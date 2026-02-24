@@ -2,8 +2,10 @@ const API_BASE = 'https://api.apify.com/v2';
 const TOKEN = () => process.env.APIFY_API_TOKEN;
 
 async function runActor(actorId, input, { waitSecs = 300 } = {}) {
+  // Apify API needs ~ instead of / in actor IDs for URL paths
+  const encodedId = actorId.replace('/', '~');
   const res = await fetch(
-    `${API_BASE}/acts/${actorId}/runs?waitForFinish=${waitSecs}`,
+    `${API_BASE}/acts/${encodedId}/runs?waitForFinish=${waitSecs}`,
     {
       method: 'POST',
       headers: {
