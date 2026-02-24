@@ -22,6 +22,7 @@ app.use('/api/ingest', require('./routes/ingest'));
 app.use('/api/enrich', require('./routes/enrich'));
 app.use('/api/reply', require('./routes/replies'));
 app.use('/api/scraper', require('./routes/scraper'));
+app.use('/api/scrapers', require('./routes/scrapers'));
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -114,5 +115,6 @@ app.listen(PORT, () => {
   console.log(`   Enrich: POST http://localhost:${PORT}/api/enrich`);
   console.log(`   Reply:  POST http://localhost:${PORT}/api/reply`);
   console.log(`   Scraper: POST http://localhost:${PORT}/api/scraper`);
+  console.log(`   Scrapers: http://localhost:${PORT}/api/scrapers`);
   console.log(`\n   Cron: Cleanup Sun 11pm EST, Dashboard Mon 8am EST\n`);
 });

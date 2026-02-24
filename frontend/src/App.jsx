@@ -2,6 +2,7 @@ import { Routes, Route, NavLink } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import Leads from './pages/Leads';
 import Replies from './pages/Replies';
+import Scrapers from './pages/Scrapers';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -25,6 +26,7 @@ function Nav() {
       {link('/', 'Dashboard')}
       {link('/leads', 'Leads')}
       {link('/replies', 'Replies')}
+      {link('/scrapers', 'Scrapers')}
     </nav>
   );
 }
@@ -38,6 +40,7 @@ export default function App() {
           <Route path="/" element={<Dashboard api={API} />} />
           <Route path="/leads" element={<Leads api={API} />} />
           <Route path="/replies" element={<Replies api={API} />} />
+          <Route path="/scrapers" element={<Scrapers api={API} />} />
         </Routes>
       </main>
     </div>
