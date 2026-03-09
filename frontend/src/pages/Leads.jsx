@@ -44,6 +44,11 @@ function ExpenditureDetail({ lead }) {
 
   return (
     <div className="space-y-3">
+      {/* Full legal name if different from display */}
+      {lead.company_display && lead.company_name && lead.company_display !== lead.company_name && (
+        <div className="text-xs text-gray-400">Legal name: {lead.company_name}</div>
+      )}
+
       {/* Summary stats */}
       <div className="flex flex-wrap gap-4 text-sm">
         {cf.total_campaign_spend > 0 && (
@@ -132,7 +137,7 @@ function ExpenditureDetail({ lead }) {
             <tbody className="divide-y divide-gray-100">
               {expenditures.map((exp, i) => (
                 <tr key={i} className="hover:bg-gray-50">
-                  <td className="px-3 py-1.5 text-gray-800">{exp.candidate || '—'}</td>
+                  <td className="px-3 py-1.5 text-gray-800">{exp.candidate_display || exp.candidate || '—'}</td>
                   <td className="px-3 py-1.5">
                     {exp.party ? (
                       <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-medium ${
@@ -256,7 +261,7 @@ export default function Leads({ api }) {
                         <td className="px-4 py-3 text-gray-400">
                           <span className={`inline-block transition-transform ${isExpanded ? 'rotate-90' : ''}`}>&#9654;</span>
                         </td>
-                        <td className="px-4 py-3 font-medium text-gray-900">{lead.company_name || '—'}</td>
+                        <td className="px-4 py-3 font-medium text-gray-900">{lead.company_display || lead.company_name || '—'}</td>
                         <td className="px-4 py-3 text-gray-600">
                           {lead.first_name || lead.last_name
                             ? `${lead.first_name} ${lead.last_name}`.trim()

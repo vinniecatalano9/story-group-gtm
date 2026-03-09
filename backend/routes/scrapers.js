@@ -261,6 +261,7 @@ async function ingestScraperLeads(leads, campaignTag) {
         last_name: lead.last_name || '',
         email: lead.email || '',
         company_name: lead.company_name || '',
+        company_display: lead.company_display || lead.company_name || '',
         company_domain: lead.company_domain || '',
         role_title: lead.role_title || '',
         linkedin_url: lead.linkedin_url || '',

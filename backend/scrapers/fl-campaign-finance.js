@@ -7,6 +7,7 @@
  */
 
 const { runActor, getDatasetItems } = require('../services/apify');
+const { simplifyName } = require('../lib/normalize');
 
 const PARTY_MAP = {
   REP: 'Republican',
@@ -73,6 +74,7 @@ async function run(config = {}) {
     last_name: '',
     email: '',
     company_name: f.company_name,
+    company_display: simplifyName(f.company_name, 'company'),
     company_domain: '',
     role_title: '',
     linkedin_url: '',
@@ -86,8 +88,11 @@ async function run(config = {}) {
       parties_served: f.parties_served,
       city: f.city || '',
       state: f.state || 'FL',
-      // Individual payments: [{candidate, amount, purpose}, ...]
-      expenditures: f.expenditures || [],
+      // Individual payments with simplified names for email copy
+      expenditures: (f.expenditures || []).map(e => ({
+        ...e,
+        candidate_display: simplifyName(e.candidate, 'candidate'),
+      })),
     },
   }));
 
