@@ -125,34 +125,19 @@ async function scrapeByPurpose(purpose, options = {}) {
       const currentUrl = page.url();
       log.info('After submit, URL: ' + currentUrl);
 
-      // Extract all table data from results page
-      const tableData = await page.evaluate(() => {
-        const results = [];
-        const tables = document.querySelectorAll('table');
-        for (const table of tables) {
-          const rows = table.querySelectorAll('tr');
-          for (const row of rows) {
-            const cells = Array.from(row.querySelectorAll('td, th')).map(c => c.innerText.trim());
-            if (cells.length >= 3) {
-              results.push(cells);
-            }
-          }
-        }
-        // Also get page text for debugging
-        const bodyText = document.body.innerText.substring(0, 3000);
-        return { rows: results, bodyText, tableCount: tables.length };
+      // Results are in a <pre> tag as fixed-width columns, not HTML tables
+      const preText = await page.evaluate(() => {
+        const pre = document.querySelector('pre');
+        return pre ? pre.innerText : '';
       });
 
-      log.info('Tables found: ' + tableData.tableCount + ', rows: ' + tableData.rows.length);
-      log.info('Body preview: ' + tableData.bodyText.substring(0, 500));
+      log.info('Pre text length: ' + preText.length);
+      log.info('Pre preview: ' + preText.substring(0, 300));
 
       return {
         purpose,
         url: currentUrl,
-        tableCount: tableData.tableCount,
-        rowCount: tableData.rows.length,
-        rows: tableData.rows,
-        bodyPreview: tableData.bodyText.substring(0, 2000),
+        preText,
       };
     }`,
     proxyConfiguration: { useApifyProxy: true },
@@ -171,40 +156,79 @@ async function scrapeByPurpose(purpose, options = {}) {
 
   const result = items[0];
   console.log(`[fl-scraper] Result URL: ${result.url}`);
-  console.log(`[fl-scraper] Tables: ${result.tableCount}, Rows: ${result.rowCount}`);
-  console.log(`[fl-scraper] Body: ${(result.bodyPreview || '').substring(0, 300)}`);
+  console.log(`[fl-scraper] Pre text length: ${(result.preText || '').length}`);
 
-  return parseRows(result.rows || [], purpose);
+  return parsePreText(result.preText || '', purpose);
 }
 
-function parseRows(rows, purpose) {
+/**
+ * Parse fixed-width <pre> text from FL elections results page.
+ * Column layout (character positions from the dash separator line):
+ *   Candidate/Committee (0-50), Date (51-61), Amount (62-78),
+ *   Payee Name (79-118), Address (119-158), City State Zip (159-198),
+ *   Purpose (199-218), Type (219+)
+ */
+function parsePreText(preText, purposeSearch) {
+  const lines = preText.split('\n');
   const records = [];
-  for (const cells of rows) {
-    if (cells.length < 3) continue;
-    let amount = 0;
-    let amountIdx = -1;
-    for (let i = 0; i < cells.length; i++) {
-      const match = cells[i].match(/\$?([\d,]+\.\d{2})/);
-      if (match) {
-        amount = parseFloat(match[1].replace(/,/g, ''));
-        amountIdx = i;
-        break;
-      }
-    }
-    if (amount < 1000 || amountIdx < 0) continue;
 
-    const record = { raw_cells: cells, amount, purpose_search: purpose };
-    for (let i = 0; i < Math.min(amountIdx, 4); i++) {
-      const cell = cells[i];
-      if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(cell)) continue;
-      if (cell.length < 3) continue;
-      if (/^[A-Z]{2}$/.test(cell)) continue;
-      if (!record.payee_name) record.payee_name = cell;
-      else if (!record.payee_address) record.payee_address = cell;
-    }
-    if (amountIdx + 1 < cells.length) record.purpose = cells[amountIdx + 1];
-    if (record.payee_name && record.payee_name.length > 2) records.push(record);
+  // Find the dash separator line to determine column positions
+  const dashIdx = lines.findIndex(l => /^-{10,}/.test(l.trim()));
+  if (dashIdx < 0) return records;
+
+  const dashLine = lines[dashIdx];
+  // Parse column boundaries from dash groups
+  const cols = [];
+  let inDash = false, start = 0;
+  for (let i = 0; i <= dashLine.length; i++) {
+    const isDash = dashLine[i] === '-';
+    if (isDash && !inDash) { start = i; inDash = true; }
+    if (!isDash && inDash) { cols.push({ start, end: i }); inDash = false; }
   }
+
+  // Data lines start after the dash line
+  for (let i = dashIdx + 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line || line.trim().length < 10) continue;
+
+    const extract = (colIdx) => {
+      if (colIdx >= cols.length) return '';
+      return line.substring(cols[colIdx].start, cols[colIdx].end).trim();
+    };
+
+    const candidate = extract(0);
+    const date = extract(1);
+    const amountStr = extract(2);
+    const payeeName = extract(3);
+    const address = extract(4);
+    const cityStateZip = extract(5);
+    const purpose = extract(6);
+
+    // Parse amount
+    const amountMatch = amountStr.match(/([\d,]+\.\d{2})/);
+    if (!amountMatch) continue;
+    const amount = parseFloat(amountMatch[1].replace(/,/g, ''));
+    if (amount < 1000) continue;
+
+    if (!payeeName || payeeName.length < 3) continue;
+
+    // Parse city/state from cityStateZip (format: "JACKSONVILLE, FL 32224")
+    let city = '', state = 'FL';
+    const cszMatch = cityStateZip.match(/^(.+?),\s*([A-Z]{2})\s/);
+    if (cszMatch) { city = cszMatch[1].trim(); state = cszMatch[2]; }
+
+    records.push({
+      payee_name: payeeName,
+      payee_address: address,
+      amount,
+      purpose: purpose || purposeSearch,
+      purpose_search: purposeSearch,
+      candidate: candidate,
+      city,
+      state,
+    });
+  }
+
   return records;
 }
 
@@ -218,14 +242,16 @@ function dedupePayees(allResults) {
     if (!firmMap.has(key)) {
       firmMap.set(key, {
         company_name: r.payee_name.trim(), address: r.payee_address || '',
+        city: r.city || '', state: r.state || 'FL',
         total_spend: r.amount, expenditure_count: 1,
         purposes: new Set([r.purpose || r.purpose_search || '']),
-        candidates_served: new Set(),
+        candidates_served: new Set(r.candidate ? [r.candidate] : []),
       });
     } else {
       const e = firmMap.get(key);
       e.total_spend += r.amount; e.expenditure_count += 1;
       if (r.purpose || r.purpose_search) e.purposes.add(r.purpose || r.purpose_search);
+      if (r.candidate) e.candidates_served.add(r.candidate);
     }
   }
   return Array.from(firmMap.values())
