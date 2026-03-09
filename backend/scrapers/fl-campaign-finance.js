@@ -20,7 +20,7 @@ const PURPOSE_SEARCHES = [
 async function run(config = {}) {
   const {
     purposes = PURPOSE_SEARCHES,
-    electionYear = '20260',
+    electionYear = '20261103-GEN',
     minAmount = 5000,
     limit = 500,
     campaign_tag = 'political-consultants-FL',
@@ -71,7 +71,7 @@ async function run(config = {}) {
 }
 
 async function scrapeByPurpose(purpose, options = {}) {
-  const { electionYear = '20260', limit = 500, minAmount = 5000 } = options;
+  const { electionYear = '20261103-GEN', limit = 500, minAmount = 5000 } = options;
 
   // Use apify/playwright-scraper — runs Node.js with Playwright page object
   const actorRun = await runActor('apify/playwright-scraper', {
@@ -95,19 +95,28 @@ async function scrapeByPurpose(purpose, options = {}) {
       await page.waitForSelector('input[name="Submit"]', { timeout: 45000 });
       log.info('Form found. Filling fields...');
 
-      // Select election year
+      // Select election year (values like "20261103-GEN", "All", etc.)
       try { await page.selectOption('select[name="election"]', electionYear); } catch(e) { log.warning('Could not set election year: ' + e.message); }
 
-      // Fill purpose
-      try { await page.fill('input[name="purpose"]', purpose); } catch(e) { log.warning('Could not fill purpose: ' + e.message); }
+      // Select "Search by Payee" radio (search_on=5)
+      try {
+        await page.click('input[name="search_on"][value="5"]');
+        log.info('Selected Search by Payee radio');
+      } catch(e) { log.warning('Could not select payee search: ' + e.message); }
 
-      // Fill min amount
-      try { await page.fill('input[name="AmtFrom"]', minAmount); } catch(e) { log.warning('Could not fill AmtFrom: ' + e.message); }
+      // Wait for payee fields to be active
+      await page.waitForTimeout(500);
+
+      // Fill purpose of expenditure (actual field name: cpurpose)
+      try { await page.fill('input[name="cpurpose"]', purpose); } catch(e) { log.warning('Could not fill cpurpose: ' + e.message); }
+
+      // Fill min amount (actual field name: cdollar_minimum)
+      try { await page.fill('input[name="cdollar_minimum"]', minAmount); } catch(e) { log.warning('Could not fill cdollar_minimum: ' + e.message); }
 
       // Fill record limit
       try { await page.fill('input[name="rowlimit"]', limit); } catch(e) { log.warning('Could not fill rowlimit: ' + e.message); }
 
-      // Select "List of expenditures" (queryformat=2) - there are multiple on the page
+      // Select "List of expenditures" (queryformat=2)
       const qfRadios = await page.$$('input[name="queryformat"][value="2"]');
       if (qfRadios.length > 0) {
         await qfRadios[0].click();

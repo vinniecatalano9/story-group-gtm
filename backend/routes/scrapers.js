@@ -14,7 +14,7 @@ const SCRAPER_MODULES = {
     module: '../scrapers/fl-campaign-finance',
     defaultConfig: {
       purposes: ['Consulting', 'Media', 'Public Relations', 'Advertising', 'Strategic', 'Communications'],
-      electionYear: '20260',
+      electionYear: '20261103-GEN',
       minAmount: 5000,
       limit: 500,
     },
