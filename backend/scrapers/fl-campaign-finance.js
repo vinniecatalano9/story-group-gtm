@@ -35,7 +35,7 @@ const PURPOSE_SEARCHES = [
 async function run(config = {}) {
   const {
     purposes = PURPOSE_SEARCHES,
-    electionYear = 'All',
+    electionYear = '20261103-GEN',
     dateFromDaysAgo = 90,
     minAmount = 5000,
     limit = 500,
