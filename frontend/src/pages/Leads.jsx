@@ -28,31 +28,128 @@ function Badge({ text, colorMap }) {
   );
 }
 
+function formatMoney(n) {
+  if (!n && n !== 0) return '—';
+  return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+function ExpenditureDetail({ lead }) {
+  const cf = lead.custom_fields || {};
+  const expenditures = cf.expenditures || [];
+  const hasDetail = expenditures.length > 0 || cf.total_campaign_spend || cf.purposes;
+
+  if (!hasDetail) {
+    return <p className="text-gray-400 text-xs italic py-2">No expenditure data available</p>;
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Summary stats */}
+      <div className="flex flex-wrap gap-4 text-sm">
+        {cf.total_campaign_spend > 0 && (
+          <div>
+            <span className="text-gray-500">Total Spend:</span>{' '}
+            <span className="font-semibold text-green-700">{formatMoney(cf.total_campaign_spend)}</span>
+          </div>
+        )}
+        {cf.expenditure_count > 0 && (
+          <div>
+            <span className="text-gray-500">Payments:</span>{' '}
+            <span className="font-semibold">{cf.expenditure_count}</span>
+          </div>
+        )}
+        {cf.purposes && (
+          <div>
+            <span className="text-gray-500">Services:</span>{' '}
+            <span className="font-medium">{cf.purposes}</span>
+          </div>
+        )}
+        {(cf.city || cf.state) && (
+          <div>
+            <span className="text-gray-500">Location:</span>{' '}
+            <span>{[cf.city, cf.state].filter(Boolean).join(', ')}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Candidates served */}
+      {cf.candidates_served && (
+        <div className="text-sm">
+          <span className="text-gray-500">Candidates Served:</span>{' '}
+          <span className="text-gray-700">{cf.candidates_served}</span>
+        </div>
+      )}
+
+      {/* Expenditure table */}
+      {expenditures.length > 0 && (
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="bg-gray-100 text-gray-500 uppercase tracking-wide">
+                <th className="px-3 py-2 text-left">Candidate / Committee</th>
+                <th className="px-3 py-2 text-left">Purpose</th>
+                <th className="px-3 py-2 text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {expenditures.map((exp, i) => (
+                <tr key={i} className="hover:bg-gray-50">
+                  <td className="px-3 py-1.5 text-gray-800">{exp.candidate || '—'}</td>
+                  <td className="px-3 py-1.5 text-gray-600">{exp.purpose || '—'}</td>
+                  <td className="px-3 py-1.5 text-right font-medium text-green-700">{formatMoney(exp.amount)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Leads({ api }) {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState({ status: '', tier: '' });
+  const [filter, setFilter] = useState({ status: '', tier: '', source: '' });
+  const [expandedId, setExpandedId] = useState(null);
 
   const fetchLeads = () => {
     setLoading(true);
     const params = new URLSearchParams();
     if (filter.status) params.set('status', filter.status);
     if (filter.tier) params.set('tier', filter.tier);
-    params.set('limit', '100');
+    params.set('limit', '200');
 
     fetch(`${api}/api/leads?${params}`)
       .then(r => r.json())
-      .then(d => { setLeads(d.leads || []); setLoading(false); })
+      .then(d => {
+        let list = d.leads || [];
+        if (filter.source) list = list.filter(l => l.source === filter.source);
+        setLeads(list);
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   };
 
-  useEffect(fetchLeads, [api, filter.status, filter.tier]);
+  useEffect(fetchLeads, [api, filter.status, filter.tier, filter.source]);
+
+  const sources = [...new Set(leads.map(l => l.source).filter(Boolean))];
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <select
+            value={filter.source}
+            onChange={e => setFilter(f => ({ ...f, source: e.target.value }))}
+            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm"
+          >
+            <option value="">All Sources</option>
+            {sources.map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
           <select
             value={filter.status}
             onChange={e => setFilter(f => ({ ...f, status: e.target.value }))}
@@ -87,33 +184,61 @@ export default function Leads({ api }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 text-left text-gray-500 text-xs uppercase tracking-wide">
-                  <th className="px-4 py-3">Name</th>
+                  <th className="px-4 py-3 w-8"></th>
                   <th className="px-4 py-3">Company</th>
-                  <th className="px-4 py-3">Email</th>
-                  <th className="px-4 py-3">Title</th>
-                  <th className="px-4 py-3">Score</th>
-                  <th className="px-4 py-3">Tier</th>
-                  <th className="px-4 py-3">Signal</th>
+                  <th className="px-4 py-3">Name</th>
+                  <th className="px-4 py-3">Total Spend</th>
+                  <th className="px-4 py-3">Payments</th>
+                  <th className="px-4 py-3">Services</th>
+                  <th className="px-4 py-3">Source</th>
                   <th className="px-4 py-3">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {leads.map(lead => (
-                  <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-gray-900">
-                      {lead.first_name} {lead.last_name}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{lead.company_name}</td>
-                    <td className="px-4 py-3 text-gray-600 font-mono text-xs">{lead.email}</td>
-                    <td className="px-4 py-3 text-gray-600">{lead.role_title}</td>
-                    <td className="px-4 py-3 font-semibold">{lead.score ?? '—'}</td>
-                    <td className="px-4 py-3"><Badge text={lead.tier} colorMap={TIER_COLORS} /></td>
-                    <td className="px-4 py-3 text-xs text-gray-500">{lead.signal_type || '—'}</td>
-                    <td className="px-4 py-3"><Badge text={lead.status} colorMap={STATUS_COLORS} /></td>
-                  </tr>
-                ))}
+                {leads.map(lead => {
+                  const cf = lead.custom_fields || {};
+                  const isExpanded = expandedId === lead.id;
+                  return (
+                    <>
+                      <tr
+                        key={lead.id}
+                        className={`hover:bg-gray-50 transition-colors cursor-pointer ${isExpanded ? 'bg-blue-50' : ''}`}
+                        onClick={() => setExpandedId(isExpanded ? null : lead.id)}
+                      >
+                        <td className="px-4 py-3 text-gray-400">
+                          <span className={`inline-block transition-transform ${isExpanded ? 'rotate-90' : ''}`}>&#9654;</span>
+                        </td>
+                        <td className="px-4 py-3 font-medium text-gray-900">{lead.company_name || '—'}</td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {lead.first_name || lead.last_name
+                            ? `${lead.first_name} ${lead.last_name}`.trim()
+                            : <span className="text-gray-400 italic">No contact</span>}
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-green-700">
+                          {cf.total_campaign_spend ? formatMoney(cf.total_campaign_spend) : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">{cf.expenditure_count || '—'}</td>
+                        <td className="px-4 py-3 text-xs text-gray-500 max-w-[200px] truncate">{cf.purposes || '—'}</td>
+                        <td className="px-4 py-3 text-xs text-gray-500">{lead.source || '—'}</td>
+                        <td className="px-4 py-3"><Badge text={lead.status} colorMap={STATUS_COLORS} /></td>
+                      </tr>
+                      {isExpanded && (
+                        <tr key={`${lead.id}-detail`}>
+                          <td colSpan={8} className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                            <ExpenditureDetail lead={lead} />
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  );
+                })}
               </tbody>
             </table>
+          </div>
+        )}
+        {!loading && leads.length > 0 && (
+          <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 text-xs text-gray-500">
+            Showing {leads.length} leads
           </div>
         )}
       </div>
