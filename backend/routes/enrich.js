@@ -10,6 +10,28 @@ const slack = require('../services/slack');
 
 const router = Router();
 
+const CONTACT_FINDER_PROMPT = (company, websiteText) => `You are a B2B sales research assistant. Analyze the following company website content and identify the best person to contact for a sales outreach about PR/media services.
+
+COMPANY: ${company}
+
+WEBSITE CONTENT:
+${websiteText}
+
+Find the most senior decision-maker — ideally the founder, CEO, president, managing partner, or principal. If you can find multiple people, pick the one most likely to make buying decisions for PR/media services.
+
+Return a JSON object:
+{
+  "first_name": "<first name or empty string>",
+  "last_name": "<last name or empty string>",
+  "role_title": "<their title, e.g. CEO, Founder, President>",
+  "linkedin_url": "<LinkedIn URL if found on the site, otherwise empty string>",
+  "confidence": "high" | "medium" | "low",
+  "source_note": "<brief note on where you found this info>"
+}
+
+If you cannot identify anyone, return empty strings for all fields with confidence "low".
+Return ONLY the JSON object, no other text.`;
+
 const SIGNAL_DETECTION_PROMPT = (company, websiteText, newsResults) => `You are a B2B sales intelligence analyst for a PR/media services company called Story Group.
 
 Analyze the following company data and detect intent signals that indicate they might need PR, media visibility, or thought leadership services.
@@ -55,13 +77,66 @@ router.post('/', async (req, res) => {
         // Mark as processing
         await updateLead(lead.id, { status: 'enriching' });
 
+        // Step 0: If no domain, try to find one via Google search
+        let domain = lead.company_domain;
+        if (!domain && lead.company_name) {
+          try {
+            console.log(`[enrich] No domain for "${lead.company_name}", searching Google...`);
+            const searchResults = await searchNews(lead.company_name + ' official website');
+            for (const r of searchResults) {
+              const url = r.url || r.link || '';
+              if (url) {
+                try {
+                  const parsed = new URL(url);
+                  const host = parsed.hostname.replace(/^www\./, '');
+                  // Skip social media, directories, news sites
+                  if (!/facebook|linkedin|twitter|yelp|bbb|mapquest|yellowpages|manta|dnb|bloomberg|crunchbase|glassdoor|indeed|google/.test(host)) {
+                    domain = host;
+                    console.log(`[enrich] Found domain via search: ${domain}`);
+                    await updateLead(lead.id, { company_domain: domain });
+                    break;
+                  }
+                } catch (_) {}
+              }
+            }
+          } catch (e) {
+            console.warn(`[enrich] Domain search failed for ${lead.company_name}:`, e.message);
+          }
+        }
+
         // Scrape website (if we have a domain)
         let websiteText = null;
-        if (lead.company_domain) {
+        if (domain) {
           try {
-            websiteText = await scrapeWebsite(lead.company_domain);
+            websiteText = await scrapeWebsite(domain);
           } catch (e) {
-            console.warn(`[enrich] Website scrape failed for ${lead.company_domain}:`, e.message);
+            console.warn(`[enrich] Website scrape failed for ${domain}:`, e.message);
+          }
+        }
+
+        // Step 1: If no contact person, try to find one from website content
+        if (websiteText && !lead.first_name && !lead.last_name) {
+          try {
+            console.log(`[enrich] Finding contact person for "${lead.company_name}"...`);
+            const contact = await claudeJSON(
+              CONTACT_FINDER_PROMPT(lead.company_name, websiteText.substring(0, 6000)),
+              { timeout: 120000 }
+            );
+            if (contact.first_name && contact.last_name) {
+              console.log(`[enrich] Found contact: ${contact.first_name} ${contact.last_name} (${contact.role_title})`);
+              await updateLead(lead.id, {
+                first_name: contact.first_name,
+                last_name: contact.last_name,
+                role_title: contact.role_title || '',
+                linkedin_url: contact.linkedin_url || lead.linkedin_url || '',
+              });
+              lead.first_name = contact.first_name;
+              lead.last_name = contact.last_name;
+              lead.role_title = contact.role_title || '';
+              lead.linkedin_url = contact.linkedin_url || lead.linkedin_url || '';
+            }
+          } catch (e) {
+            console.warn(`[enrich] Contact finder failed for ${lead.company_name}:`, e.message);
           }
         }
 
@@ -98,10 +173,11 @@ router.post('/', async (req, res) => {
           }
         }
 
-        // Waterfall email enrichment
+        // Waterfall email enrichment (use discovered domain if original was empty)
         let email = lead.email;
-        if (!email && lead.first_name && lead.last_name && lead.company_domain) {
-          const patterns = generateEmailPatterns(lead.first_name, lead.last_name, lead.company_domain);
+        const emailDomain = domain || lead.company_domain;
+        if (!email && lead.first_name && lead.last_name && emailDomain) {
+          const patterns = generateEmailPatterns(lead.first_name, lead.last_name, emailDomain);
           email = patterns[0] || ''; // Use most common pattern as best guess
           console.log(`[enrich] Generated email pattern for ${lead.first_name} ${lead.last_name}: ${email}`);
         }

@@ -8,6 +8,20 @@
 
 const { runActor, getDatasetItems } = require('../services/apify');
 
+const PARTY_MAP = {
+  REP: 'Republican',
+  DEM: 'Democrat',
+  NPA: 'No Party',
+  PTY: 'Party Org',
+  PAC: 'PAC',
+  PAP: 'Party Committee',
+  ECO: 'Electioneering Org',
+  CCE: 'Continuous Committee',
+  IND: 'Independent',
+  LBT: 'Libertarian',
+  GRE: 'Green',
+};
+
 const PURPOSE_SEARCHES = [
   'Consulting',
   'Media',
@@ -69,6 +83,7 @@ async function run(config = {}) {
       expenditure_count: f.expenditure_count,
       purposes: f.purposes,
       candidates_served: f.candidates_served,
+      parties_served: f.parties_served,
       city: f.city || '',
       state: f.state || 'FL',
       // Individual payments: [{candidate, amount, purpose}, ...]
@@ -230,13 +245,22 @@ function parsePreText(preText, purposeSearch) {
     const cszMatch = cityStateZip.match(/^(.+?),\s*([A-Z]{2})\s/);
     if (cszMatch) { city = cszMatch[1].trim(); state = cszMatch[2]; }
 
+    // Parse party/type from candidate name: "Name (REP)", "Name (PAC)", etc.
+    const partyMatch = candidate.match(/\(([A-Z]{2,4})\)\s*$/);
+    const partyCode = partyMatch ? partyMatch[1] : '';
+    const party = PARTY_MAP[partyCode] || partyCode || '';
+    const candidateClean = candidate.replace(/\s*\([A-Z]{2,4}\)\s*$/, '').trim();
+
     records.push({
       payee_name: payeeName,
       payee_address: address,
       amount,
       purpose: purpose || purposeSearch,
       purpose_search: purposeSearch,
-      candidate: candidate,
+      candidate: candidateClean,
+      candidate_party: party,
+      candidate_type: partyCode,
+      date,
       city,
       state,
     });
@@ -259,15 +283,17 @@ function dedupePayees(allResults) {
         total_spend: r.amount, expenditure_count: 1,
         purposes: new Set([r.purpose || r.purpose_search || '']),
         candidates_served: new Set(r.candidate ? [r.candidate] : []),
+        parties_served: new Set(r.candidate_party ? [r.candidate_party] : []),
         // Store individual expenditure details for personalized outreach
-        expenditures: [{ candidate: r.candidate, amount: r.amount, purpose: r.purpose || r.purpose_search }],
+        expenditures: [{ candidate: r.candidate, party: r.candidate_party, type: r.candidate_type, amount: r.amount, purpose: r.purpose || r.purpose_search, date: r.date }],
       });
     } else {
       const e = firmMap.get(key);
       e.total_spend += r.amount; e.expenditure_count += 1;
       if (r.purpose || r.purpose_search) e.purposes.add(r.purpose || r.purpose_search);
       if (r.candidate) e.candidates_served.add(r.candidate);
-      e.expenditures.push({ candidate: r.candidate, amount: r.amount, purpose: r.purpose || r.purpose_search });
+      if (r.candidate_party) e.parties_served.add(r.candidate_party);
+      e.expenditures.push({ candidate: r.candidate, party: r.candidate_party, type: r.candidate_type, amount: r.amount, purpose: r.purpose || r.purpose_search, date: r.date });
     }
   }
   return Array.from(firmMap.values())
@@ -277,6 +303,7 @@ function dedupePayees(allResults) {
       total_spend: f.total_spend, expenditure_count: f.expenditure_count,
       purposes: Array.from(f.purposes).filter(Boolean).join(', '),
       candidates_served: Array.from(f.candidates_served).filter(Boolean).slice(0, 10).join('; '),
+      parties_served: Array.from(f.parties_served).filter(Boolean).join(', '),
       // Top expenditures sorted by amount for email personalization
       expenditures: f.expenditures.sort((a, b) => b.amount - a.amount).slice(0, 10),
     }))

@@ -70,7 +70,43 @@ function ExpenditureDetail({ lead }) {
             <span>{[cf.city, cf.state].filter(Boolean).join(', ')}</span>
           </div>
         )}
+        {cf.parties_served && (
+          <div>
+            <span className="text-gray-500">Parties:</span>{' '}
+            <span className="font-medium">{cf.parties_served}</span>
+          </div>
+        )}
       </div>
+
+      {/* Contact info if enriched */}
+      {(lead.first_name || lead.email || lead.linkedin_url) && (
+        <div className="flex flex-wrap gap-4 text-sm bg-blue-50 rounded-lg px-3 py-2">
+          {(lead.first_name || lead.last_name) && (
+            <div>
+              <span className="text-gray-500">Contact:</span>{' '}
+              <span className="font-medium">{lead.first_name} {lead.last_name}</span>
+              {lead.role_title && <span className="text-gray-500 ml-1">({lead.role_title})</span>}
+            </div>
+          )}
+          {lead.email && (
+            <div>
+              <span className="text-gray-500">Email:</span>{' '}
+              <a href={`mailto:${lead.email}`} className="text-blue-600 hover:underline font-mono text-xs">{lead.email}</a>
+            </div>
+          )}
+          {lead.linkedin_url && (
+            <div>
+              <a href={lead.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs">LinkedIn</a>
+            </div>
+          )}
+          {lead.company_domain && (
+            <div>
+              <span className="text-gray-500">Website:</span>{' '}
+              <a href={`https://${lead.company_domain}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs">{lead.company_domain}</a>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Candidates served */}
       {cf.candidates_served && (
@@ -87,7 +123,9 @@ function ExpenditureDetail({ lead }) {
             <thead>
               <tr className="bg-gray-100 text-gray-500 uppercase tracking-wide">
                 <th className="px-3 py-2 text-left">Candidate / Committee</th>
+                <th className="px-3 py-2 text-left">Party</th>
                 <th className="px-3 py-2 text-left">Purpose</th>
+                <th className="px-3 py-2 text-left">Date</th>
                 <th className="px-3 py-2 text-right">Amount</th>
               </tr>
             </thead>
@@ -95,7 +133,17 @@ function ExpenditureDetail({ lead }) {
               {expenditures.map((exp, i) => (
                 <tr key={i} className="hover:bg-gray-50">
                   <td className="px-3 py-1.5 text-gray-800">{exp.candidate || '—'}</td>
+                  <td className="px-3 py-1.5">
+                    {exp.party ? (
+                      <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-medium ${
+                        exp.party === 'Republican' ? 'bg-red-100 text-red-700' :
+                        exp.party === 'Democrat' ? 'bg-blue-100 text-blue-700' :
+                        'bg-gray-100 text-gray-600'
+                      }`}>{exp.party}</span>
+                    ) : <span className="text-gray-400">{exp.type || '—'}</span>}
+                  </td>
                   <td className="px-3 py-1.5 text-gray-600">{exp.purpose || '—'}</td>
+                  <td className="px-3 py-1.5 text-gray-500 text-xs">{exp.date || '—'}</td>
                   <td className="px-3 py-1.5 text-right font-medium text-green-700">{formatMoney(exp.amount)}</td>
                 </tr>
               ))}
@@ -224,7 +272,7 @@ export default function Leads({ api }) {
                       </tr>
                       {isExpanded && (
                         <tr key={`${lead.id}-detail`}>
-                          <td colSpan={8} className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                          <td colSpan={9} className="px-6 py-4 bg-gray-50 border-t border-gray-200">
                             <ExpenditureDetail lead={lead} />
                           </td>
                         </tr>
