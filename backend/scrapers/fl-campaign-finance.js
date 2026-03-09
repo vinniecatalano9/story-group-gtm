@@ -64,6 +64,8 @@ async function run(config = {}) {
       candidates_served: f.candidates_served,
       city: f.city || '',
       state: f.state || 'FL',
+      // Individual payments: [{candidate, amount, purpose}, ...]
+      expenditures: f.expenditures || [],
     },
   }));
 
@@ -246,20 +248,26 @@ function dedupePayees(allResults) {
         total_spend: r.amount, expenditure_count: 1,
         purposes: new Set([r.purpose || r.purpose_search || '']),
         candidates_served: new Set(r.candidate ? [r.candidate] : []),
+        // Store individual expenditure details for personalized outreach
+        expenditures: [{ candidate: r.candidate, amount: r.amount, purpose: r.purpose || r.purpose_search }],
       });
     } else {
       const e = firmMap.get(key);
       e.total_spend += r.amount; e.expenditure_count += 1;
       if (r.purpose || r.purpose_search) e.purposes.add(r.purpose || r.purpose_search);
       if (r.candidate) e.candidates_served.add(r.candidate);
+      e.expenditures.push({ candidate: r.candidate, amount: r.amount, purpose: r.purpose || r.purpose_search });
     }
   }
   return Array.from(firmMap.values())
     .map(f => ({
       company_name: f.company_name, address: f.address,
+      city: f.city, state: f.state,
       total_spend: f.total_spend, expenditure_count: f.expenditure_count,
       purposes: Array.from(f.purposes).filter(Boolean).join(', '),
-      candidates_served: Array.from(f.candidates_served).filter(Boolean).slice(0, 5).join('; '),
+      candidates_served: Array.from(f.candidates_served).filter(Boolean).slice(0, 10).join('; '),
+      // Top expenditures sorted by amount for email personalization
+      expenditures: f.expenditures.sort((a, b) => b.amount - a.amount).slice(0, 10),
     }))
     .sort((a, b) => b.total_spend - a.total_spend);
 }
