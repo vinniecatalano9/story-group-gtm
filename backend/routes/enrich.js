@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const { claudeJSON } = require('../services/claude');
-const { scrapeWebsite, searchNews } = require('../services/apify');
+const { scrapeWebsite, searchNews, searchGoogle } = require('../services/apify');
 const { getLeadsByStatus, updateLead, addLog } = require('../services/db');
 const { generateEmailPatterns } = require('../lib/email-patterns');
 const { scoreLead } = require('../lib/scoring');
@@ -82,7 +82,11 @@ router.post('/', async (req, res) => {
         if (!domain && lead.company_name) {
           try {
             console.log(`[enrich] No domain for "${lead.company_name}", searching Google...`);
-            const searchResults = await searchNews(lead.company_name + ' official website');
+            const searchPages = await searchGoogle(lead.company_name + ' official website');
+            // Flatten organic results from search pages
+            const searchResults = searchPages.flatMap(p => p.organicResults || []);
+            // Also check top-level url/link in case of flat format
+            if (!searchResults.length) searchResults.push(...searchPages);
             for (const r of searchResults) {
               const url = r.url || r.link || '';
               if (url) {
@@ -144,7 +148,9 @@ router.post('/', async (req, res) => {
         let newsText = null;
         if (lead.company_name) {
           try {
-            const newsItems = await searchNews(lead.company_name);
+            const newsPages = await searchNews(lead.company_name);
+            const newsItems = newsPages.flatMap(p => p.organicResults || []);
+            if (!newsItems.length) newsItems.push(...newsPages);
             newsText = newsItems.map(n =>
               `${n.title || ''}: ${n.description || n.snippet || ''}`
             ).join('\n');

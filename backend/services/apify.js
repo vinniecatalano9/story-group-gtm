@@ -58,6 +58,19 @@ async function searchNews(companyName) {
 }
 
 /**
+ * Plain Google search (for domain discovery, etc.)
+ */
+async function searchGoogle(query) {
+  const run = await runActor('apify/google-search-scraper', {
+    queries: query,
+    maxPagesPerQuery: 1,
+    resultsPerPage: 5,
+  });
+  if (!run?.data?.defaultDatasetId) return [];
+  return getDatasetItems(run.data.defaultDatasetId, { limit: 5 });
+}
+
+/**
  * Run a custom scraper actor for lead sourcing.
  */
 async function runScraper(actorId, input, campaignTag) {
@@ -77,4 +90,4 @@ async function runScraper(actorId, input, campaignTag) {
   }));
 }
 
-module.exports = { scrapeWebsite, searchNews, runScraper, runActor, getDatasetItems };
+module.exports = { scrapeWebsite, searchNews, searchGoogle, runScraper, runActor, getDatasetItems };
