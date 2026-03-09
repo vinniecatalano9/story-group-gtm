@@ -36,27 +36,20 @@ async function run(config = {}) {
   const {
     purposes = PURPOSE_SEARCHES,
     electionYear = '20261103-GEN',
-    dateFromDaysAgo = 90,
     minAmount = 5000,
     limit = 500,
     campaign_tag = 'political-consultants-FL',
   } = config;
 
-  // Calculate date range: last N days
-  const now = new Date();
-  const from = new Date(now.getTime() - dateFromDaysAgo * 86400000);
-  const dateFrom = `${String(from.getMonth() + 1).padStart(2, '0')}/${String(from.getDate()).padStart(2, '0')}/${from.getFullYear()}`;
-  const dateTo = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}/${now.getFullYear()}`;
-
   console.log(`[fl-scraper] Starting Florida campaign finance scrape via Apify Playwright...`);
-  console.log(`[fl-scraper] Searching ${purposes.length} purpose categories, min $${minAmount}, date range: ${dateFrom} - ${dateTo}`);
+  console.log(`[fl-scraper] Searching ${purposes.length} purpose categories, min $${minAmount}, election: ${electionYear}`);
 
   const allResults = [];
 
   for (const purpose of purposes) {
     console.log(`[fl-scraper] Searching purpose: "${purpose}"...`);
     try {
-      const results = await scrapeByPurpose(purpose, { electionYear, dateFrom, dateTo, limit, minAmount });
+      const results = await scrapeByPurpose(purpose, { electionYear, limit, minAmount });
       console.log(`[fl-scraper]   Found ${results.length} records for "${purpose}"`);
       allResults.push(...results);
     } catch (err) {
@@ -100,7 +93,7 @@ async function run(config = {}) {
 }
 
 async function scrapeByPurpose(purpose, options = {}) {
-  const { electionYear = 'All', dateFrom = '', dateTo = '', limit = 500, minAmount = 5000 } = options;
+  const { electionYear = '20261103-GEN', limit = 500, minAmount = 5000 } = options;
 
   // Use apify/playwright-scraper — runs Node.js with Playwright page object
   const actorRun = await runActor('apify/playwright-scraper', {
@@ -115,10 +108,10 @@ async function scrapeByPurpose(purpose, options = {}) {
     pageLoadTimeoutSecs: 60,
     pageFunctionTimeoutSecs: 120,
     waitUntil: 'networkidle',
-    customData: { purpose, electionYear, dateFrom, dateTo, limit: String(limit), minAmount: String(minAmount) },
+    customData: { purpose, electionYear, limit: String(limit), minAmount: String(minAmount) },
     pageFunction: `async function pageFunction(context) {
       const { page, request, log, customData } = context;
-      const { purpose, electionYear, dateFrom, dateTo, limit, minAmount } = customData;
+      const { purpose, electionYear, limit, minAmount } = customData;
 
       log.info('Page loaded, waiting for form...');
       await page.waitForSelector('input[name="Submit"]', { timeout: 45000 });
@@ -128,10 +121,6 @@ async function scrapeByPurpose(purpose, options = {}) {
       try { await page.selectOption('select[name="election"]', electionYear); } catch(e) { log.warning('Could not set election year: ' + e.message); }
 
       // search_on=1 (Payee Search) is already selected by default — don't change it
-
-      // Fill date range (mm/dd/yyyy format) for recency filtering
-      if (dateFrom) { try { await page.fill('input[name="cdatefrom"]', dateFrom); } catch(e) { log.warning('Could not fill cdatefrom: ' + e.message); } }
-      if (dateTo) { try { await page.fill('input[name="cdateto"]', dateTo); } catch(e) { log.warning('Could not fill cdateto: ' + e.message); } }
 
       // Fill purpose of expenditure (actual field name: cpurpose)
       try { await page.fill('input[name="cpurpose"]', purpose); } catch(e) { log.warning('Could not fill cpurpose: ' + e.message); }

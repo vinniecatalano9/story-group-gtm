@@ -15,7 +15,6 @@ const SCRAPER_MODULES = {
     defaultConfig: {
       purposes: ['Consulting', 'Media', 'Public Relations', 'Advertising', 'Strategic', 'Communications'],
       electionYear: '20261103-GEN',
-      dateFromDaysAgo: 90,
       minAmount: 5000,
       limit: 500,
     },
