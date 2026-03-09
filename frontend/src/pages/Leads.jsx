@@ -240,6 +240,7 @@ export default function Leads({ api }) {
                   <th className="px-4 py-3 w-8"></th>
                   <th className="px-4 py-3">Company</th>
                   <th className="px-4 py-3">Name</th>
+                  <th className="px-4 py-3">Party</th>
                   <th className="px-4 py-3">Total Spend</th>
                   <th className="px-4 py-3">Payments</th>
                   <th className="px-4 py-3">Services</th>
@@ -267,6 +268,19 @@ export default function Leads({ api }) {
                             ? `${lead.first_name} ${lead.last_name}`.trim()
                             : <span className="text-gray-400 italic">No contact</span>}
                         </td>
+                        <td className="px-4 py-3">
+                          {cf.parties_served ? (
+                            <span className="text-xs">
+                              {cf.parties_served.split(', ').map((p, i) => (
+                                <span key={i} className={`inline-block px-1.5 py-0.5 rounded text-xs font-medium mr-1 ${
+                                  p === 'Republican' ? 'bg-red-100 text-red-700' :
+                                  p === 'Democrat' ? 'bg-blue-100 text-blue-700' :
+                                  'bg-gray-100 text-gray-600'
+                                }`}>{p}</span>
+                              ))}
+                            </span>
+                          ) : <span className="text-gray-400">—</span>}
+                        </td>
                         <td className="px-4 py-3 font-semibold text-green-700">
                           {cf.total_campaign_spend ? formatMoney(cf.total_campaign_spend) : '—'}
                         </td>
@@ -277,7 +291,7 @@ export default function Leads({ api }) {
                       </tr>
                       {isExpanded && (
                         <tr key={`${lead.id}-detail`}>
-                          <td colSpan={9} className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                          <td colSpan={10} className="px-6 py-4 bg-gray-50 border-t border-gray-200">
                             <ExpenditureDetail lead={lead} />
                           </td>
                         </tr>

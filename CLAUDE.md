@@ -5,9 +5,9 @@ This is the **primary GTM engine** for Story Group. The n8n workflow version (`s
 ## Workflow
 
 - **Repo**: `github.com/vinniecatalano9/story-group-gtm` (branch: `main`)
-- **Deploy**: `story-group-gtm.web.app` (Firebase Hosting, manual deploy for now)
-- **Dev flow**: Make changes locally in Claude Code → commit → `git push origin main`
-- No CI/CD yet. Firebase deploy is manual (`cd frontend && firebase deploy`).
+- **Frontend deploy**: `story-group-gtm.web.app` (Firebase Hosting, manual `cd frontend && firebase deploy`)
+- **Backend deploy**: `gtm-api.srv1364275.hstgr.cloud` — Hostinger VPS (`root@187.77.19.152`), PM2 process `gtm-engine`, code at `/root/story-group-gtm`
+- **Dev flow**: Make changes locally → commit → `git push origin main` → SSH and `cd /root/story-group-gtm && git pull && pm2 restart all`
 
 ## What It Does
 
