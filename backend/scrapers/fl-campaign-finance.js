@@ -98,14 +98,7 @@ async function scrapeByPurpose(purpose, options = {}) {
       // Select election year (values like "20261103-GEN", "All", etc.)
       try { await page.selectOption('select[name="election"]', electionYear); } catch(e) { log.warning('Could not set election year: ' + e.message); }
 
-      // Select "Search by Payee" radio (search_on=5)
-      try {
-        await page.click('input[name="search_on"][value="5"]');
-        log.info('Selected Search by Payee radio');
-      } catch(e) { log.warning('Could not select payee search: ' + e.message); }
-
-      // Wait for payee fields to be active
-      await page.waitForTimeout(500);
+      // search_on=1 (Payee Search) is already selected by default — don't change it
 
       // Fill purpose of expenditure (actual field name: cpurpose)
       try { await page.fill('input[name="cpurpose"]', purpose); } catch(e) { log.warning('Could not fill cpurpose: ' + e.message); }
@@ -116,12 +109,8 @@ async function scrapeByPurpose(purpose, options = {}) {
       // Fill record limit
       try { await page.fill('input[name="rowlimit"]', limit); } catch(e) { log.warning('Could not fill rowlimit: ' + e.message); }
 
-      // Select "List of expenditures" (queryformat=2)
-      const qfRadios = await page.$$('input[name="queryformat"][value="2"]');
-      if (qfRadios.length > 0) {
-        await qfRadios[0].click();
-        log.info('Selected List of expenditures radio');
-      }
+      // Select "Return Results to Your Screen" (queryformat=1) — NOT queryformat=2 which downloads a file
+      try { await page.click('input[name="queryformat"][value="1"]'); } catch(e) { log.warning('Could not set queryformat: ' + e.message); }
 
       // Click Submit
       log.info('Submitting form...');
