@@ -165,21 +165,25 @@ router.post('/', async (req, res) => {
             }]);
             if (waterfallResults.length > 0) {
               const wr = waterfallResults[0];
+              console.log(`[enrich] Waterfall result: email=${wr.email} conf=${wr.emailConfidence} src=${wr.emailSource} phone=${wr.phone} li=${wr.socialProfiles?.linkedin}`);
               const wUpdate = {};
               // Use email if confidence >= 70 or found on website
-              if (wr.email && (wr.emailConfidence >= 70 || wr.emailSource === 'website')) {
+              const conf = Number(wr.emailConfidence) || 0;
+              if (wr.email && (conf >= 70 || wr.emailSource === 'website' || wr.emailSource === 'website_scraping')) {
                 wUpdate.email = wr.email.trim().toLowerCase();
                 lead.email = wUpdate.email;
-                console.log(`[enrich] Waterfall email: ${lead.email} (${wr.emailConfidence}% via ${wr.emailSource})`);
+                console.log(`[enrich] Waterfall email: ${lead.email} (${conf}% via ${wr.emailSource})`);
               }
               if (wr.phone) {
                 wUpdate.phone = wr.phone;
                 lead.phone = wr.phone;
                 console.log(`[enrich] Waterfall phone: ${wr.phone}`);
               }
-              if (wr.linkedinUrl && !lead.linkedin_url) {
-                wUpdate.linkedin_url = wr.linkedinUrl;
-                lead.linkedin_url = wr.linkedinUrl;
+              // LinkedIn is under socialProfiles.linkedin
+              const linkedinFromWf = wr.socialProfiles?.linkedin || wr.linkedinUrl || '';
+              if (linkedinFromWf && !lead.linkedin_url) {
+                wUpdate.linkedin_url = linkedinFromWf;
+                lead.linkedin_url = linkedinFromWf;
               }
               if (Object.keys(wUpdate).length > 0) {
                 await updateLead(lead.id, wUpdate);
