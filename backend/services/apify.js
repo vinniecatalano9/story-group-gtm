@@ -104,8 +104,12 @@ async function waterfallEnrich(people, { verificationLevel = 'deep' } = {}) {
     verificationLevel,
     maxConcurrency: 3,
   }, { waitSecs: 600 });
+  console.log(`[waterfall] Run status: ${run?.data?.status}, datasetId: ${run?.data?.defaultDatasetId}`);
   if (!run?.data?.defaultDatasetId) return [];
-  return getDatasetItems(run.data.defaultDatasetId, { limit: people.length });
+  const items = await getDatasetItems(run.data.defaultDatasetId, { limit: Math.max(people.length, 10) });
+  console.log(`[waterfall] Got ${items.length} items from dataset`);
+  if (items.length > 0) console.log(`[waterfall] First item email: ${items[0]?.email}, conf: ${items[0]?.emailConfidence}`);
+  return items;
 }
 
 module.exports = { scrapeWebsite, searchNews, searchGoogle, waterfallEnrich, runScraper, runActor, getDatasetItems };
