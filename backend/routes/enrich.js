@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const { claudeJSON } = require('../services/claude');
-const { scrapeWebsite, searchNews, searchGoogle } = require('../services/apify');
+const { scrapeWebsite, searchNews, searchGoogle, waterfallEnrich } = require('../services/apify');
 const { getLeadsByStatus, updateLead, addLog } = require('../services/db');
 const { generateEmailPatterns } = require('../lib/email-patterns');
 const { scoreLead } = require('../lib/scoring');
@@ -151,6 +151,42 @@ router.post('/', async (req, res) => {
             }
           } catch (e) {
             console.warn(`[enrich] Contact finder failed for ${lead.company_name}:`, e.message);
+          }
+        }
+
+        // Step 2: Waterfall contact enrichment — verified email, phone, LinkedIn
+        if (lead.first_name && lead.last_name && domain && !lead.email) {
+          try {
+            console.log(`[enrich] Waterfall enriching ${lead.first_name} ${lead.last_name} @ ${domain}...`);
+            const waterfallResults = await waterfallEnrich([{
+              firstName: lead.first_name,
+              lastName: lead.last_name,
+              domain,
+            }]);
+            if (waterfallResults.length > 0) {
+              const wr = waterfallResults[0];
+              const wUpdate = {};
+              // Use email if confidence >= 70 or found on website
+              if (wr.email && (wr.emailConfidence >= 70 || wr.emailSource === 'website')) {
+                wUpdate.email = wr.email.trim().toLowerCase();
+                lead.email = wUpdate.email;
+                console.log(`[enrich] Waterfall email: ${lead.email} (${wr.emailConfidence}% via ${wr.emailSource})`);
+              }
+              if (wr.phone) {
+                wUpdate.phone = wr.phone;
+                lead.phone = wr.phone;
+                console.log(`[enrich] Waterfall phone: ${wr.phone}`);
+              }
+              if (wr.linkedinUrl && !lead.linkedin_url) {
+                wUpdate.linkedin_url = wr.linkedinUrl;
+                lead.linkedin_url = wr.linkedinUrl;
+              }
+              if (Object.keys(wUpdate).length > 0) {
+                await updateLead(lead.id, wUpdate);
+              }
+            }
+          } catch (e) {
+            console.warn(`[enrich] Waterfall enrichment failed for ${lead.first_name} ${lead.last_name}:`, e.message);
           }
         }
 

@@ -90,4 +90,22 @@ async function runScraper(actorId, input, campaignTag) {
   }));
 }
 
-module.exports = { scrapeWebsite, searchNews, searchGoogle, runScraper, runActor, getDatasetItems };
+/**
+ * Waterfall contact enrichment: name + domain → verified email, phone, LinkedIn.
+ * Uses ryanclinton/waterfall-contact-enrichment with SMTP deep verification.
+ * Accepts array of { firstName, lastName, domain } objects for batch processing.
+ */
+async function waterfallEnrich(people, { verificationLevel = 'deep' } = {}) {
+  if (!people.length) return [];
+  const run = await runActor('ryanclinton/waterfall-contact-enrichment', {
+    people,
+    enrichFromWebsite: true,
+    detectPattern: true,
+    verificationLevel,
+    maxConcurrency: 3,
+  }, { waitSecs: 600 });
+  if (!run?.data?.defaultDatasetId) return [];
+  return getDatasetItems(run.data.defaultDatasetId, { limit: people.length });
+}
+
+module.exports = { scrapeWebsite, searchNews, searchGoogle, waterfallEnrich, runScraper, runActor, getDatasetItems };
