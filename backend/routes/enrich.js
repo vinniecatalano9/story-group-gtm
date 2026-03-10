@@ -217,12 +217,14 @@ router.post('/', async (req, res) => {
 
         await updateLead(lead.id, enrichedData);
 
-        // Push to Instantly
+        // Push to Instantly (only if campaign IDs are configured)
         if (tier !== 'manual_review') {
           try {
-            await instantly.addLeadsToCampaign(tier, [{ ...lead, ...enrichedData }]);
-            await updateLead(lead.id, { status: 'emailed' });
-            enrichedData.status = 'emailed';
+            const instantlyResult = await instantly.addLeadsToCampaign(tier, [{ ...lead, ...enrichedData }]);
+            if (instantlyResult) {
+              await updateLead(lead.id, { status: 'emailed' });
+              enrichedData.status = 'emailed';
+            }
           } catch (e) {
             console.warn(`[enrich] Instantly upload failed for ${lead.email}:`, e.message);
           }
