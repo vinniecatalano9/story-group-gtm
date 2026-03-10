@@ -24,10 +24,13 @@ Return a JSON object:
   "first_name": "<first name or empty string>",
   "last_name": "<last name or empty string>",
   "role_title": "<their title, e.g. CEO, Founder, President>",
+  "email": "<their email address if found on the site, otherwise empty string>",
   "linkedin_url": "<LinkedIn URL if found on the site, otherwise empty string>",
   "confidence": "high" | "medium" | "low",
   "source_note": "<brief note on where you found this info>"
 }
+
+IMPORTANT: Look carefully for email addresses on the website — in contact pages, about pages, team bios, footers, etc. The email is the most valuable piece of information.
 
 If you cannot identify anyone, return empty strings for all fields with confidence "low".
 Return ONLY the JSON object, no other text.`;
@@ -127,13 +130,20 @@ router.post('/', async (req, res) => {
               { timeout: 120000 }
             );
             if (contact.first_name && contact.last_name) {
-              console.log(`[enrich] Found contact: ${contact.first_name} ${contact.last_name} (${contact.role_title})`);
-              await updateLead(lead.id, {
+              console.log(`[enrich] Found contact: ${contact.first_name} ${contact.last_name} (${contact.role_title})${contact.email ? ' email: ' + contact.email : ''}`);
+              const contactUpdate = {
                 first_name: contact.first_name,
                 last_name: contact.last_name,
                 role_title: contact.role_title || '',
                 linkedin_url: contact.linkedin_url || lead.linkedin_url || '',
-              });
+              };
+              // Use email found on website if available
+              if (contact.email && contact.email.includes('@')) {
+                contactUpdate.email = contact.email.trim().toLowerCase();
+                lead.email = contactUpdate.email;
+                console.log(`[enrich] Found email on website: ${lead.email}`);
+              }
+              await updateLead(lead.id, contactUpdate);
               lead.first_name = contact.first_name;
               lead.last_name = contact.last_name;
               lead.role_title = contact.role_title || '';
@@ -179,13 +189,13 @@ router.post('/', async (req, res) => {
           }
         }
 
-        // Waterfall email enrichment (use discovered domain if original was empty)
+        // Email: prefer website-scraped email, fallback to pattern generation
         let email = lead.email;
         const emailDomain = domain || lead.company_domain;
         if (!email && lead.first_name && lead.last_name && emailDomain) {
           const patterns = generateEmailPatterns(lead.first_name, lead.last_name, emailDomain);
-          email = patterns[0] || ''; // Use most common pattern as best guess
-          console.log(`[enrich] Generated email pattern for ${lead.first_name} ${lead.last_name}: ${email}`);
+          email = patterns[0] || '';
+          console.log(`[enrich] No email on site, using pattern fallback: ${email}`);
         }
 
         // Score the lead
