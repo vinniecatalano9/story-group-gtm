@@ -189,14 +189,8 @@ router.post('/', async (req, res) => {
           }
         }
 
-        // Email: prefer website-scraped email, fallback to pattern generation
+        // Email: only use emails actually found on the website (pattern guessing disabled — too many bounces)
         let email = lead.email;
-        const emailDomain = domain || lead.company_domain;
-        if (!email && lead.first_name && lead.last_name && emailDomain) {
-          const patterns = generateEmailPatterns(lead.first_name, lead.last_name, emailDomain);
-          email = patterns[0] || '';
-          console.log(`[enrich] No email on site, using pattern fallback: ${email}`);
-        }
 
         // Score the lead
         const enrichedData = {
