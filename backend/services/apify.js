@@ -95,6 +95,24 @@ async function runScraper(actorId, input, campaignTag) {
  * Uses ryanclinton/waterfall-contact-enrichment with SMTP deep verification.
  * Accepts array of { firstName, lastName, domain } objects for batch processing.
  */
+async function waitForRun(runId, maxWaitMs = 300000) {
+  const start = Date.now();
+  while (Date.now() - start < maxWaitMs) {
+    const res = await fetch(`${API_BASE}/actor-runs/${runId}?waitForFinish=60`, {
+      headers: { 'Authorization': `Bearer ${TOKEN()}` },
+    });
+    if (!res.ok) throw new Error(`Apify run check failed: ${res.status}`);
+    const data = await res.json();
+    const status = data?.data?.status;
+    if (status === 'SUCCEEDED') return data;
+    if (status === 'FAILED' || status === 'ABORTED' || status === 'TIMED-OUT') {
+      throw new Error(`Apify run ${runId} ended with status: ${status}`);
+    }
+    console.log(`[waterfall] Run ${runId} status: ${status}, waiting...`);
+  }
+  throw new Error(`Apify run ${runId} timed out after ${maxWaitMs}ms`);
+}
+
 async function waterfallEnrich(people, { verificationLevel = 'deep' } = {}) {
   if (!people.length) return [];
   const run = await runActor('ryanclinton/waterfall-contact-enrichment', {
@@ -103,12 +121,18 @@ async function waterfallEnrich(people, { verificationLevel = 'deep' } = {}) {
     detectPattern: true,
     verificationLevel,
     maxConcurrency: 3,
-  }, { waitSecs: 600 });
-  console.log(`[waterfall] Run status: ${run?.data?.status}, datasetId: ${run?.data?.defaultDatasetId}`);
-  if (!run?.data?.defaultDatasetId) return [];
-  const items = await getDatasetItems(run.data.defaultDatasetId, { limit: Math.max(people.length, 10) });
-  console.log(`[waterfall] Got ${items.length} items from dataset`);
-  if (items.length > 0) console.log(`[waterfall] First item email: ${items[0]?.email}, conf: ${items[0]?.emailConfidence}`);
+  }, { waitSecs: 30 });
+
+  let finalRun = run;
+  if (run?.data?.status !== 'SUCCEEDED') {
+    console.log(`[waterfall] Run not done yet (${run?.data?.status}), polling...`);
+    finalRun = await waitForRun(run.data.id);
+  }
+
+  const datasetId = finalRun?.data?.defaultDatasetId;
+  if (!datasetId) return [];
+  const items = await getDatasetItems(datasetId, { limit: Math.max(people.length, 10) });
+  console.log(`[waterfall] Got ${items.length} items, first email: ${items[0]?.email} (${items[0]?.emailConfidence}%)`);
   return items;
 }
 
