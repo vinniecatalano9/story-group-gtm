@@ -188,11 +188,65 @@ export default function Leads({ api }) {
 
   const sources = [...new Set(leads.map(l => l.source).filter(Boolean))];
 
+  const exportCSV = () => {
+    if (!leads.length) return;
+    const headers = [
+      'Company', 'Legal Name', 'First Name', 'Last Name', 'Title',
+      'Email', 'LinkedIn', 'Website', 'Party', 'Total Spend',
+      'Payments', 'Services', 'Candidates Served', 'City', 'State',
+      'Source', 'Status', 'Tier', 'Score', 'Signal'
+    ];
+    const esc = v => {
+      const s = String(v ?? '');
+      return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    const rows = leads.map(l => {
+      const cf = l.custom_fields || {};
+      return [
+        l.company_display || l.company_name || '',
+        l.company_name || '',
+        l.first_name || '',
+        l.last_name || '',
+        l.role_title || '',
+        l.email || '',
+        l.linkedin_url || '',
+        l.company_domain || '',
+        cf.parties_served || '',
+        cf.total_campaign_spend || '',
+        cf.expenditure_count || '',
+        cf.purposes || '',
+        cf.candidates_served || '',
+        cf.city || '',
+        cf.state || '',
+        l.source || '',
+        l.status || '',
+        l.tier || '',
+        l.score ?? '',
+        l.signal_type || '',
+      ].map(esc).join(',');
+    });
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `leads-export-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
         <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={exportCSV}
+            disabled={!leads.length}
+            className="px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            ⬇ Export CSV
+          </button>
           <select
             value={filter.source}
             onChange={e => setFilter(f => ({ ...f, source: e.target.value }))}
