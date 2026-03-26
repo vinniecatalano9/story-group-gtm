@@ -2,7 +2,9 @@ import { Routes, Route, NavLink } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import Leads from './pages/Leads';
 import Replies from './pages/Replies';
+import LinkedInReplies from './pages/LinkedInReplies';
 import Scrapers from './pages/Scrapers';
+import LeadCleaner from './pages/LeadCleaner';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -25,8 +27,10 @@ function Nav() {
       <span className="font-bold text-lg text-brand-700 mr-6">Story Group GTM</span>
       {link('/', 'Dashboard')}
       {link('/leads', 'Leads')}
-      {link('/replies', 'Replies')}
+      {link('/replies', 'Email Replies')}
+      {link('/linkedin', 'LinkedIn')}
       {link('/scrapers', 'Scrapers')}
+      {link('/cleaner', 'Lead Cleaner')}
     </nav>
   );
 }
@@ -40,7 +44,9 @@ export default function App() {
           <Route path="/" element={<Dashboard api={API} />} />
           <Route path="/leads" element={<Leads api={API} />} />
           <Route path="/replies" element={<Replies api={API} />} />
+          <Route path="/linkedin" element={<LinkedInReplies api={API} />} />
           <Route path="/scrapers" element={<Scrapers api={API} />} />
+          <Route path="/cleaner" element={<LeadCleaner api={API} />} />
         </Routes>
       </main>
     </div>
