@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 
 function formatDuration(minutes) {
   if (!minutes) return '';
-  if (minutes < 60) return `${minutes}min`;
-  const h = Math.floor(minutes / 60);
-  return `${h}h ${minutes % 60}m`;
+  const m = Math.round(minutes);
+  if (m < 60) return `${m}min`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${m % 60}m`;
 }
 
 function formatDate(d) {
