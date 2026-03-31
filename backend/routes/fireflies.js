@@ -165,8 +165,10 @@ router.post('/sync', async (req, res) => {
 router.get('/transcripts', async (req, res) => {
   try {
     const { transcripts: tCol } = require('../services/db');
-    const snap = await tCol.where('is_my_call', '==', true).orderBy('date', 'desc').limit(200).get();
-    const myTranscripts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const snap = await tCol.where('is_my_call', '==', true).limit(200).get();
+    const myTranscripts = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
     res.json({ success: true, transcripts: myTranscripts });
   } catch (e) {
