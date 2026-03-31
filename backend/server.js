@@ -584,6 +584,18 @@ cron.schedule('59 23 * * *', async () => {
   await runDailyMetrics();
 }, { timezone: 'America/New_York' });
 
+// Auto-deploy: pull + rebuild backend + rebuild frontend + firebase deploy
+// Triggered by GitHub webhook or manual POST
+app.post('/api/deploy', async (req, res) => {
+  console.log('[deploy] Triggered — running full deploy...');
+  res.json({ success: true, message: 'Deploy started' });
+  const { exec } = require('child_process');
+  exec('/root/story-group-gtm/deploy.sh 2>&1', { timeout: 300000 }, (err, stdout, stderr) => {
+    if (err) console.error('[deploy] Failed:', err.message);
+    else console.log('[deploy] Complete:\n' + stdout.slice(-500));
+  });
+});
+
 // Start
 app.listen(PORT, () => {
   console.log(`\n🚀 Story Group GTM Engine running on port ${PORT}`);
