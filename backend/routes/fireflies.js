@@ -136,9 +136,9 @@ router.post('/webhook', async (req, res) => {
  */
 router.post('/sync', async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 30;
-    console.log(`[fireflies] Syncing up to ${limit} transcripts from Fireflies API...`);
-    const transcripts = await fireflies.getRecentTranscripts(limit);
+    const all = req.query.all === 'true';
+    console.log(`[fireflies] Syncing ${all ? 'ALL' : 'recent'} transcripts from Fireflies API...`);
+    const transcripts = all ? await fireflies.getAllTranscripts() : await fireflies.getRecentTranscripts(50);
     console.log(`[fireflies] Got ${transcripts.length} transcripts from API`);
 
     let totalMatched = 0;
