@@ -164,11 +164,9 @@ router.post('/sync', async (req, res) => {
  */
 router.get('/transcripts', async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 200;
-    const all = await getStoredTranscripts(limit);
-
-    // Only show calls Vincent was on
-    const myTranscripts = all.filter(t => t.is_my_call === true);
+    const { transcripts: tCol } = require('../services/db');
+    const snap = await tCol.where('is_my_call', '==', true).orderBy('date', 'desc').limit(200).get();
+    const myTranscripts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
     res.json({ success: true, transcripts: myTranscripts });
   } catch (e) {
