@@ -11,6 +11,7 @@ const db = admin.firestore();
 const leads = db.collection('leads');
 const replies = db.collection('replies');
 const logs = db.collection('logs');
+const transcripts = db.collection('transcripts');
 
 async function addLead(lead) {
   const ref = leads.doc(lead.lead_id);
@@ -80,8 +81,20 @@ async function getRepliesPage({ classification, limit = 50, startAfter } = {}) {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
+async function upsertTranscript(data) {
+  const ref = transcripts.doc(data.fireflies_id);
+  await ref.set({ ...data, updated_at: new Date() }, { merge: true });
+  return ref.id;
+}
+
+async function getStoredTranscripts(limit = 50) {
+  const snap = await transcripts.orderBy('date', 'desc').limit(limit).get();
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
 module.exports = {
-  db, leads, replies, logs,
+  db, leads, replies, logs, transcripts,
   addLead, updateLead, getLeadByEmail, getLeadsByStatus,
   addReply, getRepliesByEmail, addLog, getLeadStats, getLeadsPage, getRepliesPage,
+  upsertTranscript, getStoredTranscripts,
 };
