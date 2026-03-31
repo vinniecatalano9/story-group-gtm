@@ -6,6 +6,7 @@ const { generateEmailPatterns } = require('../lib/email-patterns');
 const { scoreLead } = require('../lib/scoring');
 const instantly = require('../services/instantly');
 const hubspot = require('../services/hubspot');
+const coteriehq = require('../services/coteriehq');
 const slack = require('../services/slack');
 
 const router = Router();
@@ -272,6 +273,16 @@ router.post('/', async (req, res) => {
           }
         } catch (e) {
           console.warn(`[enrich] HubSpot sync failed for ${lead.email}:`, e.message);
+        }
+
+        // Sync to CoterieHQ CRM
+        try {
+          const chqResult = await coteriehq.syncLead({ ...lead, ...enrichedData });
+          if (chqResult?.contactId) {
+            await updateLead(lead.id, { coteriehq_contact_id: chqResult.contactId });
+          }
+        } catch (e) {
+          console.warn(`[enrich] CoterieHQ sync failed for ${lead.email}:`, e.message);
         }
 
         results.push({
