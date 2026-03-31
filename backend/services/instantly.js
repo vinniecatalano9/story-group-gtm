@@ -100,7 +100,103 @@ async function getCampaignAnalytics() {
   return apiCall('GET', '/campaigns/analytics');
 }
 
+/**
+ * Reply to an email thread via Instantly API v2.
+ * @param {string} replyToUuid - The UUID of the email to reply to
+ * @param {string} eaccount - The sending email account connected to Instantly
+ * @param {string} body - The reply body text
+ */
+async function replyToEmail(replyToUuid, eaccount, body, subject = 'Re:') {
+  return apiCall('POST', '/emails/reply', {
+    reply_to_uuid: replyToUuid,
+    eaccount,
+    subject,
+    body: { text: body },
+  });
+}
+
+// Get all lead labels (interest statuses) defined in Instantly
+async function getLeadLabels() {
+  try {
+    const res = await apiCall('GET', '/lead-labels?limit=100');
+    return res?.items || [];
+  } catch (e) {
+    console.warn('[instantly] getLeadLabels failed:', e.message);
+    return [];
+  }
+}
+
+// Get replied leads (status=3) for a campaign — these are the ones you interact with
+async function getRepliedLeads(campaignId, limit = 100) {
+  try {
+    const res = await apiCall('POST', '/leads/list', { campaign_id: campaignId, status: 3, limit });
+    return res?.items || [];
+  } catch (e) {
+    console.warn(`[instantly] getRepliedLeads failed:`, e.message);
+    return [];
+  }
+}
+
+// Get all replied leads across all campaigns
+async function getAllRepliedLeads() {
+  try {
+    const campaignsRes = await getCampaigns();
+    const campList = campaignsRes?.items || [];
+    const allLeads = [];
+    for (const c of campList) {
+      const leads = await getRepliedLeads(c.id);
+      leads.forEach(l => { l.campaign_name = c.name; });
+      allLeads.push(...leads);
+    }
+    return allLeads;
+  } catch (e) {
+    console.warn('[instantly] getAllRepliedLeads failed:', e.message);
+    return [];
+  }
+}
+
+// Get subsequence entries (leads enrolled in a subsequence)
+async function getSubsequenceEntries(subsequenceId, limit = 100) {
+  try {
+    const res = await apiCall('GET', `/subsequences/entries?subsequence_id=${subsequenceId}&limit=${limit}`);
+    return res?.items || [];
+  } catch (e) {
+    console.warn('[instantly] getSubsequenceEntries failed:', e.message);
+    return [];
+  }
+}
+
+// Get subsequences for a campaign
+async function getSubsequences(campaignId) {
+  try {
+    const res = await apiCall('GET', `/subsequences?parent_campaign=${campaignId}`);
+    return res?.items || [];
+  } catch (e) {
+    console.warn('[instantly] getSubsequences failed:', e.message);
+    return [];
+  }
+}
+
+// Add a lead to a subsequence
+async function addLeadToSubsequence(email, subsequenceId, campaignId) {
+  return apiCall('POST', '/subsequences/entries', {
+    subsequence_id: subsequenceId,
+    lead_email: email,
+    campaign_id: campaignId,
+  });
+}
+
+// Move lead interest status
+async function updateLeadInterestStatus(email, interestStatus, campaignId = null) {
+  const body = { email, interest_status: interestStatus };
+  if (campaignId) body.campaign_id = campaignId;
+  return apiCall('PATCH', '/leads', body);
+}
+
 module.exports = {
   addLeadsToCampaign, removeLeads, getESGFlaggedLeads,
   getCampaigns, getCampaignLeads, getCampaignAnalytics,
+  replyToEmail, getLeadLabels, getRepliedLeads, getAllRepliedLeads,
+  getSubsequences, addLeadToSubsequence, updateLeadInterestStatus,
+  getSubsequenceEntries,
 };

@@ -18,7 +18,7 @@ async function notify(text, blocks = null) {
   }
 }
 
-async function notifyNewReply({ email, company, classification, sentiment, summary, draftResponse }) {
+async function notifyNewReply({ email, company, classification, sentiment, summary, draftResponse, pastReplies = [] }) {
   const emoji = {
     interested: ':fire:',
     not_interested: ':x:',
@@ -39,6 +39,20 @@ async function notifyNewReply({ email, company, classification, sentiment, summa
       type: 'section',
       text: { type: 'mrkdwn', text: `*Suggested Response:*\n>${draftResponse}` },
     }] : []),
+    ...(pastReplies.length > 0 ? [
+      { type: 'divider' },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*Previous Replies (${pastReplies.length}):*\n${pastReplies.map(r => {
+            const date = r.created_at?.toDate ? r.created_at.toDate().toLocaleDateString() : 'unknown';
+            const snippet = (r.reply_text || r.summary || '').substring(0, 120);
+            return `• _${date}_ — ${r.classification || 'unknown'}: ${snippet}${snippet.length >= 120 ? '…' : ''}`;
+          }).join('\n')}`,
+        },
+      },
+    ] : []),
     ...(classification === 'interested' ? [{
       type: 'section',
       text: { type: 'mrkdwn', text: `:calendar: <${process.env.CALENDLY_LINK}|Book a call>` },
@@ -56,4 +70,19 @@ async function notifyDashboard(stats) {
   await notify(`:bar_chart: Weekly Pipeline Report\n• Ingested: ${ingested}\n• Enriched: ${enriched}\n• Emailed: ${emailed}\n• Replied: ${replied} (${replyRate}%)\n• Booked: ${booked}`);
 }
 
-module.exports = { notify, notifyNewReply, notifyCleanup, notifyDashboard };
+async function notifySentReply({ channel, email, contactName, messagePreview }) {
+  const icon = channel === 'linkedin' ? ':briefcase:' : ':email:';
+  const via = channel === 'linkedin' ? 'LinkedIn' : 'Email';
+  const who = contactName || email;
+  await notify(`${icon} Reply sent to ${who} via ${via}`, [
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `${icon} *Reply Sent via ${via}*\n*To:* ${who}${contactName && email ? ` (${email})` : ''}\n*Message:* ${messagePreview.substring(0, 200)}${messagePreview.length > 200 ? '…' : ''}`,
+      },
+    },
+  ]);
+}
+
+module.exports = { notify, notifyNewReply, notifyCleanup, notifyDashboard, notifySentReply };

@@ -38,12 +38,21 @@ async function addReply(reply) {
   return ref.id;
 }
 
+async function getRepliesByEmail(email, limit = 5) {
+  const snap = await replies
+    .where('email', '==', email.toLowerCase())
+    .orderBy('created_at', 'desc')
+    .limit(limit)
+    .get();
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
 async function addLog(type, data) {
   await logs.add({ type, data, created_at: new Date() });
 }
 
 async function getLeadStats() {
-  const statuses = ['ingested', 'enriched', 'scored', 'emailed', 'replied', 'booked', 'dead'];
+  const statuses = ['ingested', 'enriched', 'scored', 'emailed', 'replied', 'booked', 'closed', 'dead'];
   const stats = {};
   for (const s of statuses) {
     const snap = await leads.where('status', '==', s).count().get();
@@ -74,5 +83,5 @@ async function getRepliesPage({ classification, limit = 50, startAfter } = {}) {
 module.exports = {
   db, leads, replies, logs,
   addLead, updateLead, getLeadByEmail, getLeadsByStatus,
-  addReply, addLog, getLeadStats, getLeadsPage, getRepliesPage,
+  addReply, getRepliesByEmail, addLog, getLeadStats, getLeadsPage, getRepliesPage,
 };

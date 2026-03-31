@@ -24,6 +24,7 @@ app.use('/api/reply', require('./routes/replies'));
 app.use('/api/scraper', require('./routes/scraper'));
 app.use('/api/scrapers', require('./routes/scrapers'));
 app.use('/api/cleaner', require('./routes/cleaner'));
+app.use('/api/fireflies', require('./routes/fireflies'));
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -37,6 +38,95 @@ app.get('/api/dashboard', async (req, res) => {
     const stats = await getLeadStats();
     res.json({ success: true, stats });
   } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Email funnel endpoint — Instantly analytics + reply breakdown
+app.get('/api/dashboard/funnel', async (req, res) => {
+  try {
+    const { getCampaignAnalytics, getCampaigns } = require('./services/instantly');
+    const { replies, leads } = require('./services/db');
+
+    // 1. Instantly campaign analytics
+    let campaigns = [];
+    let totalSent = 0, totalOpened = 0, totalReplied = 0, totalBounced = 0;
+    try {
+      const analyticsData = await getCampaignAnalytics();
+      campaigns = Array.isArray(analyticsData) ? analyticsData : (analyticsData?.data || []);
+      for (const c of campaigns) {
+        totalSent += c.emails_sent_count || c.emails_sent || c.sent || 0;
+        totalOpened += c.open_count || c.emails_opened || c.opened || 0;
+        totalReplied += c.reply_count || c.emails_replied || c.replied || 0;
+        totalBounced += c.bounced_count || c.emails_bounced || c.bounced || 0;
+      }
+    } catch (e) {
+      console.warn('[funnel] Instantly analytics failed:', e.message);
+    }
+
+    // 2. Reply classification breakdown from Firestore
+    const replySnap = await replies.get();
+    const classificationCounts = {};
+    const dailyPositive = {};
+    let positiveTotal = 0;
+    replySnap.forEach(doc => {
+      const d = doc.data();
+      const cls = d.classification || 'other';
+      classificationCounts[cls] = (classificationCounts[cls] || 0) + 1;
+      // Count positive (interested, referral, more_info, cost_question)
+      if (['interested', 'referral', 'more_info', 'cost_question'].includes(cls)) {
+        positiveTotal++;
+        const day = d.created_at?.toDate?.()
+          ? d.created_at.toDate().toISOString().slice(0, 10)
+          : (d.created_at ? new Date(d.created_at).toISOString().slice(0, 10) : 'unknown');
+        dailyPositive[day] = (dailyPositive[day] || 0) + 1;
+      }
+    });
+
+    // 3. Booked + closed counts
+    const bookedSnap = await leads.where('status', '==', 'booked').count().get();
+    const booked = bookedSnap.data().count;
+    const closedSnap = await leads.where('status', '==', 'closed').count().get();
+    const closedDeals = closedSnap.data().count;
+
+    // 3b. Meetings held + second calls booked (from replies collection)
+    let meetingsHeld = 0;
+    let secondCallsBooked = 0;
+    replySnap.forEach(doc => {
+      const d = doc.data();
+      if (d.had_meeting) meetingsHeld++;
+      if (d.second_call_booked) secondCallsBooked++;
+    });
+
+    // 4. Per-campaign breakdown
+    const campaignBreakdown = campaigns.map(c => ({
+      name: c.name || c.campaign_name || 'Unknown',
+      id: c.id || c.campaign_id,
+      sent: c.emails_sent_count || c.emails_sent || c.sent || 0,
+      opened: c.open_count || c.emails_opened || c.opened || 0,
+      replied: c.reply_count || c.emails_replied || c.replied || 0,
+      bounced: c.bounced_count || c.emails_bounced || c.bounced || 0,
+    }));
+
+    res.json({
+      success: true,
+      funnel: {
+        sent: totalSent,
+        opened: totalOpened,
+        replied: totalReplied,
+        bounced: totalBounced,
+        positive: positiveTotal,
+        booked,
+        meetings_held: meetingsHeld,
+        second_calls_booked: secondCallsBooked,
+        closed_deals: closedDeals,
+        classificationCounts,
+        dailyPositive,
+        campaignBreakdown,
+      }
+    });
+  } catch (e) {
+    console.error('[funnel] Error:', e);
     res.status(500).json({ error: e.message });
   }
 });
@@ -302,6 +392,119 @@ app.patch('/api/replies/:id/handled', async (req, res) => {
   }
 });
 
+// Update reply tracking fields (had_meeting, sent_proposal, follow_up_date, notes)
+app.patch('/api/replies/:id', async (req, res) => {
+  try {
+    const { replies } = require('./services/db');
+    const allowed = ['had_meeting', 'sent_proposal', 'second_call_booked', 'closed_deal', 'follow_up_date', 'notes', 'meeting_date', 'proposal_date', 'second_call_date', 'closed_date'];
+    const updates = {};
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) updates[key] = req.body[key];
+    }
+    updates.updated_at = new Date();
+    await replies.doc(req.params.id).update(updates);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Get conversation thread for a specific email address
+app.get('/api/replies/thread/:email', async (req, res) => {
+  try {
+    const { replies } = require('./services/db');
+    const email = req.params.email.toLowerCase();
+    // Try lowercase match first, fall back to original case
+    let snap = await replies.where('email', '==', email).get();
+    if (snap.empty) {
+      snap = await replies.where('email', '==', req.params.email).get();
+    }
+    const thread = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // Sort client-side to avoid needing composite index
+    thread.sort((a, b) => {
+      const tA = a.created_at?._seconds || (a.created_at ? new Date(a.created_at).getTime() / 1000 : 0);
+      const tB = b.created_at?._seconds || (b.created_at ? new Date(b.created_at).getTime() / 1000 : 0);
+      return tA - tB;
+    });
+    res.json({ success: true, thread });
+  } catch (e) {
+    console.error('[thread] Error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Instantly replied leads + subsequence data
+app.get('/api/instantly/leads', async (req, res) => {
+  try {
+    const { getAllRepliedLeads, getCampaigns, getSubsequences, getSubsequenceEntries } = require('./services/instantly');
+
+    // Get all replied leads
+    const repliedLeads = await getAllRepliedLeads();
+
+    // Get all campaigns + subsequences with enrolled leads
+    const campaignsRes = await getCampaigns();
+    const campList = campaignsRes?.items || [];
+    const subsequenceData = [];
+    for (const c of campList) {
+      const subs = await getSubsequences(c.id);
+      for (const sub of subs) {
+        const entries = await getSubsequenceEntries(sub.id);
+        if (entries.length > 0) {
+          subsequenceData.push({
+            campaign_name: c.name,
+            campaign_id: c.id,
+            subsequence_name: sub.name,
+            subsequence_id: sub.id,
+            leads: entries,
+          });
+        }
+      }
+    }
+
+    res.json({ success: true, repliedLeads, subsequenceData });
+  } catch (e) {
+    console.error('[instantly/leads] Error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Get subsequences for a campaign
+app.get('/api/instantly/subsequences', async (req, res) => {
+  try {
+    const { getSubsequences, getCampaigns } = require('./services/instantly');
+    const { campaign_id } = req.query;
+    if (campaign_id) {
+      const subs = await getSubsequences(campaign_id);
+      return res.json({ success: true, subsequences: subs });
+    }
+    // Get subsequences for all campaigns
+    const campaigns = await getCampaigns();
+    const campList = campaigns?.items || campaigns?.campaigns || (Array.isArray(campaigns) ? campaigns : []);
+    const allSubs = {};
+    for (const c of campList) {
+      const id = c.id || c.campaign_id;
+      const subs = await getSubsequences(id);
+      if (subs.length > 0) allSubs[c.name || id] = { campaign_id: id, subsequences: subs };
+    }
+    res.json({ success: true, campaigns: allSubs });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Add lead to a subsequence
+app.post('/api/instantly/subsequence/add', async (req, res) => {
+  try {
+    const { addLeadToSubsequence } = require('./services/instantly');
+    const { email, subsequence_id, campaign_id } = req.body;
+    if (!email || !subsequence_id) return res.status(400).json({ error: 'email and subsequence_id required' });
+    const result = await addLeadToSubsequence(email, subsequence_id, campaign_id);
+    res.json({ success: true, result });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Manual trigger endpoints
 app.post('/api/trigger/cleanup', async (req, res) => {
   try {
@@ -318,6 +521,29 @@ app.post('/api/trigger/dashboard', async (req, res) => {
     const { runDashboard } = require('./cron/dashboard');
     const report = await runDashboard();
     res.json({ success: true, report });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/trigger/daily-metrics', async (req, res) => {
+  try {
+    const { runDailyMetrics } = require('./cron/daily-metrics');
+    const snapshot = await runDailyMetrics();
+    res.json({ success: true, snapshot });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Daily metrics history (last N days)
+app.get('/api/dashboard/daily-metrics', async (req, res) => {
+  try {
+    const { dailyMetrics } = require('./cron/daily-metrics');
+    const days = parseInt(req.query.days) || 30;
+    const snap = await dailyMetrics.orderBy('date', 'desc').limit(days).get();
+    const metrics = snap.docs.map(d => d.data());
+    res.json({ success: true, metrics });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -349,6 +575,13 @@ cron.schedule('0 8 * * 1', async () => {
   console.log('[cron] Running weekly dashboard...');
   const { runDashboard } = require('./cron/dashboard');
   await runDashboard();
+}, { timezone: 'America/New_York' });
+
+// Daily metrics snapshot: Every day 11:59pm EST
+cron.schedule('59 23 * * *', async () => {
+  console.log('[cron] Running daily metrics snapshot...');
+  const { runDailyMetrics } = require('./cron/daily-metrics');
+  await runDailyMetrics();
 }, { timezone: 'America/New_York' });
 
 // Start
