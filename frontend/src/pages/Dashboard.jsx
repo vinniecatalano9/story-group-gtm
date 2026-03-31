@@ -82,16 +82,6 @@ export default function Dashboard({ api }) {
     <div className="space-y-8">
       <h1 className="text-2xl font-bold text-white">Pipeline Dashboard</h1>
 
-      {/* Top KPI Cards — always visible */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        <KPICard label="Total Leads" value={total} color="text-white" />
-        <KPICard label="Scored" value={stats?.scored || 0} color="text-indigo-400" />
-        <KPICard label="Emailed" value={stats?.emailed || 0} color="text-purple-400" />
-        <KPICard label="Reply Rate" value={`${replyRate}%`} color="text-green-400" />
-        <KPICard label="Booked" value={stats?.booked || 0} color="text-emerald-400" />
-        <KPICard label="Last 7 Days" value={last7Positive} sublabel="positive replies" color="text-amber-400" />
-      </div>
-
       {/* Email Funnel (from Instantly) */}
       {!funnelLoading && funnel && funnel.sent > 0 && (
         <>
@@ -290,6 +280,16 @@ export default function Dashboard({ api }) {
           </div>
         );
       })()}
+
+      {/* KPI Cards — bottom */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <KPICard label="Total Leads" value={total} color="text-white" />
+        <KPICard label="Scored" value={stats?.scored || 0} color="text-indigo-400" />
+        <KPICard label="Emailed" value={stats?.emailed || 0} color="text-purple-400" />
+        <KPICard label="Reply Rate" value={`${replyRate}%`} color="text-green-400" />
+        <KPICard label="Booked" value={stats?.booked || 0} color="text-emerald-400" />
+        <KPICard label="Last 7 Days" value={last7Positive} sublabel="positive replies" color="text-amber-400" />
+      </div>
     </div>
   );
 }
