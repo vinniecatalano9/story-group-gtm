@@ -92,44 +92,6 @@ export default function Dashboard({ api }) {
         <KPICard label="Last 7 Days" value={last7Positive} sublabel="positive replies" color="text-amber-400" />
       </div>
 
-      {/* Lead Pipeline Funnel — horizontal bars */}
-      {stats && (() => {
-        const STAGES = [
-          { key: 'ingested', label: 'Ingested', color: 'from-slate-500/60 to-slate-600/40' },
-          { key: 'enriched', label: 'Enriched', color: 'from-blue-500/60 to-blue-600/40' },
-          { key: 'scored', label: 'Scored', color: 'from-indigo-500/60 to-indigo-600/40' },
-          { key: 'emailed', label: 'Emailed', color: 'from-purple-500/60 to-purple-600/40' },
-          { key: 'replied', label: 'Replied', color: 'from-emerald-500/60 to-emerald-600/40' },
-          { key: 'booked', label: 'Booked', color: 'from-green-400/70 to-emerald-500/50' },
-          { key: 'closed', label: 'Closed', color: 'from-amber-500/60 to-yellow-500/40' },
-        ];
-        return (
-          <div className="glass-card rounded-2xl p-6">
-            <h2 className="text-lg font-semibold text-white/90 mb-2">Lead Pipeline</h2>
-            <p className="text-sm text-white/30 mb-4">Lead status breakdown ({total.toLocaleString()} total)</p>
-            <div className="space-y-3">
-              {STAGES.map(s => {
-                const val = stats[s.key] || 0;
-                const widthPct = total > 0 ? Math.max((val / total) * 100, 2) : 0;
-                return (
-                  <div key={s.key} className="flex items-center gap-3">
-                    <span className="text-sm text-white/40 w-20 text-right font-medium">{s.label}</span>
-                    <div className="flex-1 bg-white/5 rounded-full h-9 overflow-hidden border border-white/5">
-                      <div
-                        className={`bg-gradient-to-r ${s.color} h-full rounded-full flex items-center px-3 transition-all duration-500 backdrop-blur-sm`}
-                        style={{ width: `${widthPct}%` }}
-                      >
-                        <span className="text-white text-xs font-semibold drop-shadow-sm">{val}</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
-
       {/* Email Funnel (from Instantly) */}
       {!funnelLoading && funnel && funnel.sent > 0 && (
         <>
@@ -290,6 +252,44 @@ export default function Dashboard({ api }) {
           <ActionButton api={api} endpoint="/api/trigger/dashboard" label="Generate Report" method="POST" />
         </div>
       </div>
+
+      {/* Lead Pipeline Funnel — horizontal bars */}
+      {stats && (() => {
+        const STAGES = [
+          { key: 'ingested', label: 'Ingested', color: 'from-slate-500/60 to-slate-600/40' },
+          { key: 'enriched', label: 'Enriched', color: 'from-blue-500/60 to-blue-600/40' },
+          { key: 'scored', label: 'Scored', color: 'from-indigo-500/60 to-indigo-600/40' },
+          { key: 'emailed', label: 'Emailed', color: 'from-purple-500/60 to-purple-600/40' },
+          { key: 'replied', label: 'Replied', color: 'from-emerald-500/60 to-emerald-600/40' },
+          { key: 'booked', label: 'Booked', color: 'from-green-400/70 to-emerald-500/50' },
+          { key: 'closed', label: 'Closed', color: 'from-amber-500/60 to-yellow-500/40' },
+        ];
+        return (
+          <div className="glass-card rounded-2xl p-6">
+            <h2 className="text-lg font-semibold text-white/90 mb-2">Lead Pipeline</h2>
+            <p className="text-sm text-white/30 mb-4">Lead status breakdown ({total.toLocaleString()} total)</p>
+            <div className="space-y-3">
+              {STAGES.map(s => {
+                const val = stats[s.key] || 0;
+                const widthPct = total > 0 ? Math.max((val / total) * 100, 2) : 0;
+                return (
+                  <div key={s.key} className="flex items-center gap-3">
+                    <span className="text-sm text-white/40 w-20 text-right font-medium">{s.label}</span>
+                    <div className="flex-1 bg-white/5 rounded-full h-9 overflow-hidden border border-white/5">
+                      <div
+                        className={`bg-gradient-to-r ${s.color} h-full rounded-full flex items-center px-3 transition-all duration-500 backdrop-blur-sm`}
+                        style={{ width: `${widthPct}%` }}
+                      >
+                        <span className="text-white text-xs font-semibold drop-shadow-sm">{val}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
