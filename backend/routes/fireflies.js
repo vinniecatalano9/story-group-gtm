@@ -164,11 +164,11 @@ router.post('/sync', async (req, res) => {
  */
 router.get('/transcripts', async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 50;
+    const limit = parseInt(req.query.limit) || 200;
     const all = await getStoredTranscripts(limit);
 
     // Only show calls Vincent was on
-    const myTranscripts = all.filter(t => t.is_my_call !== false);
+    const myTranscripts = all.filter(t => t.is_my_call === true);
 
     res.json({ success: true, transcripts: myTranscripts });
   } catch (e) {
