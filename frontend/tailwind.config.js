@@ -3,15 +3,25 @@ export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
+      },
       colors: {
         brand: {
-          50: '#f0f4ff',
-          100: '#dbe4ff',
-          500: '#4c6ef5',
-          600: '#3b5bdb',
-          700: '#364fc7',
-          800: '#2b3d9e',
-          900: '#1e2a6e',
+          50: '#e8eeff',
+          100: '#d4e0ff',
+          400: '#5B8DEF',
+          500: '#1856FF',
+          600: '#1248D9',
+          700: '#0D3AB3',
+          800: '#0A2D8C',
+          900: '#071F66',
+        },
+        surface: {
+          DEFAULT: 'rgba(255, 255, 255, 0.06)',
+          light: 'rgba(255, 255, 255, 0.1)',
+          lighter: 'rgba(255, 255, 255, 0.15)',
         },
       },
     },
