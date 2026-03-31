@@ -66,30 +66,23 @@ async function getRecentTranscripts(limit = 20) {
 
 async function getAllTranscripts() {
   const all = [];
+  let skip = 0;
   const batchSize = 50;
-  let oldestDate = null;
-  const seen = new Set();
   while (true) {
-    // Fireflies doesn't support skip — paginate by filtering on date
-    const vars = { limit: batchSize };
-    const dateFilter = oldestDate ? `, date_to: "${oldestDate}"` : '';
+    // skip must be inlined — Fireflies doesn't accept it as a GraphQL variable
     const data = await graphql(`
-      query AllTranscripts($limit: Int) {
-        transcripts(limit: $limit${dateFilter}) {
+      {
+        transcripts(limit: ${batchSize}, skip: ${skip}) {
           id title date duration transcript_url participants
           summary { overview action_items keywords }
         }
       }
-    `, vars);
-    const batch = (data.transcripts || []).filter(t => !seen.has(t.id));
-    if (batch.length === 0) break;
-    for (const t of batch) seen.add(t.id);
+    `);
+    const batch = data.transcripts || [];
     all.push(...batch);
-    // Get oldest date from this batch for next page
-    const dates = batch.filter(t => t.date).map(t => new Date(t.date).toISOString());
-    if (dates.length) oldestDate = dates.sort()[0];
-    console.log(`[fireflies] Fetched ${batch.length} transcripts (total ${all.length}, oldest: ${oldestDate})`);
+    console.log(`[fireflies] Fetched ${batch.length} transcripts (skip ${skip}, total ${all.length})`);
     if (batch.length < batchSize) break;
+    skip += batchSize;
   }
   return all;
 }
