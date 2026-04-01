@@ -233,7 +233,7 @@ app.post('/api/ulinc/webhook', async (req, res) => {
     console.log('[ulinc-webhook] Received push:', JSON.stringify(data).substring(0, 500));
 
     const { claudeJSON } = require('./services/claude');
-    const { addReply, addLog, getLeadByEmail, updateLead } = require('./services/db');
+    const { replies, addReply, addLog, getLeadByEmail, updateLead } = require('./services/db');
     const { syncLead } = require('./services/hubspot');
     const { notifyNewReply } = require('./services/slack');
     const { getAvailableSlots } = require('./services/calendar');
@@ -279,6 +279,16 @@ app.post('/api/ulinc/webhook', async (req, res) => {
       }
 
       console.log(`[ulinc-webhook] Processing ${contactName}: ${messageText.substring(0, 80)}...`);
+
+      // Dedup: skip if we already have a reply with the same contact_id + same message text
+      if (contactId) {
+        const dupCheck = await replies.where('ulinc_contact_id', '==', String(contactId)).get();
+        const existing = dupCheck.docs.find(d => d.data().reply_text === messageText);
+        if (existing) {
+          console.log(`[ulinc-webhook] Skipping duplicate for ${contactName} (contact ${contactId})`);
+          continue;
+        }
+      }
 
       const lead = email ? await getLeadByEmail(email) : null;
       let slots = null;

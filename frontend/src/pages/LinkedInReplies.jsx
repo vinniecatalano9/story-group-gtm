@@ -297,7 +297,22 @@ export default function LinkedInReplies({ api }) {
 
     fetch(`${api}/api/replies?${params}`)
       .then(r => r.json())
-      .then(d => { setReplies(d.replies || []); setLoading(false); })
+      .then(d => {
+        const list = (d.replies || []).sort((a, b) => {
+          const getMs = (r) => {
+            const md = r.message_date;
+            const ca = r.created_at;
+            if (md?._seconds) return md._seconds * 1000;
+            if (md) return new Date(md).getTime();
+            if (ca?._seconds) return ca._seconds * 1000;
+            if (ca) return new Date(ca).getTime();
+            return 0;
+          };
+          return getMs(b) - getMs(a);
+        });
+        setReplies(list);
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, [api, filter, statusFilter, showHandled]);
 
