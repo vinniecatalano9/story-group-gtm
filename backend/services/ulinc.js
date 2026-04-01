@@ -1,29 +1,41 @@
+const https = require('https');
+
 const ULINC_NEW_MSG_URL = () => process.env.ULINC_NEW_MESSAGE_URL;
 const ULINC_CUSTOM_MSG_URL = () => process.env.ULINC_CUSTOM_MESSAGE_URL;
 
 /**
  * Poll Ulinc for new LinkedIn messages.
- * Ulinc is poll-based: GET the webhook URL → returns array of new messages since last poll.
+ * Uses https module instead of fetch for PM2 compatibility.
  */
 async function pollNewMessages() {
   const url = ULINC_NEW_MSG_URL();
   if (!url) return [];
 
-  try {
-    const res = await fetch(url, { method: 'GET', signal: AbortSignal.timeout(15000) });
-    if (!res.ok) {
-      console.error('[ulinc] Poll failed:', res.status, await res.text());
-      return [];
-    }
-    const data = await res.json();
-    // Ulinc returns an array of message objects (or wrapped in a key)
-    const messages = Array.isArray(data) ? data : (data.messages || data.data || []);
-    // Filter out test payloads (contact_id = -1)
-    return messages.filter(m => m.contact_id !== -1 && m.contact_id !== '-1');
-  } catch (e) {
-    console.error('[ulinc] Poll error:', e.message, e.cause?.code || '', e.cause?.message || '');
-    return [];
-  }
+  return new Promise((resolve) => {
+    const req = https.get(url, { timeout: 15000 }, (res) => {
+      let body = '';
+      res.on('data', c => body += c);
+      res.on('end', () => {
+        try {
+          const data = JSON.parse(body);
+          const messages = Array.isArray(data) ? data : (data.messages || data.data || []);
+          resolve(messages.filter(m => m.contact_id !== -1 && m.contact_id !== '-1'));
+        } catch (e) {
+          console.error('[ulinc] Poll parse error:', e.message, body.substring(0, 100));
+          resolve([]);
+        }
+      });
+    });
+    req.on('error', (e) => {
+      console.error('[ulinc] Poll error:', e.message, e.code || '');
+      resolve([]);
+    });
+    req.on('timeout', () => {
+      console.error('[ulinc] Poll timeout');
+      req.destroy();
+      resolve([]);
+    });
+  });
 }
 
 /**
