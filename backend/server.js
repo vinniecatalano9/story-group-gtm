@@ -265,7 +265,11 @@ app.post('/api/ulinc/webhook', async (req, res) => {
             messageText = latest.text || latest.message || latest.body || '';
           }
           // Capture the actual message timestamp
-          if (latest.time) messageTime = new Date(latest.time);
+          // Ulinc timestamps are 1 year behind — fix by adding 1 year
+          if (latest.time) {
+            messageTime = new Date(latest.time);
+            messageTime.setFullYear(messageTime.getFullYear() + 1);
+          }
         }
       }
       // Fallback to message field
