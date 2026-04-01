@@ -259,19 +259,7 @@ app.post('/api/ulinc/webhook', async (req, res) => {
       }
 
       if (!messageText.trim()) {
-        console.log(`[ulinc-webhook] No message text for ${contactName}, skipping classification`);
-        // Still store it as a contact received
-        await addReply({
-          lead_id: null, email: email || `linkedin:${contactId}`,
-          reply_text: '(No message text — contact data only)',
-          source: 'ulinc', ulinc_contact_id: contactId,
-          contact_name: contactName, linkedin_url: contact.li_url || contact.linkedin || null,
-          classification: 'other', sentiment: 'neutral',
-          summary: `Contact data received for ${contactName}`,
-          suggested_macro: 'NONE', suggested_action: 'Review contact',
-          draft_response: '', handled: false,
-        });
-        processed++;
+        // Skip contacts with no actual message — only process real replies
         continue;
       }
 
