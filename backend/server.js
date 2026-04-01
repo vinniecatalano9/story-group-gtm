@@ -175,6 +175,14 @@ app.get('/api/replies', async (req, res) => {
     if (show_handled !== 'true') {
       replies = replies.filter(r => !r.handled);
     }
+    // Sort by message_date (actual Ulinc timestamp) falling back to created_at, newest first
+    replies.sort((a, b) => {
+      const da = a.message_date?._seconds ? a.message_date._seconds * 1000 : (a.message_date ? new Date(a.message_date).getTime() : 0);
+      const db = b.message_date?._seconds ? b.message_date._seconds * 1000 : (b.message_date ? new Date(b.message_date).getTime() : 0);
+      const ca = a.created_at?._seconds ? a.created_at._seconds * 1000 : (a.created_at ? new Date(a.created_at).getTime() : 0);
+      const cb = b.created_at?._seconds ? b.created_at._seconds * 1000 : (b.created_at ? new Date(b.created_at).getTime() : 0);
+      return (db || cb) - (da || ca);
+    });
     res.json({ success: true, replies: replies.slice(0, parseInt(limit) || 50) });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -243,6 +251,7 @@ app.post('/api/ulinc/webhook', async (req, res) => {
 
       // Get the latest message from conversations array (Ulinc "Send to webhook" format)
       let messageText = '';
+      let messageTime = null;
       const convos = contact.conversations || contact.conversation;
       if (convos && Array.isArray(convos)) {
         // Find the latest incoming message
@@ -255,6 +264,8 @@ app.post('/api/ulinc/webhook', async (req, res) => {
           } else {
             messageText = latest.text || latest.message || latest.body || '';
           }
+          // Capture the actual message timestamp
+          if (latest.time) messageTime = new Date(latest.time);
         }
       }
       // Fallback to message field
@@ -296,6 +307,7 @@ Return ONLY the JSON.`;
         reply_text: messageText, source: 'ulinc',
         ulinc_contact_id: contactId, contact_name: contactName,
         linkedin_url: contact.li_url || contact.linkedin || null,
+        message_date: messageTime || new Date(),
         ...classification, handled: false,
       });
 
