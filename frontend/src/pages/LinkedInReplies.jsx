@@ -24,6 +24,7 @@ const CLASS_EMOJI = {
 const ULINC_STATUSES = [
   { value: 'talking', label: 'Talking', color: 'bg-green-500 hover:bg-green-600' },
   { value: 'replied', label: 'Replied', color: 'bg-emerald-600 hover:bg-emerald-700' },
+  { value: 'meeting_booked', label: 'Meeting Booked', color: 'bg-blue-500 hover:bg-blue-600' },
   { value: 'later', label: 'Later', color: 'bg-gray-500 hover:bg-gray-600' },
   { value: 'no_interest', label: 'No Interest', color: 'bg-orange-500 hover:bg-orange-600' },
   { value: 'old_connect', label: 'Old Connect', color: 'bg-rose-600 hover:bg-rose-700' },
@@ -111,7 +112,7 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
   const cls = reply.classification || 'other';
   const colors = CLASS_COLORS[cls] || CLASS_COLORS.other;
   const emoji = CLASS_EMOJI[cls] || '💬';
-  const time = formatTime(reply.created_at);
+  const time = formatTime(reply.message_date || reply.created_at);
   const borderColor = colors.split(' ')[2] || 'border-white/10';
 
   const markDone = async () => {

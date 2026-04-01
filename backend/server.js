@@ -408,7 +408,7 @@ app.patch('/api/replies/:id/ulinc-status', async (req, res) => {
   try {
     const { replies } = require('./services/db');
     const { ulinc_status } = req.body;
-    const valid = ['talking', 'replied', 'no_interest', 'later', 'old_connect'];
+    const valid = ['talking', 'replied', 'meeting_booked', 'no_interest', 'later', 'old_connect'];
     if (!valid.includes(ulinc_status)) return res.status(400).json({ error: `Invalid status. Must be one of: ${valid.join(', ')}` });
     await replies.doc(req.params.id).update({ ulinc_status, ulinc_status_at: new Date() });
     res.json({ success: true, ulinc_status });
