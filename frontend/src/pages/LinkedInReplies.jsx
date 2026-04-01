@@ -21,6 +21,14 @@ const CLASS_EMOJI = {
   other: '💬',
 };
 
+const ULINC_STATUSES = [
+  { value: 'talking', label: 'Talking', color: 'bg-green-500 hover:bg-green-600' },
+  { value: 'replied', label: 'Replied', color: 'bg-emerald-600 hover:bg-emerald-700' },
+  { value: 'later', label: 'Later', color: 'bg-gray-500 hover:bg-gray-600' },
+  { value: 'no_interest', label: 'No Interest', color: 'bg-orange-500 hover:bg-orange-600' },
+  { value: 'old_connect', label: 'Old Connect', color: 'bg-rose-600 hover:bg-rose-700' },
+];
+
 function formatTime(created_at) {
   if (!created_at) return '';
   if (created_at?._seconds) return new Date(created_at._seconds * 1000).toLocaleString();
@@ -91,13 +99,15 @@ function ConversationThread({ contactId, api }) {
   );
 }
 
-function LinkedInCard({ reply, api, onHandled }) {
+function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
   const [marking, setMarking] = useState(false);
   const [showConvo, setShowConvo] = useState(false);
   const [showReply, setShowReply] = useState(false);
   const [replyText, setReplyText] = useState(reply.draft_response || '');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState(reply.ulinc_status || '');
+  const [settingStatus, setSettingStatus] = useState(false);
   const cls = reply.classification || 'other';
   const colors = CLASS_COLORS[cls] || CLASS_COLORS.other;
   const emoji = CLASS_EMOJI[cls] || '💬';
@@ -112,6 +122,20 @@ function LinkedInCard({ reply, api, onHandled }) {
     } catch {
       setMarking(false);
     }
+  };
+
+  const setUlincStatus = async (status) => {
+    setSettingStatus(true);
+    try {
+      await fetch(`${api}/api/replies/${reply.id}/ulinc-status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ulinc_status: status }),
+      });
+      setCurrentStatus(status);
+      if (onStatusChange) onStatusChange(reply.id, status);
+    } catch { /* ignore */ }
+    setSettingStatus(false);
   };
 
   const sendReply = async () => {
@@ -228,6 +252,25 @@ function LinkedInCard({ reply, api, onHandled }) {
         </p>
       )}
 
+      {/* Ulinc Status Buttons */}
+      <div className="flex items-center gap-2 pt-1">
+        <span className="text-xs text-white/30 mr-1">Status:</span>
+        {ULINC_STATUSES.map(s => (
+          <button
+            key={s.value}
+            onClick={() => setUlincStatus(s.value)}
+            disabled={settingStatus}
+            className={`px-2.5 py-1 text-xs font-medium rounded-lg text-white transition-all disabled:opacity-50 ${
+              currentStatus === s.value
+                ? `${s.color} ring-2 ring-white/30`
+                : `${s.color} opacity-40 hover:opacity-100`
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
       {showConvo && reply.ulinc_contact_id && (
         <ConversationThread contactId={reply.ulinc_contact_id} api={api} />
       )}
@@ -239,21 +282,23 @@ export default function LinkedInReplies({ api }) {
   const [replies, setReplies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [showHandled, setShowHandled] = useState(false);
 
   const fetchReplies = useCallback(() => {
     setLoading(true);
     const params = new URLSearchParams();
     if (filter) params.set('classification', filter);
+    if (statusFilter) params.set('ulinc_status', statusFilter);
     if (showHandled) params.set('show_handled', 'true');
     params.set('source', 'ulinc');
-    params.set('limit', '50');
+    params.set('limit', '100');
 
     fetch(`${api}/api/replies?${params}`)
       .then(r => r.json())
       .then(d => { setReplies(d.replies || []); setLoading(false); })
       .catch(() => setLoading(false));
-  }, [api, filter, showHandled]);
+  }, [api, filter, statusFilter, showHandled]);
 
   useEffect(() => { fetchReplies(); }, [fetchReplies]);
 
@@ -279,6 +324,16 @@ export default function LinkedInReplies({ api }) {
             Show done
           </label>
           <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className="glass-input rounded-xl px-3 py-1.5 text-sm"
+          >
+            <option value="">All Statuses</option>
+            {ULINC_STATUSES.map(s => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
+          <select
             value={filter}
             onChange={e => setFilter(e.target.value)}
             className="glass-input rounded-xl px-3 py-1.5 text-sm"
@@ -299,7 +354,9 @@ export default function LinkedInReplies({ api }) {
         </p>
       ) : (
         <div className="space-y-4">
-          {replies.map(r => <LinkedInCard key={r.id} reply={r} api={api} onHandled={handleDone} />)}
+          {replies.map(r => <LinkedInCard key={r.id} reply={r} api={api} onHandled={handleDone} onStatusChange={(id, status) => {
+            setReplies(prev => prev.map(p => p.id === id ? { ...p, ulinc_status: status } : p));
+          }} />)}
         </div>
       )}
     </div>

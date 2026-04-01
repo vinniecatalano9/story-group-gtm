@@ -152,7 +152,7 @@ const HIDDEN_CLASSIFICATIONS = ['not_interested', 'bounce', 'ooo'];
 app.get('/api/replies', async (req, res) => {
   try {
     const { getRepliesPage } = require('./services/db');
-    const { classification, limit, show_handled, source } = req.query;
+    const { classification, limit, show_handled, source, ulinc_status } = req.query;
     let replies = await getRepliesPage({
       classification: classification || undefined,
       limit: parseInt(limit) || 100,
@@ -162,6 +162,10 @@ app.get('/api/replies', async (req, res) => {
       replies = replies.filter(r => r.source === 'ulinc');
     } else if (source === 'email') {
       replies = replies.filter(r => r.source !== 'ulinc');
+    }
+    // Filter by Ulinc status
+    if (ulinc_status) {
+      replies = replies.filter(r => r.ulinc_status === ulinc_status);
     }
     // Filter out noise classifications unless explicitly requested
     if (!classification) {
@@ -382,6 +386,20 @@ app.patch('/api/replies/:id/handled', async (req, res) => {
     const { replies } = require('./services/db');
     await replies.doc(req.params.id).update({ handled: true, handled_at: new Date() });
     res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Set Ulinc status on a reply (talking, replied, no_interest, later, old_connect)
+app.patch('/api/replies/:id/ulinc-status', async (req, res) => {
+  try {
+    const { replies } = require('./services/db');
+    const { ulinc_status } = req.body;
+    const valid = ['talking', 'replied', 'no_interest', 'later', 'old_connect'];
+    if (!valid.includes(ulinc_status)) return res.status(400).json({ error: `Invalid status. Must be one of: ${valid.join(', ')}` });
+    await replies.doc(req.params.id).update({ ulinc_status, ulinc_status_at: new Date() });
+    res.json({ success: true, ulinc_status });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
