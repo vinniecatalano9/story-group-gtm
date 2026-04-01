@@ -245,11 +245,12 @@ app.post('/api/ulinc/webhook', async (req, res) => {
         const incoming = convos.filter(m => m.type === 'incoming' || m.is_incoming || m.direction === 'incoming');
         if (incoming.length > 0) {
           const latest = incoming[incoming.length - 1];
-          messageText = latest.text || latest.message || latest.body || '';
-        }
-        // If no incoming found, log first conversation object keys for debugging
-        if (!messageText && convos.length > 0) {
-          console.log(`[ulinc-webhook] Conversation keys for ${contactName}:`, JSON.stringify(convos[convos.length - 1]).substring(0, 300));
+          // Ulinc sends message text as base64 in text_base64 field
+          if (latest.text_base64) {
+            messageText = Buffer.from(latest.text_base64, 'base64').toString('utf-8').trim();
+          } else {
+            messageText = latest.text || latest.message || latest.body || '';
+          }
         }
       }
       // Fallback to message field
