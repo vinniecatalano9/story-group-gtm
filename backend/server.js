@@ -298,18 +298,12 @@ app.post('/api/ulinc/webhook', async (req, res) => {
       let slots = null;
       try { slots = await getAvailableSlots(); } catch (e) {}
 
-      // Classify
-      const { processUlincMessages } = require('./cron/ulinc-poll');
+      // Classify — use the same playbook prompt as the poller
       let classification;
       try {
-        const CLASSIFY_PROMPT = `You are a sales reply classifier for Story Group, a PR/media services company.
-This is a LinkedIn message. Classify it and generate a draft response.
-FROM: ${contactName} (${company || 'Unknown'}, first name: ${firstName || 'there'})
-MESSAGE: ${messageText}
-TONE: Casual, confident, conversational. Keep it LinkedIn-appropriate. 40-100 words max.
-Return JSON: { "classification": "interested"|"not_interested"|"why_reach_out"|"more_info"|"cost_question"|"question_other"|"referral"|"re_engage"|"ooo"|"other", "sentiment": "positive"|"neutral"|"negative", "summary": "<1 sentence>", "suggested_macro": "CALL_TIME"|"WHY_REACH_OUT"|"MORE_INFO"|"COST_QUESTION"|"RE_ENGAGE"|"CASE_STUDY"|"REFERRAL"|"NONE", "suggested_action": "<brief>", "draft_response": "<personalized reply using macro style, mentioning go.storygroup.io/meetings/vincent-catalano if scheduling>" }
-Return ONLY the JSON.`;
-        classification = await claudeJSON(CLASSIFY_PROMPT, { timeout: 120000 });
+        const { CLASSIFY_PROMPT } = require('./cron/ulinc-poll');
+        const prompt = CLASSIFY_PROMPT ? CLASSIFY_PROMPT(contactName, company, messageText, firstName, null) : `Classify this LinkedIn reply. FROM: ${contactName}. MESSAGE: ${messageText}. Return JSON with classification, sentiment, summary, suggested_macro, suggested_action, draft_response.`;
+        classification = await claudeJSON(prompt, { timeout: 120000 });
       } catch (e) {
         console.error(`[ulinc-webhook] Classification failed for ${contactName}:`, e.message);
         classification = { classification: 'other', sentiment: 'neutral', summary: 'Classification failed', suggested_macro: 'NONE', suggested_action: 'Review manually', draft_response: '' };
