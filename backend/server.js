@@ -237,13 +237,19 @@ app.post('/api/ulinc/webhook', async (req, res) => {
       const firstName = contact.first_name || null;
       const contactId = contact.id || contact.contact_id || null;
 
-      // Get the latest message from conversation if available
+      // Get the latest message from conversations array (Ulinc "Send to webhook" format)
       let messageText = '';
-      if (contact.conversation && Array.isArray(contact.conversation)) {
+      const convos = contact.conversations || contact.conversation;
+      if (convos && Array.isArray(convos)) {
         // Find the latest incoming message
-        const incoming = contact.conversation.filter(m => m.is_incoming || m.direction === 'incoming');
+        const incoming = convos.filter(m => m.type === 'incoming' || m.is_incoming || m.direction === 'incoming');
         if (incoming.length > 0) {
-          messageText = incoming[incoming.length - 1].message || incoming[incoming.length - 1].text || '';
+          const latest = incoming[incoming.length - 1];
+          messageText = latest.text || latest.message || latest.body || '';
+        }
+        // If no incoming found, log first conversation object keys for debugging
+        if (!messageText && convos.length > 0) {
+          console.log(`[ulinc-webhook] Conversation keys for ${contactName}:`, JSON.stringify(convos[convos.length - 1]).substring(0, 300));
         }
       }
       // Fallback to message field
