@@ -148,7 +148,7 @@ app.get('/api/leads', async (req, res) => {
 });
 
 // Replies list endpoint (for frontend)
-const HIDDEN_CLASSIFICATIONS = ['not_interested', 'bounce', 'ooo'];
+const HIDDEN_CLASSIFICATIONS = ['bounce', 'ooo'];
 app.get('/api/replies', async (req, res) => {
   try {
     const { getRepliesPage } = require('./services/db');
