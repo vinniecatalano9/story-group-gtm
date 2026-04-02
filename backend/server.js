@@ -167,8 +167,8 @@ app.get('/api/replies', async (req, res) => {
     if (ulinc_status) {
       replies = replies.filter(r => r.ulinc_status === ulinc_status);
     }
-    // Filter out noise classifications unless explicitly requested
-    if (!classification) {
+    // Filter out noise classifications unless explicitly requested or show_handled is on
+    if (!classification && show_handled !== 'true') {
       replies = replies.filter(r => !HIDDEN_CLASSIFICATIONS.includes(r.classification));
     }
     // Default to unhandled only unless show_handled=true
