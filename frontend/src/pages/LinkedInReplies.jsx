@@ -160,7 +160,8 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
       });
       if (res.ok) {
         setSent(true);
-        setTimeout(() => onHandled(reply.id), 1500);
+        setSending(false);
+        setShowReply(false);
       } else {
         const err = await res.json();
         alert(`Send failed: ${err.error || 'Unknown error'}`);

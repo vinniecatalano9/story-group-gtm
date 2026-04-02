@@ -385,10 +385,10 @@ app.post('/api/ulinc/send', async (req, res) => {
 
     const result = await sendMessage(contact_id, message);
 
-    // Mark the reply as handled if reply_id provided
+    // Store what was sent but do NOT auto-mark as handled — let user click Done
     if (reply_id) {
       const { replies } = require('./services/db');
-      await replies.doc(reply_id).update({ handled: true, handled_at: new Date(), sent_response: message });
+      await replies.doc(reply_id).update({ sent_response: message, sent_at: new Date() });
     }
 
     await addLog('ulinc_send', { contact_id, message_length: message.length });
