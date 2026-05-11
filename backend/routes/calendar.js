@@ -9,11 +9,23 @@ const SECOND_CALL_PATTERNS = [
   /proposal/i,
   /pitch(?:\s+(?:call|meeting))?/i,
   /close\s+call/i,
-  /follow[- ]up\s+(?:call|meeting)/i
+  /follow[- ]?up\s+(?:call|meeting)?/i,
+  /\b2nd\s*call/i,
+  /\bsecond\s+call/i
+];
+
+// Strip noise from company names: time-of-day ("11 AM EST"), date stamps,
+// trailing "call" residue after second-call pattern removal.
+const COMPANY_NOISE = [
+  /\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/gi,
+  /\b(?:est|edt|cst|cdt|mst|mdt|pst|pdt|utc|gmt)\b/gi,
+  /\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g,
+  /\bcall\b\s*$/i
 ];
 
 const STORY_GROUP_PREFIX = /^story\s*group\s*[&|/-]\s*/i;
 const INTERNAL_DOMAINS = ['storygroup.io', 'winningrepublicans.com', 'wrstrategies.com'];
+const GENERIC_LOCAL_PARTS = new Set(['info','contact','hello','admin','support','sales','team','office','hi','contactus','help']);
 
 let _calendarClient = null;
 function getCalendar() {
@@ -30,10 +42,12 @@ function classifyEvent(title) {
 
   const isSecond = SECOND_CALL_PATTERNS.some(rx => rx.test(t));
 
-  // Company = strip "Story Group & " prefix, then strip trailing call-type keyword.
+  // Company = strip "Story Group & " prefix, then strip trailing call-type keyword
+  // and timestamp/timezone noise.
   let company = t.replace(STORY_GROUP_PREFIX, '');
   SECOND_CALL_PATTERNS.forEach(rx => { company = company.replace(rx, ''); });
-  company = company.replace(/\s{2,}/g, ' ').replace(/[-–—|/]+\s*$/, '').trim();
+  COMPANY_NOISE.forEach(rx => { company = company.replace(rx, ''); });
+  company = company.replace(/\s{2,}/g, ' ').replace(/[-–—|/,]+\s*$/, '').trim();
 
   return {
     callType: isSecond ? 'second' : 'discovery',
@@ -41,16 +55,20 @@ function classifyEvent(title) {
   };
 }
 
-function pickProspectFromAttendees(attendees) {
-  if (!Array.isArray(attendees)) return { prospect: '', email: '' };
+function pickProspectFromAttendees(attendees, fallbackCompany) {
+  if (!Array.isArray(attendees)) return { prospect: fallbackCompany || '', email: '' };
   const external = attendees.find(a => {
     const email = (a.email || '').toLowerCase();
     if (!email) return false;
     return !INTERNAL_DOMAINS.some(d => email.endsWith('@' + d));
   });
-  if (!external) return { prospect: '', email: '' };
-  const name = external.displayName || external.email.split('@')[0].replace(/[._]/g, ' ');
-  return { prospect: name, email: external.email };
+  if (!external) return { prospect: fallbackCompany || '', email: '' };
+  if (external.displayName) return { prospect: external.displayName, email: external.email };
+  const local = external.email.split('@')[0].toLowerCase().replace(/\d+$/, '');
+  if (GENERIC_LOCAL_PARTS.has(local) && fallbackCompany) {
+    return { prospect: fallbackCompany, email: external.email };
+  }
+  return { prospect: external.email.split('@')[0].replace(/[._]/g, ' '), email: external.email };
 }
 
 /**
@@ -95,7 +113,7 @@ router.get('/sync-meetings', async (req, res) => {
       if (ev.status === 'cancelled') continue;
       const cls = classifyEvent(ev.summary || '');
       if (!cls) continue;
-      const { prospect, email } = pickProspectFromAttendees(ev.attendees || []);
+      const { prospect, email } = pickProspectFromAttendees(ev.attendees || [], cls.company);
       const startISO = (ev.start?.dateTime || ev.start?.date || '').slice(0, 10);
       if (!startISO) continue;
 
