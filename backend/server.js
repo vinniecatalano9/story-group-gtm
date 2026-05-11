@@ -26,6 +26,8 @@ app.use('/api/scrapers', require('./routes/scrapers'));
 app.use('/api/cleaner', require('./routes/cleaner'));
 app.use('/api/fireflies', require('./routes/fireflies'));
 app.use('/api/heyreach', require('./routes/heyreach'));
+app.use('/api/instantly', require('./routes/instantly'));
+app.use('/api/calendar', require('./routes/calendar'));
 
 // Health check
 app.get('/api/health', (req, res) => {
