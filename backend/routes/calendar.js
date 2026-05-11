@@ -89,6 +89,46 @@ async function batchLookupInstantlyLeads(emails) {
 }
 
 /**
+ * Cross-reference a batch of prospect emails against Heyreach leads.
+ * Heyreach indexes by LinkedIn profile; only leads with a known email
+ * (typically scraped via Apollo) will match. Returns Map<lowercase-email,
+ * {campaignName, accountName}>.
+ */
+async function batchLookupHeyreachLeads(emails) {
+  const out = new Map();
+  const lookup = new Set((emails || []).map(e => (e || '').toLowerCase()).filter(Boolean));
+  if (!lookup.size || !process.env.HEYREACH_API_KEY) return out;
+
+  const HR = 'https://api.heyreach.io/api/public';
+  const hdrs = { 'X-API-KEY': process.env.HEYREACH_API_KEY, 'Content-Type': 'application/json' };
+
+  try {
+    const cR = await axios.post(`${HR}/campaign/GetAll`, { offset: 0, limit: 100 }, { headers: hdrs, timeout: 5000 });
+    const campaigns = cR.data?.items || [];
+    if (!campaigns.length) return out;
+
+    // Scan each campaign's leads (capped to 20 campaigns, 1000 leads each)
+    await Promise.all(campaigns.slice(0, 20).map(async (c) => {
+      try {
+        const lR = await axios.post(`${HR}/lead/GetLeadsFromCampaign`, {
+          campaignId: c.id, offset: 0, limit: 1000
+        }, { headers: hdrs, timeout: 8000 });
+        const leads = lR.data?.items || lR.data?.leads || [];
+        for (const lead of leads) {
+          const email = (lead.email || lead.emailAddress || '').toLowerCase();
+          if (!email || !lookup.has(email)) continue;
+          out.set(email, {
+            campaignName: c.name || ('Campaign ' + c.id),
+            accountName: lead.accountName || lead.senderName || ''
+          });
+        }
+      } catch (e) { /* per-campaign errors swallowed */ }
+    }));
+  } catch (e) { /* swallow */ }
+  return out;
+}
+
+/**
  * Memoize campaign name lookups so we only hit Instantly once per campaign per request.
  */
 let _campaignNameCache = null;
@@ -196,23 +236,35 @@ router.get('/sync-meetings', async (req, res) => {
     }
 
     // Attribute each meeting to its outbound source by cross-referencing
-    // prospect emails against Instantly leads in one batched call.
-    if (process.env.INSTANTLY_API_KEY) {
-      _campaignNameCache = new Map();
-      const emails = meetings.map(m => (m.prospectEmail || '').toLowerCase()).filter(Boolean);
-      const leadMap = await batchLookupInstantlyLeads(emails);
+    // prospect emails against Instantly + Heyreach in parallel.
+    _campaignNameCache = new Map();
+    const emails = meetings.map(m => (m.prospectEmail || '').toLowerCase()).filter(Boolean);
+    const [instMap, hrMap] = await Promise.all([
+      batchLookupInstantlyLeads(emails),
+      batchLookupHeyreachLeads(emails)
+    ]);
 
-      // Resolve campaign names for all unique campaigns we hit
-      const uniqueCampaigns = [...new Set([...leadMap.values()].map(v => v.campaignId).filter(Boolean))];
-      await Promise.all(uniqueCampaigns.map(id => getInstantlyCampaignName(id)));
+    // Resolve Instantly campaign names
+    const uniqueInstCampaigns = [...new Set([...instMap.values()].map(v => v.campaignId).filter(Boolean))];
+    await Promise.all(uniqueInstCampaigns.map(id => getInstantlyCampaignName(id)));
 
-      for (const m of meetings) {
-        if (!m.prospectEmail) continue;
-        const hit = leadMap.get(m.prospectEmail.toLowerCase());
-        if (!hit) continue;
-        const name = _campaignNameCache.get(hit.campaignId);
+    for (const m of meetings) {
+      if (!m.prospectEmail) continue;
+      const key = m.prospectEmail.toLowerCase();
+      // Heyreach (LinkedIn) takes precedence over Instantly (Cold Email)
+      // — LinkedIn convo typically gets the meeting; Instantly may have
+      // touched them earlier but the booking source is the latest channel.
+      const hr = hrMap.get(key);
+      if (hr) {
+        m.sourceChannel = 'LinkedIn';
+        m.sourceAccount = 'Heyreach — ' + (hr.campaignName || '') + (hr.accountName ? ' / ' + hr.accountName : '');
+        continue;
+      }
+      const inst = instMap.get(key);
+      if (inst) {
+        const name = _campaignNameCache.get(inst.campaignId);
         m.sourceChannel = 'Cold Email';
-        m.sourceAccount = 'Instantly — ' + (name || ('Campaign ' + (hit.campaignId || '?').slice(0, 8)));
+        m.sourceAccount = 'Instantly — ' + (name || ('Campaign ' + (inst.campaignId || '?').slice(0, 8)));
       }
     }
 
