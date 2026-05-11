@@ -1,4 +1,5 @@
 const express = require('express');
+const axios = require('axios');
 const { google } = require('googleapis');
 const router = express.Router();
 
@@ -53,6 +54,58 @@ function classifyEvent(title) {
     callType: isSecond ? 'second' : 'discovery',
     company
   };
+}
+
+/**
+ * Cross-reference a prospect email against Instantly leads.
+ * Returns { campaignId, campaignName } if the email exists in any Instantly campaign,
+ * otherwise null. Errors are swallowed — attribution is best-effort.
+ */
+async function lookupInstantlyLead(email) {
+  if (!email || !process.env.INSTANTLY_API_KEY) return null;
+  try {
+    const r = await axios.post('https://api.instantly.ai/api/v2/leads/list', {
+      search: email,
+      limit: 1
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.INSTANTLY_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 6000
+    });
+    const items = r.data?.items || (Array.isArray(r.data) ? r.data : []);
+    if (!items.length) return null;
+    const lead = items[0];
+    return {
+      campaignId: lead.campaign || lead.campaign_id || null,
+      campaignName: lead.campaign_name || null
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Memoize campaign name lookups so we only hit Instantly once per campaign per request.
+ */
+let _campaignNameCache = null;
+async function getInstantlyCampaignName(campaignId) {
+  if (!campaignId || !process.env.INSTANTLY_API_KEY) return null;
+  if (_campaignNameCache && _campaignNameCache.has(campaignId)) return _campaignNameCache.get(campaignId);
+  if (!_campaignNameCache) _campaignNameCache = new Map();
+  try {
+    const r = await axios.get(`https://api.instantly.ai/api/v2/campaigns/${campaignId}`, {
+      headers: { 'Authorization': `Bearer ${process.env.INSTANTLY_API_KEY}` },
+      timeout: 4000
+    });
+    const name = r.data?.name || r.data?.campaign_name || null;
+    _campaignNameCache.set(campaignId, name);
+    return name;
+  } catch (e) {
+    _campaignNameCache.set(campaignId, null);
+    return null;
+  }
 }
 
 function pickProspectFromAttendees(attendees, fallbackCompany) {
@@ -140,12 +193,27 @@ router.get('/sync-meetings', async (req, res) => {
       });
     }
 
+    // Attribute each meeting to its outbound source by cross-referencing
+    // the prospect email against Instantly leads. Best-effort; never blocks.
+    if (process.env.INSTANTLY_API_KEY) {
+      _campaignNameCache = new Map();
+      await Promise.all(meetings.map(async (m) => {
+        if (!m.prospectEmail) return;
+        const hit = await lookupInstantlyLead(m.prospectEmail);
+        if (!hit) return;
+        const name = hit.campaignName || await getInstantlyCampaignName(hit.campaignId);
+        m.sourceChannel = 'Cold Email';
+        m.sourceAccount = 'Instantly — ' + (name || ('Campaign ' + (hit.campaignId || '?')));
+      }));
+    }
+
     res.json({
       from: from.toISOString().slice(0, 10),
       to: to.toISOString().slice(0, 10),
       calendarId,
       eventsScanned: events.length,
       meetingsMatched: meetings.length,
+      attributed: meetings.filter(m => m.sourceChannel).length,
       items: meetings
     });
   } catch (e) {
