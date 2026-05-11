@@ -57,33 +57,35 @@ function classifyEvent(title) {
 }
 
 /**
- * Cross-reference a prospect email against Instantly leads.
- * Returns { campaignId, campaignName } if the email exists in any Instantly campaign,
- * otherwise null. Errors are swallowed — attribution is best-effort.
+ * Cross-reference a batch of prospect emails against Instantly leads in one call.
+ * `contacts` in Instantly v2 takes an array of exact-match emails (search only
+ * matches names/companies). Returns Map<lowercase-email, {campaignId}>.
+ * Errors swallowed — attribution is best-effort.
  */
-async function lookupInstantlyLead(email) {
-  if (!email || !process.env.INSTANTLY_API_KEY) return null;
+async function batchLookupInstantlyLeads(emails) {
+  const out = new Map();
+  const list = (emails || []).filter(Boolean);
+  if (!list.length || !process.env.INSTANTLY_API_KEY) return out;
   try {
     const r = await axios.post('https://api.instantly.ai/api/v2/leads/list', {
-      search: email,
-      limit: 1
+      contacts: list,
+      limit: Math.max(list.length * 2, 100)
     }, {
       headers: {
         'Authorization': `Bearer ${process.env.INSTANTLY_API_KEY}`,
         'Content-Type': 'application/json'
       },
-      timeout: 6000
+      timeout: 8000
     });
     const items = r.data?.items || (Array.isArray(r.data) ? r.data : []);
-    if (!items.length) return null;
-    const lead = items[0];
-    return {
-      campaignId: lead.campaign || lead.campaign_id || null,
-      campaignName: lead.campaign_name || null
-    };
-  } catch (e) {
-    return null;
-  }
+    for (const lead of items) {
+      if (!lead.email) continue;
+      out.set(lead.email.toLowerCase(), {
+        campaignId: lead.campaign || lead.campaign_id || null
+      });
+    }
+  } catch (e) { /* swallow */ }
+  return out;
 }
 
 /**
@@ -194,17 +196,24 @@ router.get('/sync-meetings', async (req, res) => {
     }
 
     // Attribute each meeting to its outbound source by cross-referencing
-    // the prospect email against Instantly leads. Best-effort; never blocks.
+    // prospect emails against Instantly leads in one batched call.
     if (process.env.INSTANTLY_API_KEY) {
       _campaignNameCache = new Map();
-      await Promise.all(meetings.map(async (m) => {
-        if (!m.prospectEmail) return;
-        const hit = await lookupInstantlyLead(m.prospectEmail);
-        if (!hit) return;
-        const name = hit.campaignName || await getInstantlyCampaignName(hit.campaignId);
+      const emails = meetings.map(m => (m.prospectEmail || '').toLowerCase()).filter(Boolean);
+      const leadMap = await batchLookupInstantlyLeads(emails);
+
+      // Resolve campaign names for all unique campaigns we hit
+      const uniqueCampaigns = [...new Set([...leadMap.values()].map(v => v.campaignId).filter(Boolean))];
+      await Promise.all(uniqueCampaigns.map(id => getInstantlyCampaignName(id)));
+
+      for (const m of meetings) {
+        if (!m.prospectEmail) continue;
+        const hit = leadMap.get(m.prospectEmail.toLowerCase());
+        if (!hit) continue;
+        const name = _campaignNameCache.get(hit.campaignId);
         m.sourceChannel = 'Cold Email';
-        m.sourceAccount = 'Instantly — ' + (name || ('Campaign ' + (hit.campaignId || '?')));
-      }));
+        m.sourceAccount = 'Instantly — ' + (name || ('Campaign ' + (hit.campaignId || '?').slice(0, 8)));
+      }
     }
 
     res.json({
