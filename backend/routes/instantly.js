@@ -52,4 +52,25 @@ router.get('/daily-stats', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/instantly/campaigns
+ * Returns a lean list of campaigns for the tracker's Source dropdown.
+ */
+router.get('/campaigns', async (req, res) => {
+  try {
+    const r = await axios.get(`${INSTANTLY_BASE}/campaigns`, {
+      params: { limit: 100 },
+      headers: authHeader()
+    });
+    const arr = Array.isArray(r.data) ? r.data : (r.data?.items || r.data?.campaigns || []);
+    const items = arr.map(c => ({
+      id: c.id || c.campaign_id,
+      name: c.name || c.campaign_name || ('Campaign ' + (c.id || '?'))
+    }));
+    res.json({ totalCount: items.length, items });
+  } catch (e) {
+    res.status(500).json({ error: e.message, status: e.response?.status, body: e.response?.data });
+  }
+});
+
 module.exports = router;
