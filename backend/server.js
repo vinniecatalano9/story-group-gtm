@@ -576,6 +576,28 @@ app.post('/api/trigger/daily-metrics', async (req, res) => {
   }
 });
 
+// Morning GTM Brief — fire to Slack on demand
+app.post('/api/trigger/brief', async (req, res) => {
+  try {
+    const { runBrief } = require('./cron/brief');
+    const r = await runBrief({ send: true });
+    res.json({ success: true, boardCount: r.boardCount });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Preview the brief WITHOUT sending to Slack (safe to spam while testing)
+app.get('/api/trigger/brief/preview', async (req, res) => {
+  try {
+    const { runBrief } = require('./cron/brief');
+    const r = await runBrief({ send: false });
+    res.json({ success: true, ...r });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Daily metrics history (last N days)
 app.get('/api/dashboard/daily-metrics', async (req, res) => {
   try {
@@ -623,6 +645,13 @@ cron.schedule('59 23 * * *', async () => {
   const { runDailyMetrics } = require('./cron/daily-metrics');
   await runDailyMetrics();
 }, { timezone: 'America/New_York' });
+
+// Morning GTM Brief: every day 7am CT
+cron.schedule('0 7 * * *', async () => {
+  console.log('[cron] Running morning brief...');
+  const { runBrief } = require('./cron/brief');
+  await runBrief({ send: true });
+}, { timezone: 'America/Chicago' });
 
 // Auto-deploy: pull + rebuild backend + rebuild frontend + firebase deploy
 // Triggered by GitHub webhook or manual POST
