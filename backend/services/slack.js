@@ -1,21 +1,9 @@
 const SLACK_WEBHOOK = process.env.SLACK_WEBHOOK_URL;
 
+// Slack delivery disabled per Vincent — all GTM output lives on the Command tab.
+// Kept as a no-op so existing callers (brief, reply alerts, dashboard) don't error.
 async function notify(text, blocks = null) {
-  if (!SLACK_WEBHOOK) {
-    console.log('[slack] No webhook configured, skipping:', text);
-    return;
-  }
-  try {
-    const body = blocks ? { text, blocks } : { text };
-    const res = await fetch(SLACK_WEBHOOK, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) console.error('[slack] Error:', res.status, await res.text());
-  } catch (e) {
-    console.error('[slack] Failed to send:', e.message);
-  }
+  return;
 }
 
 async function notifyNewReply({ email, company, classification, sentiment, summary, draftResponse, pastReplies = [] }) {
