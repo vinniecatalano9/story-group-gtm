@@ -10,7 +10,6 @@
 
 const axios = require('axios');
 const { db } = require('../services/db');
-const slack = require('../services/slack');
 const { claudeJSON } = require('../services/claude');
 
 const HR_BASE = 'https://api.heyreach.io/api/public';
@@ -133,15 +132,7 @@ async function runInsights({ send = true } = {}) {
   await db.collection('insights').doc(docId).set(result);
   console.log(`[insights] Saved insights ${docId} (${responders.length} responders)`);
 
-  if (send) {
-    const noticing = (result.noticing || []).slice(0, 5).map(n => `• ${n}`).join('\n');
-    const shift = result.icp?.shift || '';
-    const chase = (result.chase || []).slice(0, 4).map(c => `• ${c}`).join('\n');
-    await slack.notify(
-      `*🧠 Weekly GTM Insights — ${docId}*  _(${responders.length} responders analyzed)_\n\n*What I'm noticing:*\n${noticing}\n\n*ICP shift:* ${shift}${chase ? `\n\n*Chase now:*\n${chase}` : ''}`
-    );
-    console.log('[insights] Posted to Slack');
-  }
+  console.log('[insights] Stored — surfaced on the Command tab (no Slack)');
   return result;
 }
 
