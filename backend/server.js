@@ -608,6 +608,28 @@ app.get('/api/command', async (req, res) => {
   }
 });
 
+// Weekly Insights — LLM "what I'm noticing" + self-updating ICP (manual trigger)
+app.post('/api/trigger/insights', async (req, res) => {
+  try {
+    const { runInsights } = require('./cron/insights');
+    const r = await runInsights({ send: true });
+    res.json({ success: true, date: r.date, noticing: r.noticing, icp: r.icp });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Latest insights for the Command tab
+app.get('/api/insights', async (req, res) => {
+  try {
+    const { db } = require('./services/db');
+    const snap = await db.collection('insights').orderBy('created_at', 'desc').limit(1).get();
+    res.json({ success: true, insights: snap.empty ? null : snap.docs[0].data() });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Daily metrics history (last N days)
 app.get('/api/dashboard/daily-metrics', async (req, res) => {
   try {
@@ -661,6 +683,13 @@ cron.schedule('0 7 * * *', async () => {
   console.log('[cron] Running morning brief...');
   const { runBrief } = require('./cron/brief');
   await runBrief({ send: true });
+}, { timezone: 'America/Chicago' });
+
+// Weekly GTM Insights: Monday 7:30am CT
+cron.schedule('30 7 * * 1', async () => {
+  console.log('[cron] Running weekly insights...');
+  const { runInsights } = require('./cron/insights');
+  await runInsights({ send: true });
 }, { timezone: 'America/Chicago' });
 
 // Auto-deploy: pull + rebuild backend + rebuild frontend + firebase deploy

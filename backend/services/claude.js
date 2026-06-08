@@ -14,9 +14,10 @@ function claudePrompt(prompt, { maxTokens = 4096, timeout = 120000 } = {}) {
       { timeout, maxBuffer: 1024 * 1024, env: { ...process.env, HOME: '/root' } },
       (error, stdout, stderr) => {
         if (error) {
-          console.error('[claude] Error:', error.message);
-          if (stderr) console.error('[claude] Stderr:', stderr);
-          return reject(new Error(`Claude CLI failed: ${error.message}`));
+          console.error('[claude] Error:', error.message, '| killed:', error.killed, '| signal:', error.signal, '| code:', error.code);
+          if (stderr) console.error('[claude] Stderr:', String(stderr).slice(0, 500));
+          if (stdout) console.error('[claude] Stdout(partial):', String(stdout).slice(0, 300));
+          return reject(new Error(`Claude CLI failed: ${error.message}${error.killed ? ' (killed/timeout)' : ''}`));
         }
         resolve(stdout.trim());
       }
