@@ -87,12 +87,16 @@ async function getBoard() {
       if (seen.has(key)) return;
       seen.add(key);
       board.push({
+        id: doc.id,
         name: d.full_name || d.lead_name || d.email || 'Unknown',
         company: d.company_name || '',
         channel: d.source || '',
         classification: d.classification,
-        reply: (d.reply_text || d.summary || '').replace(/\s+/g, ' ').trim().slice(0, 160),
+        reply: (d.reply_text || d.summary || '').replace(/\s+/g, ' ').trim().slice(0, 220),
+        draft: d.draft_response || '',
         hasDraft: !!d.draft_response,
+        email_uuid: d.email_uuid || null,
+        eaccount: d.eaccount || null,
       });
     });
     return board;

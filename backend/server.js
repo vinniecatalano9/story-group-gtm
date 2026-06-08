@@ -630,6 +630,27 @@ app.get('/api/insights', async (req, res) => {
   }
 });
 
+// Brains (Claude auth) status for the Command status dot
+app.get('/api/brains', async (req, res) => {
+  try {
+    const { db } = require('./services/db');
+    const doc = await db.collection('system').doc('brains').get();
+    res.json({ success: true, status: doc.exists ? doc.data() : null });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/trigger/healthcheck', async (req, res) => {
+  try {
+    const { checkBrains } = require('./cron/healthcheck');
+    const status = await checkBrains();
+    res.json({ success: true, status });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Daily metrics history (last N days)
 app.get('/api/dashboard/daily-metrics', async (req, res) => {
   try {
@@ -690,6 +711,13 @@ cron.schedule('30 7 * * 1', async () => {
   console.log('[cron] Running weekly insights...');
   const { runInsights } = require('./cron/insights');
   await runInsights({ send: true });
+}, { timezone: 'America/Chicago' });
+
+// Brains health check: every 6 hours
+cron.schedule('0 */6 * * *', async () => {
+  console.log('[cron] Brains health check...');
+  const { checkBrains } = require('./cron/healthcheck');
+  await checkBrains();
 }, { timezone: 'America/Chicago' });
 
 // Auto-deploy: pull + rebuild backend + rebuild frontend + firebase deploy
