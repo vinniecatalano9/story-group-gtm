@@ -1,4 +1,5 @@
 const express = require('express');
+const { classifyReply } = require('../services/replyClassifier');
 const axios = require('axios');
 const router = express.Router();
 
@@ -104,15 +105,17 @@ router.get('/stats', async (req, res) => {
     const r = await axios.post(`${HEYREACH_BASE}/stats/GetOverallStats`, body, { headers: headers() });
     const data = r.data || {};
 
+    const stats = data.overallStats || data;
+    const totalReplies = (stats.totalMessageReplies || 0) + (stats.totalInmailReplies || 0);
+    const positive = stats.autoTaggedInterested || 0;
     const summary = {
-      requestsSent:     data.totalSentConnections      || data.connectionRequestsSent || 0,
-      requestsAccepted: data.totalAcceptedConnections  || data.connectionsAccepted   || 0,
-      inmailsSent:      data.totalInMailsSent          || data.inMailsSent           || 0,
-      positiveReplies:  data.totalPositiveReplies      || data.positiveReplies       || 0,
-      normalReplies:    (data.totalReplies || data.replies || 0) - (data.totalPositiveReplies || data.positiveReplies || 0),
-      meetingsBooked:   data.totalMeetingsBooked       || data.meetingsBooked        || 0
+      requestsSent:     stats.connectionsSent       || 0,
+      requestsAccepted: stats.connectionsAccepted   || 0,
+      inmailsSent:      stats.inmailMessagesSent    || 0,
+      positiveReplies:  positive,
+      normalReplies:    Math.max(0, totalReplies - positive),
+      meetingsBooked:   stats.totalMeetingsBooked   || 0
     };
-    if (summary.normalReplies < 0) summary.normalReplies = 0;
 
     res.json({ from, to, accountIds, campaignIds, summary, raw: data });
   } catch (e) {
@@ -146,16 +149,19 @@ router.get('/stats/per-account', async (req, res) => {
           accountIds: [acc.id], campaignIds, startDate: from, endDate: to
         }, { headers: headers() });
         const d = r.data || {};
+        const s = d.overallStats || d;
+        const totalReplies = (s.totalMessageReplies || 0) + (s.totalInmailReplies || 0);
+        const positive = s.autoTaggedInterested || 0;
         return {
           id: acc.id,
           fullName: [acc.firstName, acc.lastName].filter(Boolean).join(' '),
           summary: {
-            requestsSent:     d.totalSentConnections      || d.connectionRequestsSent || 0,
-            requestsAccepted: d.totalAcceptedConnections  || d.connectionsAccepted   || 0,
-            inmailsSent:      d.totalInMailsSent          || d.inMailsSent           || 0,
-            positiveReplies:  d.totalPositiveReplies      || d.positiveReplies       || 0,
-            normalReplies:    Math.max(0, (d.totalReplies || d.replies || 0) - (d.totalPositiveReplies || d.positiveReplies || 0)),
-            meetingsBooked:   d.totalMeetingsBooked       || d.meetingsBooked        || 0
+            requestsSent:     s.connectionsSent       || 0,
+            requestsAccepted: s.connectionsAccepted   || 0,
+            inmailsSent:      s.inmailMessagesSent    || 0,
+            positiveReplies:  positive,
+            normalReplies:    Math.max(0, totalReplies - positive),
+            meetingsBooked:   s.totalMeetingsBooked   || 0
           }
         };
       } catch (e) {
@@ -166,6 +172,188 @@ router.get('/stats/per-account', async (req, res) => {
     res.json({ from, to, items });
   } catch (e) {
     res.status(500).json({ error: e.message, status: e.response?.status, body: e.response?.data });
+  }
+});
+
+/**
+ * POST /api/heyreach/campaign/:id/push
+ * Push an array of leads to an existing Heyreach campaign.
+ * Body: { leads: [{ linkedinUrl, firstName, lastName, company, position, location }] }
+ * Optional body field: linkedInAccountId (number) — if specified, all leads
+ *   are assigned to that sender account.
+ */
+router.post('/campaign/:id/push', express.json({ limit: '10mb' }), async (req, res) => {
+  try {
+    const campaignId = Number(req.params.id);
+    if (!campaignId) return res.status(400).json({ error: 'campaignId required' });
+
+    const leads = Array.isArray(req.body?.leads) ? req.body.leads : null;
+    if (!leads || !leads.length) return res.status(400).json({ error: 'leads array required' });
+
+    const accountId = req.body?.linkedInAccountId ? Number(req.body.linkedInAccountId) : null;
+
+    // Heyreach API takes leads in batches of up to 100.
+    const BATCH = 100;
+    let added = 0;
+    let skipped = 0;
+    const errors = [];
+
+    for (let i = 0; i < leads.length; i += BATCH) {
+      const batch = leads.slice(i, i + BATCH);
+      const accountLeadPairs = batch
+        .filter(l => l && l.linkedinUrl)
+        .map(l => ({
+          leadDto: {
+            firstName: l.firstName || '',
+            lastName: l.lastName || '',
+            profileUrl: l.linkedinUrl,
+            location: l.location || '',
+            summary: l.headline || '',
+            companyName: l.company || '',
+            position: l.position || l.title || ''
+          },
+          linkedInAccountId: accountId
+        }));
+
+      if (!accountLeadPairs.length) {
+        skipped += batch.length;
+        continue;
+      }
+
+      try {
+        const r = await axios.post(
+          `${HEYREACH_BASE}/campaign/AddLeadsToCampaignV2`,
+          { campaignId, accountLeadPairs },
+          { headers: headers() }
+        );
+        added += accountLeadPairs.length;
+      } catch (e) {
+        errors.push({
+          batchStart: i,
+          batchSize: accountLeadPairs.length,
+          status: e.response?.status,
+          message: e.response?.data?.detail || e.response?.data?.error || e.message
+        });
+        skipped += accountLeadPairs.length;
+      }
+    }
+
+    res.json({
+      ok: errors.length === 0,
+      campaignId,
+      totalLeads: leads.length,
+      added,
+      skipped,
+      errors
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message, status: e.response?.status, body: e.response?.data });
+  }
+});
+
+
+
+/**
+ * POST /api/heyreach/webhook
+ *
+ * Heyreach posts here on every Message/InMail reply received.
+ * We accept the payload defensively (field names vary by Heyreach release),
+ * normalize the important fields, and write a row to the replies collection
+ * with source='heyreach' so the LinkedIn Replies page picks it up.
+ *
+ * Configured in Heyreach: Settings -> Webhooks -> Every Message/InMail Reply Received.
+ */
+router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
+  try {
+    const payload = req.body || {};
+
+    // Heyreach sends nested data. Try common field shapes:
+    const evt = payload.data || payload.event || payload.payload || payload;
+
+    const lead = evt.lead || evt.contact || evt.prospect || evt.linkedInLead || {};
+    const account = evt.account || evt.linkedInAccount || evt.sender || {};
+    const message = evt.message || evt.reply || evt;
+
+    const firstName = lead.firstName || lead.first_name || (lead.name || '').split(' ')[0] || '';
+    const lastName  = lead.lastName  || lead.last_name  || (lead.name || '').split(' ').slice(1).join(' ') || '';
+    const fullName  = [firstName, lastName].filter(Boolean).join(' ') || lead.fullName || lead.full_name || lead.name || '';
+    const profileUrl = lead.profileUrl || lead.linkedin_url || lead.linkedinUrl || lead.profile_url || '';
+    const companyName = lead.companyName || lead.company_name || lead.company || '';
+
+    const replyText = message.text || message.body || message.content || message.message || message.reply || message.replyText || '';
+    const messageDate = message.timestamp || message.sentAt || message.createdAt || message.created_at || new Date().toISOString();
+
+    const accountName = [account.firstName, account.lastName].filter(Boolean).join(' ') || account.fullName || account.name || '';
+    const accountId = account.id || account.accountId || null;
+    const campaignId = evt.campaignId || evt.campaign_id || (evt.campaign && evt.campaign.id) || null;
+    const campaignName = (evt.campaign && (evt.campaign.name || evt.campaign.campaignName)) || evt.campaignName || '';
+
+    // Skip if this is our own outbound (direction=outgoing) — only ingest INCOMING replies
+    const direction = (message.direction || evt.direction || '').toLowerCase();
+    if (direction && direction !== 'incoming' && direction !== 'inbound' && direction !== 'received') {
+      return res.json({ ok: true, ignored: 'outbound message' });
+    }
+
+    if (!replyText && !profileUrl) {
+      console.warn('[heyreach webhook] Empty payload — saving nothing. Body:', JSON.stringify(payload).slice(0, 500));
+      return res.json({ ok: true, ignored: 'empty' });
+    }
+
+    // Save to Firestore via the same db.addReply path the Instantly handler uses.
+    const { db } = require('../services/db');
+    const replyDoc = {
+      source: 'heyreach',
+      email: null,
+      lead_id: null,
+      first_name: firstName,
+      last_name: lastName,
+      full_name: fullName,
+      lead_name: fullName,
+      profile_url: profileUrl,
+      company_name: companyName,
+      reply_text: replyText,
+      message_date: messageDate,
+      heyreach_account_id: accountId,
+      heyreach_account_name: accountName,
+      heyreach_campaign_id: campaignId,
+      heyreach_campaign_name: campaignName,
+      raw_payload: payload,
+      handled: false,
+      classification: 'other',          // default until classifier runs
+      created_at: new Date(),
+    };
+    const ref = await db.collection('replies').add(replyDoc);
+    console.log(`[heyreach webhook] Saved reply ${ref.id} from ${fullName || profileUrl}`);
+
+    // Fire-and-forget classify-and-draft using the shared playbook
+    (async () => {
+      try {
+        const cls = await classifyReply({
+          channel: 'linkedin',
+          email: null,
+          company: companyName,
+          replyText,
+          firstName,
+          slots: null,
+        });
+        await ref.update({
+          classification: cls.classification || 'other',
+          sentiment: cls.sentiment || 'neutral',
+          summary: cls.summary || '',
+          suggested_macro: cls.suggested_macro || 'NONE',
+          suggested_action: cls.suggested_action || '',
+          draft_response: cls.draft_response || '',
+        });
+        console.log(`[heyreach webhook] Classified ${ref.id} as ${cls.classification}`);
+      } catch (e) {
+        console.error(`[heyreach webhook] Classify failed for ${ref.id}:`, e.message);
+      }
+    })();
+
+    res.json({ ok: true, id: ref.id });
+  } catch (e) {
+    console.error('[heyreach webhook] Error:', e.message);
+    res.status(500).json({ error: e.message });
   }
 });
 

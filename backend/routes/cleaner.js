@@ -41,7 +41,7 @@ function parseMultipart(req, res, next) {
     busboy.end(req.rawBody);
   } else {
     // Local dev — use multer
-    parseMultipart(req, res, next);
+    upload.single('file')(req, res, next);
   }
 }
 

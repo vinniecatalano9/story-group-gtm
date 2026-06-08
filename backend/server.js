@@ -160,11 +160,15 @@ app.get('/api/replies', async (req, res) => {
       classification: classification || undefined,
       limit: parseInt(limit) || 100,
     });
-    // Filter by source (email vs ulinc)
+    // Filter by source. Recognize: ulinc, heyreach, linkedin (= ulinc+heyreach), email (= instantly).
     if (source === 'ulinc') {
       replies = replies.filter(r => r.source === 'ulinc');
-    } else if (source === 'email') {
-      replies = replies.filter(r => r.source !== 'ulinc');
+    } else if (source === 'heyreach') {
+      replies = replies.filter(r => r.source === 'heyreach');
+    } else if (source === 'linkedin') {
+      replies = replies.filter(r => r.source === 'ulinc' || r.source === 'heyreach');
+    } else if (source === 'email' || source === 'instantly') {
+      replies = replies.filter(r => r.source === 'instantly');
     }
     // Filter by Ulinc status
     if (ulinc_status) {

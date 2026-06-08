@@ -1,5 +1,6 @@
 const { Router } = require('express');
 const { claudeJSON } = require('../services/claude');
+const { classifyReply } = require('../services/replyClassifier');
 const { getLeadByEmail, updateLead, addReply, getRepliesByEmail, addLog } = require('../services/db');
 const { removeLeads } = require('../services/instantly');
 const { syncLead } = require('../services/hubspot');
@@ -125,24 +126,15 @@ router.post('/', async (req, res) => {
       console.warn('[reply] Calendar fetch failed:', e.message);
     }
 
-    // Classify with Claude
-    let classification;
-    try {
-      classification = await claudeJSON(
-        CLASSIFY_PROMPT(email, company_name || lead?.company_name, reply_text, first_name || lead?.first_name, slots),
-        { timeout: 120000 }
-      );
-    } catch (e) {
-      console.error('[reply] Classification failed:', e.message);
-      classification = {
-        classification: 'other',
-        sentiment: 'neutral',
-        summary: 'Classification failed',
-        suggested_macro: 'NONE',
-        suggested_action: 'Review manually',
-        draft_response: '',
-      };
-    }
+    // Classify + draft with Claude using the unified Reply & Follow-Up Playbook
+    const classification = await classifyReply({
+      channel: 'email',
+      email,
+      company: company_name || lead?.company_name,
+      replyText: reply_text,
+      firstName: first_name || lead?.first_name,
+      slots,
+    });
 
     // Store reply (include Instantly email UUID + sending account for reply-back)
     const replyId = await addReply({
