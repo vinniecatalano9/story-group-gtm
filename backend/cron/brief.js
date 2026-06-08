@@ -132,8 +132,13 @@ function chLabel(src) {
   return src || '?';
 }
 
-async function runBrief({ send = true } = {}) {
+async function gatherData() {
   const [li, email, board, mix] = await Promise.all([linkedinWeek(), emailOverview(), getBoard(), classMix7d()]);
+  return { board, li, email, mix };
+}
+
+async function runBrief({ send = true } = {}) {
+  const { board, li, email, mix } = await gatherData();
 
   const pricingObjections = (mix.cost_question || 0) + (mix.cost_question_repeat || 0) + (mix.guarantee || 0);
 
@@ -168,4 +173,4 @@ async function runBrief({ send = true } = {}) {
   return { text, boardCount: board.length, li, email, mix };
 }
 
-module.exports = { runBrief };
+module.exports = { runBrief, gatherData };

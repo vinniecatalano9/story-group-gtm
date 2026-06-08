@@ -598,6 +598,16 @@ app.get('/api/trigger/brief/preview', async (req, res) => {
   }
 });
 
+// Command dashboard data — structured board + funnel for the frontend
+app.get('/api/command', async (req, res) => {
+  try {
+    const { gatherData } = require('./cron/brief');
+    res.json(await gatherData());
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Daily metrics history (last N days)
 app.get('/api/dashboard/daily-metrics', async (req, res) => {
   try {
