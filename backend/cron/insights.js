@@ -11,6 +11,7 @@
 const axios = require('axios');
 const { db } = require('../services/db');
 const { claudeJSON } = require('../services/claude');
+const { isMediaOutreach } = require('../lib/mediaFilter');
 
 const HR_BASE = 'https://api.heyreach.io/api/public';
 function hrHeaders() {
@@ -31,6 +32,7 @@ async function gatherResponders() {
       const items = r.data?.items || [];
       for (const c of items) {
         const p = c.correspondentProfile || {};
+        if (isMediaOutreach({ headline: p.headline, company: p.companyName })) continue; // journalist, not a prospect
         const tags = (p.autoTags || []).map(t => t.name).filter(Boolean);
         out.push({
           ch: 'LI',
@@ -52,6 +54,7 @@ async function gatherResponders() {
     snap.forEach(doc => {
       const x = doc.data();
       if (x.source !== 'instantly' && x.source !== 'email') return;
+      if (isMediaOutreach({ email: x.email, company: x.company_name })) return; // Lydia's reporter pitches
       out.push({
         ch: 'EM',
         awaiting: x.handled !== true,

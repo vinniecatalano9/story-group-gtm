@@ -12,6 +12,7 @@
 const axios = require('axios');
 const { db } = require('../services/db');
 const slack = require('../services/slack');
+const { isMediaOutreach } = require('../lib/mediaFilter');
 
 const HR_BASE = 'https://api.heyreach.io/api/public';
 const INST_BASE = 'https://api.instantly.ai/api/v2';
@@ -83,6 +84,7 @@ async function getBoard() {
       const d = doc.data();
       if (d.handled === true) return;
       if (!WINNABLE.includes(d.classification)) return;
+      if (isMediaOutreach({ email: d.email, company: d.company_name })) return; // Lydia's reporter pitches — not sales
       const key = d.profile_url || d.email || d.full_name || doc.id;
       if (seen.has(key)) return;
       seen.add(key);
