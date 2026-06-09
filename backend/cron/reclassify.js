@@ -18,6 +18,7 @@ async function reclassifyBacklog({ limit = 25 } = {}) {
     if (isMediaOutreach({ email: d.email, company: d.company_name })) return;
     const reply = (d.reply_text || '').trim();
     if (reply.length < 4) return; // nothing to classify (empty webhook capture)
+    if (d.reclassified_at) return; // already upgraded to v3 — let batches advance
     candidates.push({ id: doc.id, d });
   });
 
