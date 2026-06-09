@@ -10,7 +10,7 @@ const SUFFIXES = [
   'professional\\s+association',
   'incorporated', 'corporation',
   'limited\\s+partnership', 'limited',
-  'general\\s+partnership', 'company',
+  'general\\s+partnership',
   'p\\.?\\s*l\\.?\\s*l\\.?\\s*c\\.?', 'l\\.?\\s*l\\.?\\s*c\\.?', 'l\\.?\\s*l\\.?\\s*p\\.?',
   'l\\.?\\s*p\\.?\\s*a\\.?',  // L.P.A. / L. P. A.
   'l\\.?\\s*p\\.?',
@@ -79,7 +79,7 @@ function fixEncoding(str) {
 // Title case: "VOGL MEREDITH" → "Vogl Meredith"
 // Keeps short words lowercase, preserves & and common abbreviations
 const SMALL_WORDS = new Set(['and', 'of', 'the', 'for', 'in', 'at', 'by', 'to', 'on', 'or']);
-const KEEP_UPPER = new Set(['LLP', 'PC', 'PA', 'SC', 'APC', 'PLC', 'PLLC', 'II', 'III', 'IV']);
+const KEEP_UPPER = new Set(['LLP', 'PC', 'PA', 'SC', 'APC', 'PLC', 'PLLC', 'II', 'III', 'IV', 'AI', 'IT', 'HR', 'VP', 'US', 'UK', 'EU']);
 
 function smartTitleCase(str) {
   // Only convert if mostly uppercase (>60% caps)
@@ -91,6 +91,8 @@ function smartTitleCase(str) {
     if (word.trim() === '&' || word.trim() === '') return word;
     const upper = word.toUpperCase();
     if (KEEP_UPPER.has(upper)) return upper;
+    // Preserve any short all-caps word (≤4 chars) as likely acronym: PMT, DSS, UMC, IND, etc.
+    if (word.length <= 4 && word === upper && /^[A-Z]+$/.test(word)) return word;
     const lower = word.toLowerCase();
     if (i > 0 && SMALL_WORDS.has(lower)) return lower;
     return lower.charAt(0).toUpperCase() + lower.slice(1);
@@ -126,20 +128,22 @@ function cleanCompanyName(name) {
     // Keep everything else (actual name parts like "Morris - Sockle")
     return match;
   }).trim();
-  // Strip junk after Inc./Corp./LLC mid-name: "TASA Group, Inc., A Futuris..." → "TASA Group"
-  c = c.replace(/,?\s+Inc\.?,?\s+.+$/i, '').trim();
-  c = c.replace(/,?\s+Corp\.?,?\s+.+$/i, '').trim();
-  c = c.replace(/,?\s+LLC,?\s+.+$/i, '').trim();
-  // Strip parenthetical content: "(PILI)", "(MCLENew England)", "(formerly ...)"
-  c = c.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
+  // Strip junk ONLY after "Inc./Corp./LLC + comma + more text": "TASA Group, Inc., A Futuris..." → "TASA Group, Inc."
+  // Don't strip Inc/Corp/LLC itself here — let suffix removal handle that
+  c = c.replace(/,?\s+(Inc\.?|Corp\.?|LLC),\s+.+$/i, ', $1').trim();
+  // Strip parenthetical content ONLY for known non-name patterns: "(formerly ...)", "(fka ...)", "(dba ...)"
+  c = c.replace(/\s*\((?:formerly|fka|dba|f\/k\/a|d\/b\/a|now)\s+[^)]*\)\s*/gi, ' ').trim();
   // Strip parenthetical suffixes (legal entity types in parens)
   c = c.replace(PAREN_RE, ' ').trim();
   // Strip post-suffix descriptors BEFORE suffix removal: "LLC Attorneys at Law" → "LLC" → ""
   c = c.replace(POST_SUFFIX_JUNK, '').trim();
   // Strip trailing legal suffixes (run multiple passes for stacked suffixes)
+  // Guard: don't strip if it would leave fewer than 2 characters
   for (let i = 0; i < 4; i++) {
     const prev = c;
-    c = c.replace(SUFFIX_RE, '');
+    const candidate = c.replace(SUFFIX_RE, '').replace(/[\s,.\-|/]+$/, '').trim();
+    if (candidate.length < 2) break; // would destroy the name
+    c = candidate;
     if (c === prev) break;
   }
   // Clean trailing junk
@@ -152,36 +156,57 @@ function cleanCompanyName(name) {
 // ── CSV Parser (browser) ────────────────────────────────────────────────────
 
 function parseCSVText(text) {
-  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(l => l.trim());
-  if (lines.length < 2) return { headers: [], rows: [] };
+  const src = text.replace(/^\uFEFF/, '');
+  if (!src.trim()) return { headers: [], rows: [] };
 
-  // Simple CSV parse handling quoted fields
-  function parseLine(line) {
-    const fields = [];
+  // Full RFC 4180 parser — handles commas, newlines, and escaped quotes inside quoted fields
+  function parseAllRows(input) {
+    const rows = [];
+    let fields = [];
     let field = '';
     let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
+    for (let i = 0; i < input.length; i++) {
+      const ch = input[i];
       if (inQuotes) {
-        if (ch === '"' && line[i + 1] === '"') { field += '"'; i++; }
-        else if (ch === '"') inQuotes = false;
-        else field += ch;
+        if (ch === '"') {
+          if (input[i + 1] === '"') { field += '"'; i++; }
+          else inQuotes = false;
+        } else {
+          field += ch;
+        }
       } else {
-        if (ch === '"') inQuotes = true;
-        else if (ch === ',') { fields.push(field.trim()); field = ''; }
-        else field += ch;
+        if (ch === '"') {
+          inQuotes = true;
+        } else if (ch === ',') {
+          fields.push(field); field = '';
+        } else if (ch === '\r' && input[i + 1] === '\n') {
+          fields.push(field); field = '';
+          rows.push(fields); fields = [];
+          i++; // skip \n
+        } else if (ch === '\n') {
+          fields.push(field); field = '';
+          rows.push(fields); fields = [];
+        } else {
+          field += ch;
+        }
       }
     }
-    fields.push(field.trim());
-    return fields;
+    // Last field / row
+    if (field || fields.length) { fields.push(field); rows.push(fields); }
+    // Drop trailing empty rows
+    while (rows.length && rows[rows.length - 1].every(f => !f.trim())) rows.pop();
+    return rows;
   }
 
-  const headers = parseLine(lines[0]);
+  const allRows = parseAllRows(src);
+  if (allRows.length < 2) return { headers: [], rows: [] };
+
+  const headers = allRows[0].map(h => h.trim());
   const rows = [];
-  for (let i = 1; i < lines.length; i++) {
-    const vals = parseLine(lines[i]);
+  for (let i = 1; i < allRows.length; i++) {
+    const vals = allRows[i];
     const row = {};
-    headers.forEach((h, j) => { row[h] = vals[j] || ''; });
+    headers.forEach((h, j) => { row[h] = (vals[j] || '').trim(); });
     rows.push(row);
   }
   return { headers, rows };
@@ -396,9 +421,180 @@ async function addCleanHistoryEntry(entry, rows) {
   } catch { return null; }
 }
 
+// ── Story Group AI ICP Filter (calls storygroup-api on VPS) ─────────────────
+// Used by the "Verify + Clean + ICP Filter" mode.
+const ICP_API_URL = "https://187-77-19-152.nip.io";
+const ICP_API_KEY = "KaByyC3Q7RL2XugH9WMIinBCc_XoG8D1H3LzBcl3SmE";
+const ICP_VERTICALS = [
+  { value: "healthcare", label: "Healthcare" },
+  { value: "healthcare-ai", label: "Healthcare-AI" },
+  { value: "tech-b2b-b2c", label: "Tech B2B / B2C" },
+  { value: "education", label: "Education" },
+  { value: "frontier-tech", label: "Frontier Tech" },
+  { value: "vc-pe", label: "VC / PE" },
+];
+
+function rowsToCsv(rows) {
+  if (!rows.length) return "";
+  const headers = Object.keys(rows[0]);
+  const escape = (v) => {
+    const s = (v ?? "").toString();
+    return s.includes(",") || s.includes("\"") || s.includes("\n")
+      ? `"${s.replace(/"/g, '""')}"`
+      : s;
+  };
+  return [
+    headers.join(","),
+    ...rows.map(r => headers.map(h => escape(r[h])).join(",")),
+  ].join("\n");
+}
+
+function parseCsv(text) {
+  // Robust enough for our cleaned output (Papa not in scope here)
+  const lines = text.split(/\r?\n/).filter(l => l.length);
+  if (!lines.length) return [];
+  const splitLine = (line) => {
+    const out = [];
+    let cur = "", inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (inQuotes) {
+        if (c === '"' && line[i+1] === '"') { cur += '"'; i++; }
+        else if (c === '"') { inQuotes = false; }
+        else cur += c;
+      } else {
+        if (c === '"') inQuotes = true;
+        else if (c === ',') { out.push(cur); cur = ""; }
+        else cur += c;
+      }
+    }
+    out.push(cur);
+    return out;
+  };
+  const headers = splitLine(lines[0]);
+  return lines.slice(1).map(line => {
+    const vals = splitLine(line);
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = vals[i] || ""; });
+    return obj;
+  });
+}
+
+// Detect & rename loose column names to what the VPS ICP filter expects.
+// Email CSVs may have "About" instead of "Headline", "URL" instead of "Profile URL", etc.
+function normalizeForIcp(rows) {
+  if (!rows.length) return { rows, missing: ["No rows"] };
+
+  const headers = Object.keys(rows[0]);
+  const findCol = (candidates) => {
+    for (const c of candidates) {
+      const found = headers.find(h => h.toLowerCase().trim() === c);
+      if (found) return found;
+    }
+    for (const c of candidates) {
+      const found = headers.find(h => h.toLowerCase().includes(c));
+      if (found) return found;
+    }
+    return null;
+  };
+
+  const headlineCol = findCol(["headline", "about", "bio", "description", "summary", "tagline"]);
+  const urlCol      = findCol(["profile url", "profile_url", "linkedin url", "linkedin_url", "linkedin", "url"]);
+  const titleCol    = findCol(["job title", "job_title", "title", "position", "role"]);
+  const companyCol  = findCol(["company", "company_name", "companyname", "organization", "org", "employer"]);
+  const firstCol    = findCol(["first name", "first_name", "firstname", "first"]);
+  const lastCol     = findCol(["last name", "last_name", "lastname", "last", "surname"]);
+  const fullCol     = findCol(["full name", "full_name", "fullname", "name"]);
+
+  // Need at least: headline-equivalent + company for the AI to qualify
+  const missing = [];
+  if (!headlineCol) missing.push("Headline / About / Bio / Description");
+  if (!companyCol)  missing.push("Company");
+  if (missing.length) return { rows, missing };
+
+  // Build normalized rows with standard column names the VPS skill expects
+  const normalized = rows.map(r => {
+    const fullName = fullCol
+      ? r[fullCol]
+      : [r[firstCol] || "", r[lastCol] || ""].filter(Boolean).join(" ").trim();
+    return {
+      "Profile URL": urlCol ? r[urlCol] : "",
+      "First Name": firstCol ? r[firstCol] : "",
+      "Last Name":  lastCol  ? r[lastCol]  : "",
+      "Full Name":  fullName,
+      "Headline":   r[headlineCol] || "",
+      "Job Title":  titleCol ? r[titleCol] : "",
+      "Company":    r[companyCol] || "",
+      // Preserve email for the final output
+      ...(r.email ? { email: r.email } : {}),
+      ...(r["Email Address"] ? { "Email Address": r["Email Address"] } : {}),
+      ...(r.Email ? { Email: r.Email } : {}),
+    };
+  });
+
+  return { rows: normalized, missing: [], detected: { headlineCol, urlCol, titleCol, companyCol } };
+}
+
+async function runIcpFilter(rows, vertical, onProgress) {
+  // Normalize column names so the VPS skill can read them.
+  const { rows: normalized, missing, detected } = normalizeForIcp(rows);
+  if (missing.length) {
+    throw new Error(`Can't run ICP filter — CSV missing required field(s): ${missing.join(", ")}`);
+  }
+  if (detected) {
+    onProgress(`Mapped: ${detected.headlineCol}→Headline, ${detected.companyCol}→Company${detected.urlCol ? `, ${detected.urlCol}→Profile URL` : ""}${detected.titleCol ? `, ${detected.titleCol}→Job Title` : ""}`, 2);
+  }
+  // Build CSV and POST to storygroup-api
+  const csv = rowsToCsv(normalized);
+  const blob = new Blob([csv], { type: "text/csv" });
+  const file = new File([blob], "input.csv", { type: "text/csv" });
+  const form = new FormData();
+  form.append("csv", file);
+  form.append("vertical", vertical);
+
+  onProgress("Submitting to AI filter...", 0);
+  const submitRes = await fetch(`${ICP_API_URL}/filter`, {
+    method: "POST",
+    headers: { "X-API-Key": ICP_API_KEY },
+    body: form,
+  });
+  if (!submitRes.ok) throw new Error(`ICP submit failed: HTTP ${submitRes.status}`);
+  const { job_id, total_rows } = await submitRes.json();
+  onProgress(`AI reading ${total_rows} headlines... (5-15 min)`, 10);
+
+  // Poll
+  let pct = 10;
+  while (true) {
+    await new Promise(r => setTimeout(r, 15000));
+    const stRes = await fetch(`${ICP_API_URL}/status/${job_id}`, {
+      headers: { "X-API-Key": ICP_API_KEY },
+    });
+    const st = await stRes.json();
+    if (st.status === "done") {
+      onProgress(`Done: ${st.fit_count} fit, ${st.killed_count} killed`, 100);
+      break;
+    }
+    if (st.status === "error") {
+      throw new Error(st.message || "ICP filter failed");
+    }
+    pct = Math.min(95, pct + 4);
+    onProgress(`Job ${job_id} running...`, pct);
+  }
+
+  // Download FIT CSV
+  const fitRes = await fetch(`${ICP_API_URL}/result/${job_id}?key=${encodeURIComponent(ICP_API_KEY)}`);
+  if (!fitRes.ok) throw new Error(`FIT download failed: HTTP ${fitRes.status}`);
+  const fitText = await fitRes.text();
+  const fitRows = parseCsv(fitText);
+  return { jobId: job_id, fitRows };
+}
+
+
 export default function LeadCleaner({ api }) {
   const [file, setFile] = useState(null);
   const [mode, setMode] = useState('names');
+  const [icpVertical, setIcpVertical] = useState('healthcare');
+  const [icpProgress, setIcpProgress] = useState({ note: '', pct: 0, running: false });
   const [status, setStatus] = useState('idle');
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState(null);
@@ -462,21 +658,30 @@ export default function LeadCleaner({ api }) {
               (dlData.rows || []).map(r => (r['Email Address'] || r.email || r.Email || Object.values(r)[0] || '').toLowerCase()).filter(Boolean)
             );
 
+            // Company names to drop — unpersonalizable leads
+            const DROP_COMPANIES = new Set(['stealth', 'stealth mode', 'stealth startup']);
+
             let finalRows, totalBefore, cleaned;
             const saved = parsedDataRef.current;
             if (saved && saved.rows?.length) {
-              // We have the original parsed+cleaned data — filter to valid emails
+              // We have the original parsed+cleaned data — filter to valid emails + drop stealth
               totalBefore = saved.rows.length;
               cleaned = saved.cleaned || 0;
               finalRows = saved.rows.filter(r => {
                 const email = (r[saved.emailCol] || '').toLowerCase();
-                return email && validEmails.has(email);
+                if (!email || !validEmails.has(email)) return false;
+                const company = (r[saved.companyCol] || '').toLowerCase().trim();
+                if (DROP_COMPANIES.has(company)) return false;
+                return true;
               });
             } else {
               // Fallback: page was refreshed, we lost the parsed data — use Clearout's rows directly
               totalBefore = dlData.total_before_filter || dlData.total;
               cleaned = dlData.cleaned || 0;
-              finalRows = dlData.rows || [];
+              finalRows = (dlData.rows || []).filter(r => {
+                const company = (r['Company Name'] || r['company'] || '').toLowerCase().trim();
+                return !DROP_COMPANIES.has(company);
+              });
             }
 
             let masterAdded = 0;
@@ -490,6 +695,34 @@ export default function LeadCleaner({ api }) {
             await addCleanHistoryEntry({ mode: 'verify', fileName: file?.name, total: finalRows.length, valid: finalRows.length, cleaned, masterAdded, totalBeforeFilter: totalBefore }, finalRows);
             setHistory(getCleanHistory());
             setStatus('done');
+
+            // ── If mode === 'icp', chain into the AI ICP filter on the VPS ──
+            if (mode === 'icp' && finalRows.length > 0) {
+              try {
+                setIcpProgress({ note: 'Starting AI ICP filter...', pct: 0, running: true });
+                setStatus('verifying'); // reuse running state for progress
+                const { jobId, fitRows } = await runIcpFilter(
+                  finalRows,
+                  icpVertical,
+                  (note, pct) => setIcpProgress({ note, pct, running: true })
+                );
+                setResult({
+                  total: fitRows.length,
+                  cleaned,
+                  company_column: saved?.companyCol || dlData.company_column,
+                  rows: fitRows,
+                  masterAdded,
+                  icpJobId: jobId,
+                  icpVertical,
+                  preIcpTotal: finalRows.length,
+                });
+                setIcpProgress({ note: `${fitRows.length} fit out of ${finalRows.length}`, pct: 100, running: false });
+                setStatus('done');
+              } catch (icpErr) {
+                setError(`ICP filter step failed: ${icpErr.message}`);
+                setIcpProgress({ note: icpErr.message, pct: 0, running: false });
+              }
+            }
           } catch (e) { setError(e.message); setStatus('error'); }
           localStorage.removeItem('clearout_active_list');
         } else if (['failed', 'error'].includes(state)) {
@@ -649,7 +882,7 @@ export default function LeadCleaner({ api }) {
 
   const handleSubmit = () => {
     if (mode === 'names') cleanNamesOnly();
-    else runFullPipeline();
+    else runFullPipeline(); // both 'full' and 'icp' use the same Clearout pipeline; the chain to ICP happens at the end of the poll
   };
 
   // Download result as CSV
@@ -767,7 +1000,7 @@ export default function LeadCleaner({ api }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-white">Lead Cleaner</h1>
+        <h1 className="text-2xl font-bold text-white">Email Cleaner</h1>
         <div className="flex items-center gap-3">
           <div className="glass-card rounded-xl px-4 py-2 flex items-center gap-3">
             <span className="text-sm text-white/40">Master List:</span>
@@ -825,7 +1058,7 @@ export default function LeadCleaner({ api }) {
             onClick={() => setMode('full')}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
               mode === 'full'
-                ? 'bg-brand-500/20 text-white border border-brand-500/30 shadow-[0_0_12px_rgba(24,86,255,0.15)]'
+                ? 'bg-brand-500/20 text-white border border-brand-500/30 shadow-[0_0_12px_rgba(255,34,87,0.2)]'
                 : 'bg-white/5 text-white/50 hover:bg-white/10 border border-white/5'
             }`}
           >
@@ -835,19 +1068,57 @@ export default function LeadCleaner({ api }) {
             onClick={() => setMode('names')}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
               mode === 'names'
-                ? 'bg-brand-500/20 text-white border border-brand-500/30 shadow-[0_0_12px_rgba(24,86,255,0.15)]'
+                ? 'bg-brand-500/20 text-white border border-brand-500/30 shadow-[0_0_12px_rgba(255,34,87,0.2)]'
                 : 'bg-white/5 text-white/50 hover:bg-white/10 border border-white/5'
             }`}
           >
             Clean Company Names Only
+          </button>
+          <button
+            onClick={() => setMode('icp')}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+              mode === 'icp'
+                ? 'bg-brand-500/20 text-white border border-brand-500/30 shadow-[0_0_12px_rgba(255,34,87,0.2)]'
+                : 'bg-white/5 text-white/50 hover:bg-white/10 border border-white/5'
+            }`}
+          >
+            Verify + Clean + ICP Filter
           </button>
         </div>
 
         <p className="text-sm text-white/40 mb-4">
           {mode === 'full'
             ? 'Upload a CSV with emails. Clearout verifies them, then we download only valid emails and clean company names.'
-            : 'Upload a CSV. We\'ll strip LLC, Inc, Corp, Ltd, and other legal suffixes from company names.'}
+            : mode === 'names'
+              ? "Upload a CSV. We'll strip LLC, Inc, Corp, Ltd, and other legal suffixes from company names."
+              : "Full pipeline: Clearout verify → strip LLC/Inc → then AI reads every Headline/About against the chosen vertical's ICP. CSV needs an email column and at least a Headline / About / Bio / Description field plus Company. LinkedIn URL and Job Title are used if present."}
         </p>
+
+        {mode === 'icp' && (
+          <div className="mb-4">
+            <label className="block text-xs text-white/60 mb-2 uppercase tracking-wider">Vertical</label>
+            <select
+              value={icpVertical}
+              onChange={(e) => setIcpVertical(e.target.value)}
+              className="w-full max-w-xs px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-brand-500/50"
+            >
+              {ICP_VERTICALS.map(v => (
+                <option key={v.value} value={v.value} className="bg-navy">{v.label}</option>
+              ))}
+            </select>
+            {icpProgress.note && (
+              <div className="mt-3 text-xs text-white/60">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono">[ICP {icpProgress.pct}%]</span>
+                  <span>{icpProgress.note}</span>
+                </div>
+                <div className="mt-1 h-1 bg-white/10 rounded overflow-hidden">
+                  <div className="h-full bg-brand-500 transition-all" style={{ width: `${icpProgress.pct}%` }} />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Drop Zone */}
         <div
@@ -902,7 +1173,7 @@ export default function LeadCleaner({ api }) {
             ) : status === 'error' ? (
               <span className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
             ) : (
-              <span className="w-3 h-3 rounded-full bg-brand-500 animate-pulse shadow-[0_0_8px_rgba(24,86,255,0.5)]" />
+              <span className="w-3 h-3 rounded-full bg-brand-500 animate-pulse shadow-[0_0_8px_rgba(255,34,87,0.5)]" />
             )}
             <span className="font-medium text-white/80">{statusLabels[status]}</span>
           </div>

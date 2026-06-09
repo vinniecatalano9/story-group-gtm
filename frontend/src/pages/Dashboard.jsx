@@ -1,312 +1,490 @@
-import { useState, useEffect } from 'react';
-
-const FUNNEL_STAGES = [
-  { key: 'sent', label: 'Emails Sent', color: 'from-blue-500/60 to-blue-600/40', text: 'text-blue-400', glow: '0 0 20px rgba(59,130,246,0.3)' },
-  { key: 'opened', label: 'Opened', color: 'from-sky-500/60 to-sky-600/40', text: 'text-sky-400', glow: '0 0 20px rgba(56,189,248,0.3)' },
-  { key: 'replied', label: 'Replied', color: 'from-indigo-500/60 to-indigo-600/40', text: 'text-indigo-400', glow: '0 0 20px rgba(129,140,248,0.3)' },
-  { key: 'positive', label: 'Positive', color: 'from-emerald-500/60 to-emerald-600/40', text: 'text-emerald-400', glow: '0 0 20px rgba(52,211,153,0.3)' },
-  { key: 'booked', label: 'Booked', color: 'from-green-400/70 to-emerald-500/50', text: 'text-green-400', glow: '0 0 20px rgba(74,222,128,0.3)' },
-  { key: 'meetings_held', label: 'Meetings Held', color: 'from-teal-500/60 to-teal-600/40', text: 'text-teal-400', glow: '0 0 20px rgba(45,212,191,0.3)' },
-  { key: 'second_calls_booked', label: '2nd Calls', color: 'from-purple-500/60 to-purple-600/40', text: 'text-purple-400', glow: '0 0 20px rgba(168,85,247,0.3)' },
-  { key: 'closed_deals', label: 'Closed Deals', color: 'from-amber-500/60 to-yellow-500/40', text: 'text-amber-400', glow: '0 0 20px rgba(245,158,11,0.3)' },
-];
+import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  loadAll, lastNDays, linkedinRollup, emailRollup, funnelRollup,
+  pathToGoal, sourceAttribution, dailyTrend, groupBy,
+  lostReasonBreakdown,
+  fmtMoney, pct,
+  SAMEER_TARGET_CLOSE_RATE, SAMEER_MRR_GOAL_ADDED, SAMEER_AVG_RETAINER
+} from '../lib/funnelMath';
 
 const CLASSIFICATION_COLORS = {
-  interested: 'bg-green-500/15 text-green-400 border border-green-500/20',
-  referral: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20',
-  more_info: 'bg-blue-500/15 text-blue-400 border border-blue-500/20',
-  cost_question: 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/20',
-  why_reach_out: 'bg-yellow-500/15 text-yellow-400 border border-yellow-500/20',
-  question_other: 'bg-orange-500/15 text-orange-400 border border-orange-500/20',
-  re_engage: 'bg-purple-500/15 text-purple-400 border border-purple-500/20',
-  not_interested: 'bg-red-500/15 text-red-400 border border-red-500/20',
-  ooo: 'bg-white/5 text-white/40 border border-white/10',
-  bounce: 'bg-white/5 text-white/30 border border-white/10',
-  other: 'bg-white/5 text-white/40 border border-white/10',
+  interested:      'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25',
+  referral:        'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25',
+  more_info:       'bg-brand-500/15 text-brand-300 border border-brand-500/25',
+  cost_question:   'bg-brand-500/15 text-brand-300 border border-brand-500/25',
+  why_reach_out:   'bg-yellow-500/15 text-yellow-300 border border-yellow-500/25',
+  question_other:  'bg-coral-500/15 text-coral-400 border border-coral-500/25',
+  re_engage:       'bg-brand-500/15 text-brand-300 border border-brand-500/25',
+  not_interested:  'bg-red-500/15 text-red-300 border border-red-500/25',
+  ooo:             'bg-white/5 text-white/40 border border-white/10',
+  bounce:          'bg-white/5 text-white/30 border border-white/10',
+  other:           'bg-white/5 text-white/40 border border-white/10'
 };
 
-function pct(num, denom) {
+function pctStr(num, denom) {
   if (!denom) return '0%';
   return ((num / denom) * 100).toFixed(1) + '%';
 }
 
 export default function Dashboard({ api }) {
-  const [stats, setStats] = useState(null);
-  const [funnel, setFunnel] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [funnelLoading, setFunnelLoading] = useState(true);
+  const [tracker, setTracker] = useState(() => loadAll());
+  const [enginePipeline, setEnginePipeline] = useState(null);
+  const [engineLoading, setEngineLoading] = useState(true);
+
+  const reloadTracker = useCallback(() => setTracker(loadAll()), []);
 
   useEffect(() => {
-    fetch(`${api}/api/dashboard`)
-      .then(r => {
-        if (!r.ok || !(r.headers.get('content-type') || '').includes('json')) throw new Error('Backend unavailable');
-        return r.json();
-      })
-      .then(d => { setStats(d.stats); setLoading(false); })
-      .catch(() => setLoading(false));
-
     fetch(`${api}/api/dashboard/funnel`)
       .then(r => {
         if (!r.ok || !(r.headers.get('content-type') || '').includes('json')) throw new Error('Backend unavailable');
         return r.json();
       })
-      .then(d => {
-        if (d.success) setFunnel(d.funnel);
-        setFunnelLoading(false);
-      })
-      .catch(() => { setFunnelLoading(false); });
+      .then(d => { if (d.success) setEnginePipeline(d.funnel); setEngineLoading(false); })
+      .catch(() => setEngineLoading(false));
   }, [api]);
 
-  if (loading && funnelLoading) return <p className="text-white/30 py-10 text-center">Loading...</p>;
+  useEffect(() => {
+    const onFocus = () => reloadTracker();
+    const onStorage = (e) => { if (e.key && e.key.startsWith('sg.tracker.')) reloadTracker(); };
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('storage', onStorage);
+    document.addEventListener('visibilitychange', onFocus);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('storage', onStorage);
+      document.removeEventListener('visibilitychange', onFocus);
+    };
+  }, [reloadTracker]);
 
-  const total = stats ? Object.values(stats).reduce((a, b) => a + b, 0) : 0;
-  const replyRate = stats?.emailed > 0 ? ((stats.replied / stats.emailed) * 100).toFixed(1) : '0';
-  const bookRate = stats?.replied > 0 ? ((stats.booked / stats.replied) * 100).toFixed(1) : '0';
-
-  // Last 7 days positive count
-  const last7Positive = funnel?.dailyPositive
-    ? (() => {
-        const now = new Date();
-        let count = 0;
-        for (let i = 0; i < 7; i++) {
-          const d = new Date(now);
-          d.setDate(d.getDate() - i);
-          const key = d.toISOString().slice(0, 10);
-          count += funnel.dailyPositive[key] || 0;
-        }
-        return count;
-      })()
-    : 0;
+  const li7 = linkedinRollup(lastNDays(tracker.linkedin, 'date', 7));
+  const em7 = emailRollup(lastNDays(tracker.email, 'date', 7));
+  const fnRecent7 = lastNDays(tracker.funnel, 'dateBooked', 7);
+  const fn7 = funnelRollup(fnRecent7);
+  const liMeetingsFunnel7 = fnRecent7.filter(r => r.sourceChannel === 'LinkedIn').length;
+  const emMeetingsFunnel7 = fnRecent7.filter(r => r.sourceChannel === 'Cold Email').length;
+  // Use funnel-row counts as primary source; LinkedIn/Email tab counts as fallback
+  li7.meetingsBooked = liMeetingsFunnel7 || li7.meetingsBooked;
+  em7.meetingsBooked = emMeetingsFunnel7 || em7.meetingsBooked;
+  const path = pathToGoal(tracker.funnel, 7);
+  const attribution = sourceAttribution(lastNDays(tracker.funnel, 'dateBooked', 30));
+  const lostBreakdown = lostReasonBreakdown(lastNDays(tracker.funnel, 'dateBooked', 30));
+  const liTrend = dailyTrend(tracker.linkedin, 'date', ['requestsSent'], 14);
+  const emTrend = dailyTrend(tracker.email, 'date', ['emailsSent'], 14);
+  const fnTrend = dailyTrend(
+    tracker.funnel.map(r => ({ dateBooked: r.dateBooked, booked: 1 })),
+    'dateBooked', ['booked'], 14
+  );
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold text-white">Pipeline Dashboard</h1>
-
-      {/* Email Funnel (from Instantly) */}
-      {!funnelLoading && funnel && funnel.sent > 0 && (
-        <>
-          {/* Email funnel KPI row */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-            {FUNNEL_STAGES.map(s => (
-              <div key={s.key} className="glass-card glass-card-hover rounded-2xl p-5">
-                <p className="text-xs font-medium text-white/40 uppercase tracking-wide mb-1">{s.label}</p>
-                <p className={`text-3xl font-bold ${s.text}`} style={{ textShadow: s.glow }}>
-                  {(funnel[s.key] || 0).toLocaleString()}
-                </p>
-                {s.key !== 'sent' && funnel.sent > 0 && (
-                  <p className="text-xs text-white/30 mt-1">{pct(funnel[s.key] || 0, funnel.sent)} of sent</p>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Conversion Funnel Visual */}
-          <div className="glass-card rounded-2xl p-6">
-            <h2 className="text-lg font-semibold text-white/90 mb-2">Email Funnel</h2>
-            <p className="text-sm text-white/30 mb-5">Sent → Opened → Replied → Positive → Booked → Held → 2nd Call → Closed</p>
-            <div className="space-y-3">
-              {FUNNEL_STAGES.map((s, i) => {
-                const value = funnel[s.key] || 0;
-                const maxVal = funnel.sent || 1;
-                const widthPct = Math.max((value / maxVal) * 100, 3);
-                const prevKey = i > 0 ? FUNNEL_STAGES[i - 1].key : null;
-                const prevVal = prevKey ? (funnel[prevKey] || 0) : null;
-                return (
-                  <div key={s.key} className="flex items-center gap-3">
-                    <span className="text-sm text-white/40 w-36 text-right font-medium">{s.label}</span>
-                    <div className="flex-1 bg-white/5 rounded-full h-10 overflow-hidden border border-white/5">
-                      <div
-                        className={`bg-gradient-to-r ${s.color} h-full rounded-full flex items-center px-4 transition-all duration-700 backdrop-blur-sm`}
-                        style={{ width: `${widthPct}%` }}
-                      >
-                        <span className="text-white text-sm font-bold drop-shadow-sm">{value.toLocaleString()}</span>
-                      </div>
-                    </div>
-                    <span className="text-xs text-white/30 w-16">
-                      {prevVal != null && prevVal > 0 ? pct(value, prevVal) : ''}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Constraint identifier */}
-            {funnel.sent > 0 && (() => {
-              const steps = FUNNEL_STAGES.map((s, i) => ({
-                ...s,
-                value: funnel[s.key] || 0,
-                dropPct: i > 0 ? (1 - (funnel[s.key] || 0) / Math.max(funnel[FUNNEL_STAGES[i - 1].key] || 1, 1)) * 100 : 0,
-              }));
-              const worst = steps.slice(1).reduce((a, b) => b.dropPct > a.dropPct ? b : a);
-              return worst.dropPct > 0 ? (
-                <div className="mt-5 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-                  <p className="text-sm font-medium text-amber-400">
-                    Biggest drop-off: <span className="font-bold">{worst.label}</span> — {worst.dropPct.toFixed(1)}% drop from previous stage
-                  </p>
-                  <p className="text-xs text-amber-400/60 mt-1">This is the constraint in your conveyor belt. Focus optimization here.</p>
-                </div>
-              ) : null;
-            })()}
-          </div>
-
-          {/* Per-Campaign Breakdown */}
-          {funnel.campaignBreakdown?.length > 0 && (
-            <div className="glass-card rounded-2xl p-6">
-              <h2 className="text-lg font-semibold text-white/90 mb-4">Campaign Breakdown</h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-white/10">
-                      <th className="text-left py-2 px-3 font-medium text-white/40">Campaign</th>
-                      <th className="text-right py-2 px-3 font-medium text-white/40">Sent</th>
-                      <th className="text-right py-2 px-3 font-medium text-white/40">Opened</th>
-                      <th className="text-right py-2 px-3 font-medium text-white/40">Open %</th>
-                      <th className="text-right py-2 px-3 font-medium text-white/40">Replied</th>
-                      <th className="text-right py-2 px-3 font-medium text-white/40">Reply %</th>
-                      <th className="text-right py-2 px-3 font-medium text-white/40">Bounced</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {funnel.campaignBreakdown.map((c, i) => (
-                      <tr key={c.id || i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                        <td className="py-2 px-3 text-white/80 font-medium truncate max-w-[250px]">{c.name}</td>
-                        <td className="py-2 px-3 text-right text-white/60">{c.sent.toLocaleString()}</td>
-                        <td className="py-2 px-3 text-right text-white/60">{c.opened.toLocaleString()}</td>
-                        <td className="py-2 px-3 text-right text-sky-400 font-medium">{pct(c.opened, c.sent)}</td>
-                        <td className="py-2 px-3 text-right text-white/60">{c.replied.toLocaleString()}</td>
-                        <td className="py-2 px-3 text-right text-indigo-400 font-medium">{pct(c.replied, c.sent)}</td>
-                        <td className="py-2 px-3 text-right text-red-400">{c.bounced.toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Reply Classification Breakdown */}
-      {funnel?.classificationCounts && Object.keys(funnel.classificationCounts).length > 0 && (
-        <div className="glass-card rounded-2xl p-6">
-          <h2 className="text-lg font-semibold text-white/90 mb-4">Reply Categories</h2>
-          <div className="flex flex-wrap gap-3">
-            {Object.entries(funnel.classificationCounts)
-              .sort((a, b) => b[1] - a[1])
-              .map(([cls, count]) => (
-                <div key={cls} className={`px-4 py-2.5 rounded-xl ${CLASSIFICATION_COLORS[cls] || 'bg-white/5 text-white/40 border border-white/10'}`}>
-                  <span className="text-lg font-bold">{count}</span>
-                  <span className="text-sm ml-2 capitalize opacity-80">{cls.replace(/_/g, ' ')}</span>
-                </div>
-              ))
-            }
-          </div>
+      <div className="flex items-baseline justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="font-serif italic text-3xl font-bold text-brand-500 leading-tight">Coaching Snapshot</h1>
+          <p className="text-muted text-sm mt-1">Last 7 days · Sameer's view · refreshes when you return to this tab</p>
         </div>
-      )}
-
-      {/* Daily Positive Responses */}
-      {funnel?.dailyPositive && Object.keys(funnel.dailyPositive).length > 0 && (
-        <div className="glass-card rounded-2xl p-6">
-          <h2 className="text-lg font-semibold text-white/90 mb-4">Positive Responses — Last 30 Days</h2>
-          <div className="space-y-2">
-            {Object.entries(funnel.dailyPositive)
-              .sort((a, b) => b[0].localeCompare(a[0]))
-              .slice(0, 30)
-              .map(([day, count]) => {
-                const max = Math.max(...Object.values(funnel.dailyPositive));
-                return (
-                  <div key={day} className="flex items-center gap-3">
-                    <span className="text-sm text-white/40 w-24 font-mono">{day}</span>
-                    <div className="flex-1 bg-white/5 rounded h-6 overflow-hidden border border-white/5">
-                      <div
-                        className="bg-gradient-to-r from-green-500/60 to-emerald-500/40 h-full rounded flex items-center px-2 transition-all"
-                        style={{ width: `${Math.max((count / max) * 100, 8)}%` }}
-                      >
-                        <span className="text-white text-xs font-bold">{count}</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            }
-          </div>
-        </div>
-      )}
-
-      {/* Quick Actions */}
-      <div className="glass-card rounded-2xl p-6">
-        <h2 className="text-lg font-semibold text-white/90 mb-4">Quick Actions</h2>
-        <div className="flex gap-3 flex-wrap">
-          <ActionButton api={api} endpoint="/api/enrich" label="Run Enrichment" method="POST" />
-          <ActionButton api={api} endpoint="/api/trigger/cleanup" label="Run Cleanup" method="POST" />
-          <ActionButton api={api} endpoint="/api/trigger/dashboard" label="Generate Report" method="POST" />
+        <div className="flex gap-2 flex-wrap">
+          <Link to="/tracker" className="glass-btn-primary rounded-xl px-5 py-2.5 text-sm font-semibold">Log Today's Numbers</Link>
+          <Link to="/tracker" className="px-5 py-2.5 rounded-xl text-sm font-semibold border border-navy-border text-body hover:border-brand-500/60 transition-all">Print Coaching Prep</Link>
         </div>
       </div>
 
-      {/* Lead Pipeline Funnel — horizontal bars */}
-      {stats && (() => {
-        const STAGES = [
-          { key: 'ingested', label: 'Ingested', color: 'from-slate-500/60 to-slate-600/40' },
-          { key: 'enriched', label: 'Enriched', color: 'from-blue-500/60 to-blue-600/40' },
-          { key: 'scored', label: 'Scored', color: 'from-indigo-500/60 to-indigo-600/40' },
-          { key: 'emailed', label: 'Emailed', color: 'from-purple-500/60 to-purple-600/40' },
-          { key: 'replied', label: 'Replied', color: 'from-emerald-500/60 to-emerald-600/40' },
-          { key: 'booked', label: 'Booked', color: 'from-green-400/70 to-emerald-500/50' },
-          { key: 'closed', label: 'Closed', color: 'from-amber-500/60 to-yellow-500/40' },
-        ];
-        return (
-          <div className="glass-card rounded-2xl p-6">
-            <h2 className="text-lg font-semibold text-white/90 mb-2">Lead Pipeline</h2>
-            <p className="text-sm text-white/30 mb-4">Lead status breakdown ({total.toLocaleString()} total)</p>
-            <div className="space-y-3">
-              {STAGES.map(s => {
-                const val = stats[s.key] || 0;
-                const widthPct = total > 0 ? Math.max((val / total) * 100, 2) : 0;
-                return (
-                  <div key={s.key} className="flex items-center gap-3">
-                    <span className="text-sm text-white/40 w-20 text-right font-medium">{s.label}</span>
-                    <div className="flex-1 bg-white/5 rounded-full h-9 overflow-hidden border border-white/5">
-                      <div
-                        className={`bg-gradient-to-r ${s.color} h-full rounded-full flex items-center px-3 transition-all duration-500 backdrop-blur-sm`}
-                        style={{ width: `${widthPct}%` }}
-                      >
-                        <span className="text-white text-xs font-semibold drop-shadow-sm">{val}</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
+      {/* Sameer's 6 KPIs */}
+      <SameerStrip li7={li7} em7={em7} fn7={fn7} path={path} />
 
-      {/* KPI Cards — bottom */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        <KPICard label="Total Leads" value={total} color="text-white" />
-        <KPICard label="Scored" value={stats?.scored || 0} color="text-indigo-400" />
-        <KPICard label="Emailed" value={stats?.emailed || 0} color="text-purple-400" />
-        <KPICard label="Reply Rate" value={`${replyRate}%`} color="text-green-400" />
-        <KPICard label="Booked" value={stats?.booked || 0} color="text-emerald-400" />
-        <KPICard label="Last 7 Days" value={last7Positive} sublabel="positive replies" color="text-amber-400" />
+      {/* Path to $80k */}
+      <PathToGoalCard path={path} fn7={fn7} />
+
+      {/* 7-day activity rollup */}
+      <ActivityRow li7={li7} em7={em7} fn7={fn7} liTrend={liTrend} emTrend={emTrend} fnTrend={fnTrend} />
+
+      {/* Per-account / per-campaign breakdowns */}
+      <BreakdownRow tracker={tracker} />
+
+      {/* Why deals are dying — last 30 days lost-reason breakdown */}
+      <LostReasons breakdown={lostBreakdown} />
+
+      {/* Source attribution — 30 days */}
+      <SourceAttribution attribution={attribution} />
+
+      {/* Email Engine (auto via Instantly) */}
+      <EnginePipelineCard funnel={enginePipeline} loading={engineLoading} />
+
+      {/* Quick actions */}
+      <QuickActionsRow api={api} />
+    </div>
+  );
+}
+
+function SameerStrip({ li7, em7, fn7, path }) {
+  const closeRateOk = fn7.closeRate >= 15;
+  const calls = fn7.booked;
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <Kpi label="Discovery Calls / 7d" value={calls} sub="target ~12/wk" accent />
+      <Kpi label="Show Rate" value={`${fn7.showRate}%`} sub={`${fn7.showed} showed · ${fn7.noShow} no-show`} />
+      <Kpi label="Qualified Rate" value={`${fn7.qualifiedRate}%`} sub={`${fn7.qualified} of ${fn7.showed}`} />
+      <Kpi label="Close Rate" value={`${fn7.closeRate}%`} sub={`${fn7.closed} won · ${fn7.closedLost} lost · target 15%`} accent={!closeRateOk} good={closeRateOk} />
+      <Kpi label="Avg Retainer" value={fmtMoney(fn7.avgRetainer)} sub={`target $8–14k`} />
+      <Kpi label="MRR Added / 7d" value={fmtMoney(path.mrrAddedRecent)} sub={path.daysToGoalAtPace ? `${path.daysToGoalAtPace}d to $80k at pace` : 'log a close to project'} accent />
+    </div>
+  );
+}
+
+function Kpi({ label, value, sub, accent, good }) {
+  const border = good
+    ? 'border-l-2 border-l-emerald-400'
+    : accent
+      ? 'border-l-2 border-l-brand-500'
+      : 'border-l-2 border-l-navy-border';
+  return (
+    <div className={`glass-card rounded-xl p-4 ${border}`}>
+      <p className="text-[10px] font-semibold text-muted uppercase tracking-[0.14em] mb-1.5">{label}</p>
+      <p className="font-serif italic text-2xl font-bold text-body leading-none">{value}</p>
+      {sub && <p className="text-[11px] text-muted mt-1.5">{sub}</p>}
+    </div>
+  );
+}
+
+function PathToGoalCard({ path, fn7 }) {
+  const gapClass = path.closeRateGapPts > 0 ? 'text-coral-500' : 'text-emerald-400';
+  const gapSign = path.closeRateGapPts > 0 ? '+' : '';
+  return (
+    <div className="glass-card rounded-2xl p-6 border-l-2 border-l-brand-500">
+      <p className="text-[10px] font-semibold text-brand-500 uppercase tracking-[0.14em] mb-3">Path to $80k MRR Added</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        <div>
+          <p className="font-serif italic text-2xl font-bold text-body leading-none">{fmtMoney(path.mrrPerDay)}</p>
+          <p className="text-[11px] text-muted mt-1.5 uppercase tracking-[0.1em]">/ Day Pace</p>
+        </div>
+        <div>
+          <p className="font-serif italic text-2xl font-bold text-body leading-none">{path.closeRateRecent}%</p>
+          <p className="text-[11px] text-muted mt-1.5 uppercase tracking-[0.1em]">7d Close Rate</p>
+        </div>
+        <div>
+          <p className={`font-serif italic text-2xl font-bold leading-none ${gapClass}`}>{gapSign}{path.closeRateGapPts}pts</p>
+          <p className="text-[11px] text-muted mt-1.5 uppercase tracking-[0.1em]">Gap vs 15% Target</p>
+        </div>
+        <div>
+          <p className="font-serif italic text-2xl font-bold text-body leading-none">{path.dealsNeededAtTarget}</p>
+          <p className="text-[11px] text-muted mt-1.5 uppercase tracking-[0.1em]">Closes Needed</p>
+        </div>
+      </div>
+      <p className="font-serif italic text-base text-body leading-snug pl-4 border-l-2 border-l-brand-500 bg-brand-500/5 py-3 pr-4 rounded-r">
+        {path.daysToGoalAtPace
+          ? `${path.daysToGoalAtPace} days to $80k MRR added at current pace.`
+          : 'No closes in the last 7 days — close one deal to start projecting.'}
+        {' '}
+        At a 15% close rate and $14k average retainer, {path.dealsNeededAtTarget} closes (~{path.qualifiedNeededAtTarget} qualified discoveries) gets you to $80k MRR added.
+      </p>
+    </div>
+  );
+}
+
+function ActivityRow({ li7, em7, fn7, liTrend, emTrend, fnTrend }) {
+  return (
+    <div>
+      <h2 className="font-serif text-xl font-bold text-body mb-4">Outbound Activity — Last 7 Days</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <ActivityCard
+          title="LinkedIn"
+          trend={liTrend}
+          trendField="requestsSent"
+          stats={[
+            { l: 'Requests Sent', v: li7.requestsSent },
+            { l: 'Accepted', v: li7.requestsAccepted, sub: `${li7.acceptRate}% rate` },
+            { l: 'Positive Replies', v: li7.positiveReplies },
+            { l: 'Meetings Booked', v: li7.meetingsBooked }
+          ]}
+        />
+        <ActivityCard
+          title="Cold Email"
+          trend={emTrend}
+          trendField="emailsSent"
+          accent="coral"
+          stats={[
+            { l: 'Emails Sent', v: em7.emailsSent.toLocaleString() },
+            { l: 'Avg Open Rate', v: `${em7.avgOpenRate}%` },
+            { l: 'Positive Replies', v: em7.positiveReplies },
+            { l: 'Meetings Booked', v: em7.meetingsBooked }
+          ]}
+        />
+        <ActivityCard
+          title="Sales Funnel"
+          trend={fnTrend}
+          trendField="booked"
+          stats={[
+            { l: 'Calls Booked', v: fn7.booked },
+            { l: 'Showed', v: fn7.showed, sub: `${fn7.showRate}% rate` },
+            { l: 'Qualified', v: fn7.qualified, sub: `${fn7.qualifiedRate}% rate` },
+            { l: 'Won / Lost', v: `${fn7.closed} / ${fn7.closedLost}`, sub: fmtMoney(fn7.mrrClosed) }
+          ]}
+        />
       </div>
     </div>
   );
 }
 
-function KPICard({ label, value, sublabel, color }) {
+function ActivityCard({ title, stats, trend, trendField, accent }) {
+  const max = Math.max(1, ...trend.map(p => p[trendField] || 0));
+  const barColor = accent === 'coral' ? 'bg-coral-500' : 'bg-brand-500';
   return (
-    <div className="glass-card glass-card-hover rounded-2xl p-5">
-      <p className="text-xs font-medium text-white/40 uppercase tracking-wide mb-1">{label}</p>
-      <p className={`text-3xl font-bold ${color || 'text-white'}`}>{typeof value === 'number' ? value.toLocaleString() : value}</p>
-      {sublabel && <p className="text-xs text-white/30 mt-1">{sublabel}</p>}
+    <div className="glass-card rounded-2xl p-5">
+      <h3 className="font-serif text-lg font-bold text-body mb-3">{title}</h3>
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        {stats.map((s, i) => (
+          <div key={i}>
+            <p className="font-serif italic text-xl font-bold text-body leading-none">{s.v}</p>
+            <p className="text-[10px] text-muted uppercase tracking-[0.1em] mt-1">{s.l}</p>
+            {s.sub && <p className="text-[10px] text-muted mt-0.5">{s.sub}</p>}
+          </div>
+        ))}
+      </div>
+      <div>
+        <p className="text-[9px] text-muted uppercase tracking-[0.1em] mb-1.5">14-Day Trend</p>
+        <div className="flex items-end gap-[2px] h-14">
+          {trend.map((p, i) => {
+            const v = p[trendField] || 0;
+            const h = max === 0 ? 2 : Math.max(2, Math.round((v / max) * 40));
+            return (
+              <div key={i} className="flex-1 flex flex-col items-stretch justify-end min-w-0 group" title={`${p.date}: ${v}`}>
+                <div className="text-[9px] text-body text-center font-bold leading-[12px] h-3">{v > 0 ? v : '·'}</div>
+                <div className={`${barColor} rounded-t-sm opacity-90 group-hover:opacity-100`} style={{ height: `${h}px` }} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BreakdownRow({ tracker }) {
+  const liByAccount = groupBy(lastNDays(tracker.linkedin, 'date', 7), 'account');
+  const emByCampaign = groupBy(lastNDays(tracker.email, 'date', 7), 'campaign');
+  const liRows = Object.entries(liByAccount).map(([k, v]) => ({ k, r: linkedinRollup(v) }));
+  const emRows = Object.entries(emByCampaign).map(([k, v]) => ({ k, r: emailRollup(v) }));
+
+  if (!liRows.length && !emRows.length) return null;
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {liRows.length > 0 && (
+        <div className="glass-card rounded-2xl p-5">
+          <h3 className="font-serif text-lg font-bold text-body mb-3">LinkedIn — Per Account (7d)</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-navy-border">
+                  <th className="text-left py-2 pr-3 text-[10px] uppercase tracking-[0.12em] text-muted font-semibold">Account</th>
+                  <th className="text-right py-2 px-2 text-[10px] uppercase tracking-[0.12em] text-muted font-semibold">Sent</th>
+                  <th className="text-right py-2 px-2 text-[10px] uppercase tracking-[0.12em] text-muted font-semibold">Accept%</th>
+                  <th className="text-right py-2 pl-2 text-[10px] uppercase tracking-[0.12em] text-muted font-semibold">Mtgs</th>
+                </tr>
+              </thead>
+              <tbody>
+                {liRows.map(({ k, r }) => (
+                  <tr key={k} className="border-b border-navy-border/50">
+                    <td className="py-2 pr-3 text-body truncate max-w-[160px]">{k}</td>
+                    <td className="py-2 px-2 text-right text-body">{r.requestsSent}</td>
+                    <td className="py-2 px-2 text-right text-brand-300">{r.acceptRate}%</td>
+                    <td className="py-2 pl-2 text-right text-body">{r.meetingsBooked}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      {emRows.length > 0 && (
+        <div className="glass-card rounded-2xl p-5">
+          <h3 className="font-serif text-lg font-bold text-body mb-3">Cold Email — Per Campaign (7d)</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-navy-border">
+                  <th className="text-left py-2 pr-3 text-[10px] uppercase tracking-[0.12em] text-muted font-semibold">Campaign</th>
+                  <th className="text-right py-2 px-2 text-[10px] uppercase tracking-[0.12em] text-muted font-semibold">Sent</th>
+                  <th className="text-right py-2 px-2 text-[10px] uppercase tracking-[0.12em] text-muted font-semibold">Open%</th>
+                  <th className="text-right py-2 pl-2 text-[10px] uppercase tracking-[0.12em] text-muted font-semibold">Mtgs</th>
+                </tr>
+              </thead>
+              <tbody>
+                {emRows.map(({ k, r }) => (
+                  <tr key={k} className="border-b border-navy-border/50">
+                    <td className="py-2 pr-3 text-body truncate max-w-[200px]">{k}</td>
+                    <td className="py-2 px-2 text-right text-body">{r.emailsSent.toLocaleString()}</td>
+                    <td className="py-2 px-2 text-right text-coral-400">{r.avgOpenRate}%</td>
+                    <td className="py-2 pl-2 text-right text-body">{r.meetingsBooked}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LostReasons({ breakdown }) {
+  if (!breakdown || breakdown.total === 0) return null;
+  const top = breakdown.ranked[0];
+  const insight = top
+    ? `${top.pct}% of your lost deals in the last 30 days carry a "${top.tag}" objection (${top.count} of ${breakdown.total}). ${
+        top.tag === 'budget'    ? 'Your ICP filter is letting through prospects who can\'t afford the tier — qualify earlier.' :
+        top.tag === 'timing'    ? 'You\'re catching them too early in the cycle — add a nurture sequence or follow-up cadence.' :
+        top.tag === 'fit'       ? 'Tighten the ICP at the outreach stage so non-fits never book.' :
+        top.tag === 'decision-maker' ? 'Add a question on Call 1 to flag DM access early.' :
+        'Bring this pattern to Sameer — it\'s your highest-leverage funnel leak.'
+      }`
+    : '';
+  return (
+    <div className="glass-card rounded-2xl p-5 border-l-2 border-l-coral-500">
+      <div className="flex items-baseline justify-between mb-1">
+        <h3 className="font-serif text-lg font-bold text-body">Why You're Losing Deals — Last 30 Days</h3>
+        <span className="text-[10px] text-muted uppercase tracking-[0.12em]">{breakdown.total} lost</span>
+      </div>
+      {insight && <p className="font-serif italic text-base text-body leading-snug pl-4 border-l-2 border-l-coral-500 bg-coral-500/5 py-3 pr-4 rounded-r mt-3 mb-4">{insight}</p>}
+      <div className="flex flex-wrap gap-2 mt-3">
+        {breakdown.ranked.map(r => (
+          <div key={r.tag} className="px-3 py-1.5 rounded-lg text-xs bg-coral-500/15 text-coral-400 border border-coral-500/30">
+            <span className="font-bold">{r.count}</span>
+            <span className="ml-1.5 capitalize">{r.tag.replace('-', ' ')}</span>
+            <span className="ml-1.5 opacity-70">{r.pct}%</span>
+          </div>
+        ))}
+        {breakdown.untagged > 0 && (
+          <div className="px-3 py-1.5 rounded-lg text-xs bg-white/5 text-muted border border-white/10">
+            <span className="font-bold">{breakdown.untagged}</span>
+            <span className="ml-1.5">unlabeled</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SourceAttribution({ attribution }) {
+  const channels = Object.entries(attribution.byChannel);
+  if (!channels.length) return null;
+  return (
+    <div className="glass-card rounded-2xl p-5">
+      <h3 className="font-serif text-lg font-bold text-body mb-3">Closed Deals — Last 30 Days by Source</h3>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-navy-border">
+              <th className="text-left py-2 pr-3 text-[10px] uppercase tracking-[0.12em] text-muted font-semibold">Channel</th>
+              <th className="text-right py-2 px-2 text-[10px] uppercase tracking-[0.12em] text-muted font-semibold">Closes</th>
+              <th className="text-right py-2 pl-2 text-[10px] uppercase tracking-[0.12em] text-muted font-semibold">MRR Closed</th>
+            </tr>
+          </thead>
+          <tbody>
+            {channels.map(([k, count]) => (
+              <tr key={k} className="border-b border-navy-border/50">
+                <td className="py-2 pr-3 text-body">{k}</td>
+                <td className="py-2 px-2 text-right text-body">{count}</td>
+                <td className="py-2 pl-2 text-right text-brand-300 font-semibold">{fmtMoney(attribution.mrrByChannel[k] || 0)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function EnginePipelineCard({ funnel, loading }) {
+  if (loading) return <p className="text-muted text-center py-6">Loading email engine stats…</p>;
+  if (!funnel || !funnel.sent) {
+    return (
+      <div className="glass-card rounded-2xl p-5">
+        <h3 className="font-serif text-lg font-bold text-body mb-1">Email Engine (Auto via Instantly)</h3>
+        <p className="text-muted text-sm">No email engine data yet. Once Instantly is sending, top-of-funnel volume shows up here.</p>
+      </div>
+    );
+  }
+
+  const stages = [
+    { key: 'sent',     label: 'Sent',     color: 'from-brand-700/60 to-brand-800/40' },
+    { key: 'opened',   label: 'Opened',   color: 'from-brand-500/60 to-brand-600/40' },
+    { key: 'replied',  label: 'Replied',  color: 'from-coral-500/60 to-coral-600/40' },
+    { key: 'positive', label: 'Positive', color: 'from-emerald-500/60 to-emerald-600/40' }
+  ];
+
+  return (
+    <div className="glass-card rounded-2xl p-6">
+      <div className="flex items-baseline justify-between mb-1">
+        <h3 className="font-serif text-lg font-bold text-body">Email Engine (Auto via Instantly)</h3>
+        <span className="text-[10px] text-muted uppercase tracking-[0.12em]">Top of funnel · system data</span>
+      </div>
+      <p className="text-muted text-xs mb-4">Booked → Closed live in the Coaching Snapshot above. This is the upstream send → reply pipeline only.</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        {stages.map(s => (
+          <div key={s.key} className="glass-card rounded-xl p-4 border-l-2 border-l-brand-500/40">
+            <p className="text-[10px] font-semibold text-muted uppercase tracking-[0.12em] mb-1">{s.label}</p>
+            <p className="font-serif italic text-2xl font-bold text-body leading-none">{(funnel[s.key] || 0).toLocaleString()}</p>
+            {s.key !== 'sent' && (
+              <p className="text-[11px] text-muted mt-1.5">{pctStr(funnel[s.key] || 0, funnel.sent)} of sent</p>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="space-y-2">
+        {stages.map((s, i) => {
+          const value = funnel[s.key] || 0;
+          const maxVal = funnel.sent || 1;
+          const widthPct = Math.max((value / maxVal) * 100, 3);
+          const prev = i > 0 ? (funnel[stages[i - 1].key] || 0) : null;
+          return (
+            <div key={s.key} className="flex items-center gap-3">
+              <span className="text-xs text-muted w-20 text-right font-medium">{s.label}</span>
+              <div className="flex-1 bg-white/5 rounded-full h-8 overflow-hidden border border-navy-border">
+                <div className={`bg-gradient-to-r ${s.color} h-full rounded-full flex items-center px-3 transition-all duration-700`} style={{ width: `${widthPct}%` }}>
+                  <span className="text-white text-xs font-bold">{value.toLocaleString()}</span>
+                </div>
+              </div>
+              <span className="text-[11px] text-muted w-14">{prev != null && prev > 0 ? pctStr(value, prev) : ''}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {funnel.classificationCounts && Object.keys(funnel.classificationCounts).length > 0 && (
+        <div className="mt-6 pt-5 border-t border-navy-border">
+          <p className="text-[10px] font-semibold text-muted uppercase tracking-[0.12em] mb-3">Reply Categories</p>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(funnel.classificationCounts)
+              .sort((a, b) => b[1] - a[1])
+              .map(([cls, count]) => (
+                <div key={cls} className={`px-3 py-1.5 rounded-lg text-xs ${CLASSIFICATION_COLORS[cls] || 'bg-white/5 text-white/40 border border-white/10'}`}>
+                  <span className="font-bold">{count}</span>
+                  <span className="ml-1.5 capitalize opacity-80">{cls.replace(/_/g, ' ')}</span>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function QuickActionsRow({ api }) {
+  return (
+    <div className="glass-card rounded-2xl p-5">
+      <p className="text-[10px] font-semibold text-muted uppercase tracking-[0.12em] mb-3">System Actions</p>
+      <div className="flex gap-2 flex-wrap">
+        <ActionButton api={api} endpoint="/api/enrich"           label="Run Enrichment" method="POST" />
+        <ActionButton api={api} endpoint="/api/trigger/cleanup"  label="Run Cleanup"    method="POST" />
+        <ActionButton api={api} endpoint="/api/trigger/dashboard" label="Generate Report" method="POST" />
+      </div>
     </div>
   );
 }
 
 function ActionButton({ api, endpoint, label, method }) {
   const [status, setStatus] = useState('idle');
-
   const run = async () => {
     setStatus('running');
     try {
@@ -319,19 +497,18 @@ function ActionButton({ api, endpoint, label, method }) {
       setTimeout(() => setStatus('idle'), 3000);
     }
   };
-
   return (
     <button
       onClick={run}
       disabled={status === 'running'}
-      className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+      className={`px-4 py-2 rounded-xl text-xs font-semibold uppercase tracking-[0.1em] transition-all ${
         status === 'running' ? 'bg-white/5 text-white/30 cursor-wait border border-white/5' :
-        status === 'done' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-        status === 'error' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
-        'glass-btn-primary rounded-xl'
+        status === 'done'    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+        status === 'error'   ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+        'border border-navy-border text-muted hover:text-body hover:border-brand-500/60'
       }`}
     >
-      {status === 'running' ? 'Running...' : status === 'done' ? 'Done!' : status === 'error' ? 'Error' : label}
+      {status === 'running' ? 'Running…' : status === 'done' ? 'Done' : status === 'error' ? 'Error' : label}
     </button>
   );
 }

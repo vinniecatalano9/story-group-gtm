@@ -295,17 +295,29 @@ export default function LinkedInReplies({ api }) {
 
   const fetchReplies = useCallback(() => {
     setLoading(true);
-    const params = new URLSearchParams();
-    if (filter) params.set('classification', filter);
-    if (statusFilter) params.set('ulinc_status', statusFilter);
-    if (showHandled) params.set('show_handled', 'true');
-    params.set('source', 'ulinc');
-    params.set('limit', '100');
+    // LinkedIn replies arrive under 'heyreach' (current, since 2026-05-11) AND 'ulinc' (legacy pre-May 11).
+    // Fetch both sources in parallel and merge so all LinkedIn conversations show up here.
+    const baseParams = new URLSearchParams();
+    if (filter) baseParams.set('classification', filter);
+    if (statusFilter) baseParams.set('ulinc_status', statusFilter);
+    if (showHandled) baseParams.set('show_handled', 'true');
+    baseParams.set('limit', '150');
 
-    fetch(`${api}/api/replies?${params}`)
-      .then(r => r.json())
-      .then(d => {
-        const list = (d.replies || []).sort((a, b) => {
+    const fetchSource = (source) => {
+      const p = new URLSearchParams(baseParams);
+      p.set('source', source);
+      return fetch(`${api}/api/replies?${p}`).then(r => r.json()).catch(() => ({ replies: [] }));
+    };
+
+    Promise.all([fetchSource('heyreach'), fetchSource('ulinc')])
+      .then(([hr, ul]) => {
+        const all = [...(hr.replies || []), ...(ul.replies || [])];
+        const seen = new Set();
+        const deduped = [];
+        for (const r of all) {
+          if (r && r.id && !seen.has(r.id)) { seen.add(r.id); deduped.push(r); }
+        }
+        const list = deduped.sort((a, b) => {
           const getMs = (r) => {
             const md = r.message_date;
             const ca = r.created_at;
