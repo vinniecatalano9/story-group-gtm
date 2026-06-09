@@ -651,6 +651,18 @@ app.post('/api/trigger/healthcheck', async (req, res) => {
   }
 });
 
+// Re-run the v3 classifier over unhandled replies (upgrade old drafts / fix 'other' backlog)
+app.post('/api/trigger/reclassify', async (req, res) => {
+  try {
+    const { reclassifyBacklog } = require('./cron/reclassify');
+    const limit = parseInt(req.query.limit) || 25;
+    const r = await reclassifyBacklog({ limit });
+    res.json({ success: true, ...r });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Daily metrics history (last N days)
 app.get('/api/dashboard/daily-metrics', async (req, res) => {
   try {
