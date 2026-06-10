@@ -401,7 +401,8 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
     const replyText = extracted.text;
     const messageDate = extracted.date || evt.timestamp || new Date().toISOString();
 
-    const accountName = [account.firstName, account.lastName].filter(Boolean).join(' ') || account.fullName || account.name || '';
+    const accountName = [account.firstName || account.first_name, account.lastName || account.last_name].filter(Boolean).join(' ')
+      || account.fullName || account.full_name || account.name || '';
     const accountId = account.id || account.accountId || null;
     const campaignId = evt.campaignId || evt.campaign_id || (evt.campaign && evt.campaign.id) || null;
     const campaignName = (evt.campaign && (evt.campaign.name || evt.campaign.campaignName)) || evt.campaignName || '';
