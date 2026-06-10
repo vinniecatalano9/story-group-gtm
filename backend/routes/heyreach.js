@@ -370,6 +370,26 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
     const isInterestedTag = tags.some(t => /interested/i.test(t) && !/not.?interested/i.test(t));
     const eventType = (evt.event_type || payload.event_type || '').toLowerCase();
 
+    // Outbound send webhook (MESSAGE_SENT / INMAIL_SENT): we answered this
+    // lead — clear their pending reply card(s) immediately instead of waiting
+    // for the 30-min queue sync (HeyReach's chatroom API also lags the UI).
+    if (/(^|_)(message|inmail)_sent$/.test(eventType) || eventType === 'message_sent' || eventType === 'inmail_sent') {
+      const { db } = require('../services/db');
+      if (profileUrl) {
+        const snap = await db.collection('replies')
+          .where('profile_url', '==', profileUrl).limit(20).get();
+        let n = 0;
+        for (const doc of snap.docs) {
+          if (doc.data().handled === true) continue;
+          await doc.ref.update({ handled: true, handled_reason: 'answered_in_heyreach' });
+          n++;
+        }
+        console.log(`[heyreach webhook] Outbound send to ${fullName || profileUrl} — cleared ${n} pending repl${n === 1 ? 'y' : 'ies'}`);
+        return res.json({ ok: true, cleared: n });
+      }
+      return res.json({ ok: true, ignored: 'outbound send, no profile url' });
+    }
+
     // Tag-change webhook (e.g. auto-tag "Interested" applied after the reply):
     // update the lead's most recent reply doc instead of creating a duplicate.
     if (eventType.includes('tag') && !Array.isArray(evt.recent_messages)) {
