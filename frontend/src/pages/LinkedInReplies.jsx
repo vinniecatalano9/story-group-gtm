@@ -443,9 +443,13 @@ export default function LinkedInReplies({ api }) {
   // Default ON — open straight to the leads worth time. Toggle off to see everything.
   const [interestedOnly, setInterestedOnly] = useState(true);
   // Sender accounts toggled OFF (e.g. hide Aaron's threads). Persisted per browser.
+  // Aaron starts hidden on EVERY load per Vincent — unhiding lasts for the
+  // session only; the next visit hides him again.
+  const ALWAYS_START_HIDDEN = ['Aaron Evans'];
   const [hiddenSenders, setHiddenSenders] = useState(() => {
-    try { return new Set(JSON.parse(localStorage.getItem('li_hidden_senders') || '[]')); }
-    catch { return new Set(); }
+    let stored = [];
+    try { stored = JSON.parse(localStorage.getItem('li_hidden_senders') || '[]'); } catch { /* ignore */ }
+    return new Set([...stored, ...ALWAYS_START_HIDDEN]);
   });
 
   const senderOf = (r) => r.heyreach_account_name || r.ulinc_account_name || 'Other';
