@@ -371,6 +371,14 @@ export default function LinkedInReplies({ api }) {
   const [filter, setFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showHandled, setShowHandled] = useState(false);
+  // Default ON — open straight to the leads worth time. Toggle off to see everything.
+  const [interestedOnly, setInterestedOnly] = useState(true);
+
+  const isHot = (r) =>
+    r.classification === 'interested' ||
+    r.auto_tag_interested === true ||
+    r.classification === 'cost_question' ||
+    r.classification === 'cost_question_repeat';
 
   const fetchReplies = useCallback(() => {
     setLoading(true);
@@ -425,9 +433,21 @@ export default function LinkedInReplies({ api }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <h1 className="text-2xl font-bold text-white">LinkedIn Messages</h1>
-          <span className="text-sm text-white/30">{replies.length} pending</span>
+          <span className="text-sm text-white/30">
+            {(interestedOnly ? replies.filter(isHot) : replies).length} pending
+          </span>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setInterestedOnly(!interestedOnly)}
+            className={`px-3 py-1.5 text-sm font-medium rounded-xl border transition-all ${
+              interestedOnly
+                ? 'border-green-500/30 text-green-400 bg-green-500/15 ring-1 ring-green-500/20'
+                : 'border-white/10 text-white/40 bg-white/5 hover:text-white/70'
+            }`}
+          >
+            🔥 Interested only
+          </button>
           <label className="flex items-center gap-2 text-sm text-white/40 cursor-pointer">
             <input
               type="checkbox"
@@ -462,17 +482,25 @@ export default function LinkedInReplies({ api }) {
 
       {loading ? (
         <p className="text-white/30 py-10 text-center">Loading...</p>
-      ) : replies.length === 0 ? (
-        <p className="text-white/30 py-10 text-center">
-          {showHandled ? 'No LinkedIn messages yet' : 'All caught up'}
-        </p>
-      ) : (
-        <div className="space-y-4">
-          {replies.map(r => <LinkedInCard key={r.id} reply={r} api={api} onHandled={handleDone} onStatusChange={(id, status) => {
-            setReplies(prev => prev.map(p => p.id === id ? { ...p, ulinc_status: status } : p));
-          }} />)}
-        </div>
-      )}
+      ) : (() => {
+        const visible = interestedOnly ? replies.filter(isHot) : replies;
+        if (visible.length === 0) {
+          return (
+            <p className="text-white/30 py-10 text-center">
+              {interestedOnly && replies.length > 0
+                ? `No interested leads pending — ${replies.length} other message${replies.length === 1 ? '' : 's'} hidden by the Interested filter`
+                : showHandled ? 'No LinkedIn messages yet' : 'All caught up'}
+            </p>
+          );
+        }
+        return (
+          <div className="space-y-4">
+            {visible.map(r => <LinkedInCard key={r.id} reply={r} api={api} onHandled={handleDone} onStatusChange={(id, status) => {
+              setReplies(prev => prev.map(p => p.id === id ? { ...p, ulinc_status: status } : p));
+            }} />)}
+          </div>
+        );
+      })()}
     </div>
   );
 }
