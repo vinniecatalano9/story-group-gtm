@@ -286,6 +286,9 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {reply.heyreach_account_name && (
+            <span className="text-xs text-white/25">via {reply.heyreach_account_name}</span>
+          )}
           <span className="text-xs text-white/30">{time}</span>
           {reply.ulinc_contact_id && (
             <button
@@ -439,6 +442,22 @@ export default function LinkedInReplies({ api }) {
   const [showHandled, setShowHandled] = useState(false);
   // Default ON — open straight to the leads worth time. Toggle off to see everything.
   const [interestedOnly, setInterestedOnly] = useState(true);
+  // Sender accounts toggled OFF (e.g. hide Aaron's threads). Persisted per browser.
+  const [hiddenSenders, setHiddenSenders] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('li_hidden_senders') || '[]')); }
+    catch { return new Set(); }
+  });
+
+  const senderOf = (r) => r.heyreach_account_name || r.ulinc_account_name || 'Other';
+
+  const toggleSender = (name) => {
+    setHiddenSenders(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name); else next.add(name);
+      try { localStorage.setItem('li_hidden_senders', JSON.stringify([...next])); } catch { /* ignore */ }
+      return next;
+    });
+  };
 
   const isHot = (r) =>
     r.classification === 'interested' ||
@@ -500,7 +519,7 @@ export default function LinkedInReplies({ api }) {
         <div className="flex items-center gap-4">
           <h1 className="text-2xl font-bold text-white">LinkedIn Messages</h1>
           <span className="text-sm text-white/30">
-            {(interestedOnly ? replies.filter(isHot) : replies).length} pending
+            {replies.filter(r => (!interestedOnly || isHot(r)) && !hiddenSenders.has(senderOf(r))).length} pending
           </span>
         </div>
         <div className="flex items-center gap-3">
@@ -546,10 +565,38 @@ export default function LinkedInReplies({ api }) {
         </div>
       </div>
 
+      {/* Sender chips — click a name to hide/show that account's threads */}
+      {!loading && replies.length > 0 && (() => {
+        const senders = [...new Set(replies.map(senderOf))].sort();
+        if (senders.length < 2) return null;
+        return (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-white/30">Senders:</span>
+            {senders.map(name => {
+              const hidden = hiddenSenders.has(name);
+              const count = replies.filter(r => senderOf(r) === name && (!interestedOnly || isHot(r))).length;
+              return (
+                <button
+                  key={name}
+                  onClick={() => toggleSender(name)}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-all ${
+                    hidden
+                      ? 'border-white/10 text-white/25 bg-white/5 line-through'
+                      : 'border-sky-500/20 text-sky-400 bg-sky-500/10 hover:bg-sky-500/20'
+                  }`}
+                >
+                  {name} ({count})
+                </button>
+              );
+            })}
+          </div>
+        );
+      })()}
+
       {loading ? (
         <p className="text-white/30 py-10 text-center">Loading...</p>
       ) : (() => {
-        const visible = interestedOnly ? replies.filter(isHot) : replies;
+        const visible = replies.filter(r => (!interestedOnly || isHot(r)) && !hiddenSenders.has(senderOf(r)));
         if (visible.length === 0) {
           return (
             <p className="text-white/30 py-10 text-center">
