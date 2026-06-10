@@ -263,6 +263,29 @@ router.post('/campaign/:id/push', express.json({ limit: '10mb' }), async (req, r
  *
  * Configured in Heyreach: Settings -> Webhooks -> Every Message/InMail Reply Received.
  */
+// Pull the newest inbound message out of Heyreach's recent_messages array
+// (the real payload shape — event_type: every_message_reply_received).
+function extractReplyText(evt) {
+  const msgs = Array.isArray(evt.recent_messages) ? evt.recent_messages : [];
+  const replies = msgs.filter(m => m && m.is_reply && (m.message || '').trim());
+  const pick = replies.length ? replies[replies.length - 1] : (msgs[msgs.length - 1] || null);
+  if (pick && (pick.message || '').trim()) {
+    return { text: pick.message.trim(), date: pick.creation_time || null };
+  }
+  // Legacy / alternate shapes
+  const message = evt.message || evt.reply || evt;
+  const text = message.text || message.body || message.content ||
+    (typeof message.message === 'string' ? message.message : '') ||
+    message.replyText || '';
+  return { text: (text || '').trim(), date: message.timestamp || message.sentAt || message.createdAt || message.created_at || null };
+}
+
+// Heyreach tags come as ["Interested"] or [{ name: "Interested" }]
+function extractTags(lead) {
+  const raw = Array.isArray(lead.tags) ? lead.tags : [];
+  return raw.map(t => (typeof t === 'string' ? t : (t && (t.name || t.tag)) || '')).filter(Boolean);
+}
+
 router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
   try {
     const payload = req.body || {};
@@ -280,8 +303,40 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
     const profileUrl = lead.profileUrl || lead.linkedin_url || lead.linkedinUrl || lead.profile_url || '';
     const companyName = lead.companyName || lead.company_name || lead.company || '';
 
-    const replyText = message.text || message.body || message.content || message.message || message.reply || message.replyText || '';
-    const messageDate = message.timestamp || message.sentAt || message.createdAt || message.created_at || new Date().toISOString();
+    const tags = extractTags(lead);
+    const isInterestedTag = tags.some(t => /interested/i.test(t) && !/not.?interested/i.test(t));
+    const eventType = (evt.event_type || payload.event_type || '').toLowerCase();
+
+    // Tag-change webhook (e.g. auto-tag "Interested" applied after the reply):
+    // update the lead's most recent reply doc instead of creating a duplicate.
+    if (eventType.includes('tag') && !Array.isArray(evt.recent_messages)) {
+      const { db } = require('../services/db');
+      if (profileUrl) {
+        // No orderBy — avoids needing a composite Firestore index; sort in code.
+        const snap = await db.collection('replies')
+          .where('profile_url', '==', profileUrl).limit(20).get();
+        if (!snap.empty) {
+          const newest = snap.docs.slice().sort((a, b) => {
+            const ta = a.data().created_at?.toMillis ? a.data().created_at.toMillis() : 0;
+            const tb = b.data().created_at?.toMillis ? b.data().created_at.toMillis() : 0;
+            return tb - ta;
+          })[0];
+          await newest.ref.update({
+            heyreach_tags: tags,
+            auto_tag_interested: isInterestedTag,
+            ...(isInterestedTag ? { handled: false } : {}),
+          });
+          console.log(`[heyreach webhook] Tag update for ${fullName || profileUrl}: ${tags.join(', ')}`);
+          return res.json({ ok: true, updated: newest.id, tags });
+        }
+      }
+      console.log(`[heyreach webhook] Tag update with no matching reply (${fullName || profileUrl}): ${tags.join(', ')}`);
+      return res.json({ ok: true, ignored: 'tag update, no matching reply', tags });
+    }
+
+    const extracted = extractReplyText(evt);
+    const replyText = extracted.text;
+    const messageDate = extracted.date || evt.timestamp || new Date().toISOString();
 
     const accountName = [account.firstName, account.lastName].filter(Boolean).join(' ') || account.fullName || account.name || '';
     const accountId = account.id || account.accountId || null;
@@ -317,6 +372,8 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
       heyreach_account_name: accountName,
       heyreach_campaign_id: campaignId,
       heyreach_campaign_name: campaignName,
+      heyreach_tags: tags,
+      auto_tag_interested: isInterestedTag,
       raw_payload: payload,
       handled: false,
       classification: 'other',          // default until classifier runs
@@ -336,14 +393,27 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
           firstName,
           slots: null,
         });
-        await ref.update({
+        const update = {
           classification: cls.classification || 'other',
           sentiment: cls.sentiment || 'neutral',
           summary: cls.summary || '',
           suggested_macro: cls.suggested_macro || 'NONE',
           suggested_action: cls.suggested_action || '',
           draft_response: cls.draft_response || '',
-        });
+        };
+        // Heyreach auto-tagged this lead Interested — never let it land without
+        // a draft. Fall back to the playbook's INTERESTED soft ask (LinkedIn split).
+        if (isInterestedTag && !update.draft_response) {
+          const fn = firstName || 'there';
+          update.classification = 'interested';
+          update.sentiment = 'positive';
+          update.suggested_macro = 'INTERESTED_SOFT_ASK';
+          update.suggested_action = 'Reply with soft ask, no link yet.';
+          update.draft_response =
+            `Message 1: Hey ${fn}, glad to hear it. We pitch founders' stories straight to reporters and producers who cover your space and earn the coverage, no paid placement.\n\n` +
+            `Message 2: Are you free for a quick call this week?`;
+        }
+        await ref.update(update);
         console.log(`[heyreach webhook] Classified ${ref.id} as ${cls.classification}`);
       } catch (e) {
         console.error(`[heyreach webhook] Classify failed for ${ref.id}:`, e.message);
