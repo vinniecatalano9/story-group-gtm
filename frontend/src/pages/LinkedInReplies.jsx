@@ -176,25 +176,55 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
   const isHeyreach = reply.source === 'heyreach';
   const canSend = isHeyreach || reply.ulinc_contact_id;
 
+  // HeyReach drafts are 2-3 separate LinkedIn messages — each gets its own
+  // box + Send button so Vincent controls the pacing (never all at once).
+  const [msgBlocks, setMsgBlocks] = useState(() => {
+    const blocks = (reply.draft_response || '')
+      .split(/\n{2,}/)
+      .map(b => stripLabel(b))
+      .filter(Boolean)
+      .map(text => ({ text, sent: false, sending: false }));
+    return blocks.length ? blocks : [{ text: '', sent: false, sending: false }];
+  });
+
+  const sendBlock = async (i) => {
+    const block = msgBlocks[i];
+    if (!block.text.trim() || block.sent || block.sending) return;
+    const isLast = msgBlocks.every((b, j) => j === i || b.sent);
+    setMsgBlocks(prev => prev.map((b, j) => j === i ? { ...b, sending: true } : b));
+    try {
+      const res = await fetch(`${api}/api/heyreach/reply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reply_id: reply.id, message: block.text.trim(), single: true, done: isLast }),
+      });
+      if (res.ok) {
+        setMsgBlocks(prev => prev.map((b, j) => j === i ? { ...b, sent: true, sending: false } : b));
+        if (isLast) { setSent(true); setShowReply(false); }
+      } else {
+        const err = await res.json();
+        alert(`Send failed: ${err.error || 'Unknown error'}`);
+        setMsgBlocks(prev => prev.map((b, j) => j === i ? { ...b, sending: false } : b));
+      }
+    } catch {
+      alert('Send failed — check connection');
+      setMsgBlocks(prev => prev.map((b, j) => j === i ? { ...b, sending: false } : b));
+    }
+  };
+
   const sendReply = async () => {
-    if (!replyText.trim() || !canSend) return;
+    if (!replyText.trim() || !reply.ulinc_contact_id) return;
     setSending(true);
     try {
-      const res = isHeyreach
-        ? await fetch(`${api}/api/heyreach/reply`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ reply_id: reply.id, message: replyText.trim() }),
-          })
-        : await fetch(`${api}/api/ulinc/send`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contact_id: reply.ulinc_contact_id,
-              message: replyText.trim(),
-              reply_id: reply.id,
-            }),
-          });
+      const res = await fetch(`${api}/api/ulinc/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contact_id: reply.ulinc_contact_id,
+          message: replyText.trim(),
+          reply_id: reply.id,
+        }),
+      });
       if (res.ok) {
         setSent(true);
         setSending(false);
@@ -310,7 +340,43 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
         </div>
       )}
 
-      {showReply && (
+      {showReply && isHeyreach && (
+        <div className="space-y-3 border-t border-white/10 pt-3">
+          <p className="text-xs font-medium text-white/40 uppercase tracking-wide">
+            Send LinkedIn Reply — one message at a time, you control the pacing
+          </p>
+          {msgBlocks.map((b, i) => (
+            <div key={i} className={`space-y-1.5 ${b.sent ? 'opacity-50' : ''}`}>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-medium text-white/30 uppercase tracking-wide">Message {i + 1}</span>
+                {b.sent && <span className="text-[10px] text-green-400">✓ Sent</span>}
+              </div>
+              <div className="flex items-start gap-2">
+                <textarea
+                  value={b.text}
+                  disabled={b.sent}
+                  onChange={e => setMsgBlocks(prev => prev.map((p, j) => j === i ? { ...p, text: e.target.value } : p))}
+                  rows={Math.max(2, Math.ceil(b.text.length / 80))}
+                  className="glass-input flex-1 text-sm rounded-xl p-3 resize-y disabled:opacity-60"
+                  placeholder="Type your message..."
+                />
+                <button
+                  onClick={() => sendBlock(i)}
+                  disabled={b.sent || b.sending || !b.text.trim() || (i > 0 && !msgBlocks[i - 1].sent)}
+                  className="glass-btn-primary shrink-0 px-3 py-2 text-xs rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {b.sent ? 'Sent' : b.sending ? '...' : 'Send'}
+                </button>
+              </div>
+            </div>
+          ))}
+          <p className="text-[10px] text-white/25">
+            Messages send in order — Message 2 unlocks after Message 1 is sent. The card marks done after the last one.
+          </p>
+        </div>
+      )}
+
+      {showReply && !isHeyreach && (
         <div className="space-y-2 border-t border-white/10 pt-3">
           <p className="text-xs font-medium text-white/40 uppercase tracking-wide">Send LinkedIn Reply</p>
           <textarea

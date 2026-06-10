@@ -256,14 +256,17 @@ router.post('/campaign/:id/push', express.json({ limit: '10mb' }), async (req, r
 /**
  * POST /api/heyreach/reply
  * Send a reply into the lead's HeyReach conversation from the dashboard.
- * Body: { reply_id, message }
- * Multi-message LinkedIn drafts ("Message 1: ...\n\nMessage 2: ...") are split
- * on blank lines, "Message N:" labels stripped, and sent as separate
- * back-to-back messages — the playbook format.
+ * Body: { reply_id, message, single?, done? }
+ *   single=true — send `message` as ONE LinkedIn message, no splitting.
+ *     The dashboard sends each playbook message individually so Vincent
+ *     controls the pacing instead of all 3 firing at once.
+ *   done=true — mark the reply handled after this send (the dashboard sets
+ *     it on the final message). Legacy mode (no `single`) splits on blank
+ *     lines and marks handled.
  */
 router.post('/reply', express.json({ limit: '1mb' }), async (req, res) => {
   try {
-    const { reply_id, message } = req.body || {};
+    const { reply_id, message, single, done } = req.body || {};
     if (!reply_id || !(message || '').trim()) {
       return res.status(400).json({ error: 'reply_id and message required' });
     }
@@ -281,9 +284,11 @@ router.post('/reply', express.json({ limit: '1mb' }), async (req, res) => {
       return res.status(400).json({ error: 'No HeyReach conversation/account on this reply — answer it in HeyReach directly.' });
     }
 
-    const blocks = message.split(/\n{2,}/)
-      .map(b => b.replace(/^Message\s*\d+\s*:\s*/i, '').trim())
-      .filter(Boolean);
+    const blocks = single
+      ? [message.replace(/^Message\s*\d+\s*:\s*/i, '').trim()].filter(Boolean)
+      : message.split(/\n{2,}/)
+          .map(b => b.replace(/^Message\s*\d+\s*:\s*/i, '').trim())
+          .filter(Boolean);
 
     const sentBlocks = [];
     for (const block of blocks) {
@@ -294,10 +299,12 @@ router.post('/reply', express.json({ limit: '1mb' }), async (req, res) => {
       if (blocks.length > 1) await new Promise(r => setTimeout(r, 1500));
     }
 
+    const priorSent = d.sent_text ? d.sent_text + '\n\n' : '';
+    const markHandled = single ? done === true : true;
     await ref.update({
-      handled: true,
+      ...(markHandled ? { handled: true } : {}),
       sent_at: new Date(),
-      sent_text: sentBlocks.join('\n\n'),
+      sent_text: priorSent + sentBlocks.join('\n\n'),
       sent_via: 'heyreach',
     });
 
