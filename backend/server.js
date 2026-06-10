@@ -651,6 +651,18 @@ app.post('/api/trigger/healthcheck', async (req, res) => {
   }
 });
 
+// Sync the LinkedIn queue against live HeyReach chatrooms (clear answered, refresh stale)
+app.post('/api/trigger/queue-sync', async (req, res) => {
+  try {
+    const { syncQueue } = require('./cron/queueSync');
+    const limit = parseInt(req.query.limit) || 60;
+    const r = await syncQueue({ limit });
+    res.json({ success: true, ...r });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Re-run the v3 classifier over unhandled replies (upgrade old drafts / fix 'other' backlog)
 app.post('/api/trigger/reclassify', async (req, res) => {
   try {
@@ -730,6 +742,14 @@ cron.schedule('0 */6 * * *', async () => {
   console.log('[cron] Brains health check...');
   const { checkBrains } = require('./cron/healthcheck');
   await checkBrains();
+}, { timezone: 'America/Chicago' });
+
+// LinkedIn queue sync: every 30 min — clear replies already answered in
+// HeyReach, refresh stale reply text, sync Interested auto-tags.
+cron.schedule('*/30 * * * *', async () => {
+  console.log('[cron] LinkedIn queue sync...');
+  const { syncQueue } = require('./cron/queueSync');
+  await syncQueue();
 }, { timezone: 'America/Chicago' });
 
 // Auto-deploy: pull + rebuild backend + rebuild frontend + firebase deploy
