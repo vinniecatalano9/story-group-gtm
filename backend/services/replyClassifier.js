@@ -43,7 +43,7 @@ Match the prospect's message to one of these, prefer the most specific:
 |---|---|
 | interested | "tell me more," "interested," "how can you help," generic positive |
 | cost_question | "how much," "cost," "pricing," "rates" — first time asking |
-| cost_question_repeat | They already asked pricing and are pressing again for a number |
+| cost_question_repeat | They already got the "it's personalized, let's hop on a call" answer and are pressing again — they won't book without a number |
 | more_info | "how does this work," "what's your process," "walk me through" |
 | why_reach_out | "why are you reaching out," "how did you find me" |
 | guarantee | "guarantee results," "is this paid/free," "pay-to-play," "commission," "pay-per-placement" |
@@ -59,22 +59,24 @@ Match the prospect's message to one of these, prefer the most specific:
 
 Use the exact playbook macros below. Adapt minimally — these are Vincent's proven scripts. Use {{firstName}} only if you don't have the actual first name; otherwise insert the real first name.
 
---- COST_QUESTION (first pricing ask — ANCHOR the range, do NOT dodge) ---
+--- COST_QUESTION (first pricing ask — personalized framing, NO numbers yet) ---
+Everything we do is built around the founder's story and goals, so pricing is personalized — the first call is where we figure out where they fit. Do NOT give a number or range on the first ask.
 Email (single block):
-"Straight answer ${firstName || '{{firstName}}'}: most engagements run $8-15K/mo depending on how aggressive the media push is. That covers your story angles, pitching reporters and producers on your behalf, and the follow-up. Where it lands for you comes down to your goals, which is the 15 minutes I'd want on a call. Free this week?"
-
-LinkedIn (3 messages):
-Message 1: Straight answer ${firstName || '{{firstName}}'}: most engagements run $8-15K/mo depending on how aggressive the push is.
-Message 2: That covers story angles, pitching reporters and producers for you, and the follow-up. Where it lands comes down to your goals.
-Message 3: Worth 15 minutes this week to map it out?
-
---- COST_QUESTION_REPEAT / BUDGET PUSHBACK (they balked on price) ---
-Email:
-"Totally fair. The full retainer runs $8-15K/mo, but if you'd rather start lighter we also run focused media-booking projects in the $4-5K range to get you in front of the right reporters without the bigger commitment. Happy to map which fits on a quick call, free this week?"
+"Fair question ${firstName || '{{firstName}}'} — pricing is built around your goals and how aggressive the media push is, so it's different for every founder. The first call is where we figure out where you'd fit and what it'd run. Free for 15 minutes this week?"
 
 LinkedIn (2 messages):
-Message 1: Totally fair. The full retainer's $8-15K/mo, but we also run lighter media-booking projects around $4-5K to start.
-Message 2: Happy to map which fits on a quick call. Free this week?
+Message 1: Fair question ${firstName || '{{firstName}}'} — pricing is built around your goals and how aggressive the push is, so it's different for every founder.
+Message 2: The first call is where we figure out where you'd fit and what it'd run. Free for 15 minutes this week?
+
+--- COST_QUESTION_REPEAT (they pressed again / won't book without a number — NOW give the range) ---
+Only when they've already gotten the personalized answer and are saying they won't take a call without a number. Give the range straight, then bring it back to the call.
+Email:
+"Totally fair ${firstName || '{{firstName}}'} — most engagements run $8-15K/mo depending on how aggressive the media push is, and if you'd rather start lighter we also run focused media-booking projects in the $4-5K range. Where you'd land comes down to your goals, which is the 15 minutes I'd want on a call. Free this week?"
+
+LinkedIn (3 messages):
+Message 1: Totally fair ${firstName || '{{firstName}}'} — most engagements run $8-15K/mo depending on how aggressive the push is.
+Message 2: If you'd rather start lighter, we also run focused media-booking projects around $4-5K.
+Message 3: Where you'd land comes down to your goals. Worth 15 minutes this week to map it out?
 
 --- MORE_INFO (process question) ---
 Email:
@@ -115,7 +117,7 @@ draft_response='', suggested_action='Wait until return / clean from list.'
 
 === NON-NEGOTIABLES (v3) ===
 - Email length: 1–3 sentences (4 max). LinkedIn: 2–3 back-to-back messages.
-- ANCHOR the price on the FIRST cost question — give the $8-15K/mo range, do not dodge. "It depends" reads evasive and kills the thread. Offer the $4-5K lighter project only on budget pushback. Never name tiers (Foundation/Amplify/Influence/Command).
+- Pricing is PERSONALIZED. On the FIRST cost question: no numbers, no range — frame it as built around their goals and bring it to the call. ONLY if they press again and won't book without a number do you give the $8-15K/mo range (plus the $4-5K lighter media-booking option). Never name tiers (Foundation/Amplify/Influence/Command).
 - For "is this paid / free / pay-to-play?": ALWAYS reframe to earned-not-paid (we don't pay outlets; the retainer is the strategy + pitching work; editorial independence is why it works). This is the #1 reason deals stall — never leave it unanswered.
 - Do NOT hardcode CNN or left-leaning outlets — many founders are conservative-leaning and "you lost me at CNN" is a real churn. Say "reporters and producers who cover your space."
 - NO booking link in the FIRST reply. Once they confirm they want to talk, share the Calendly: ${process.env.CALENDLY_LINK || '[Calendly link]'}
