@@ -94,6 +94,7 @@ async function getBoard() {
         company: d.company_name || '',
         channel: d.source || '',
         classification: d.classification,
+        hot: d.classification === 'interested' || d.auto_tag_interested === true,
         reply: (d.reply_text || d.summary || '').replace(/\s+/g, ' ').trim().slice(0, 220),
         draft: d.draft_response || '',
         hasDraft: !!d.draft_response,
@@ -150,13 +151,26 @@ async function runBrief({ send = true } = {}) {
 
   const lines = [`*☀️ Morning GTM Brief — ${fmtDate()}*`];
 
-  if (board.length) {
-    lines.push(`\n*🎯 ${board.length} winnable repl${board.length === 1 ? 'y' : 'ies'} awaiting you${board.length > 8 ? ' (top 8)' : ''}:*`);
-    for (const b of board.slice(0, 8)) {
+  const hot = board.filter(b => b.hot);
+  const rest = board.filter(b => !b.hot);
+
+  if (hot.length) {
+    lines.push(`\n*🔥 ${hot.length} INTERESTED — answer these first:*`);
+    for (const b of hot.slice(0, 8)) {
+      const co = b.company ? ` — ${b.company.slice(0, 40)}` : '';
+      lines.push(`• *${b.name}*${co}  _(${chLabel(b.channel)})_${b.hasDraft ? '  ✏️ draft ready' : ''}\n   ›_${b.reply || '(no text captured)'}_`);
+    }
+  }
+
+  if (rest.length) {
+    lines.push(`\n*🎯 ${rest.length} more winnable repl${rest.length === 1 ? 'y' : 'ies'} awaiting you${rest.length > 8 ? ' (top 8)' : ''}:*`);
+    for (const b of rest.slice(0, 8)) {
       const co = b.company ? ` — ${b.company.slice(0, 40)}` : '';
       lines.push(`• *${b.name}*${co}  _(${chLabel(b.channel)} · ${b.classification})_${b.hasDraft ? '  ✏️ draft ready' : ''}\n   ›_${b.reply || '(no text captured)'}_`);
     }
-  } else {
+  }
+
+  if (!board.length) {
     lines.push(`\n*🎯 Board clear* — no winnable replies awaiting a response.`);
   }
 

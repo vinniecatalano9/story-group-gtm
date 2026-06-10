@@ -106,6 +106,34 @@ function ConversationThread({ contactId, api }) {
   );
 }
 
+function CopyButton({ text }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch { /* ignore */ }
+  };
+  return (
+    <button
+      onClick={copy}
+      className={`shrink-0 px-2 py-1 text-[10px] font-medium rounded-lg border transition-all ${
+        copied
+          ? 'border-green-500/30 text-green-400 bg-green-500/10'
+          : 'border-white/10 text-white/40 bg-white/5 hover:text-white/80 hover:bg-white/10'
+      }`}
+    >
+      {copied ? 'Copied!' : 'Copy'}
+    </button>
+  );
+}
+
+// Strip the "Message N:" label — copy/send the text the prospect should actually see
+function stripLabel(block) {
+  return block.replace(/^Message\s*\d+\s*:\s*/i, '').trim();
+}
+
 function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
   const [marking, setMarking] = useState(false);
   const [showConvo, setShowConvo] = useState(false);
@@ -145,19 +173,28 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
     setSettingStatus(false);
   };
 
+  const isHeyreach = reply.source === 'heyreach';
+  const canSend = isHeyreach || reply.ulinc_contact_id;
+
   const sendReply = async () => {
-    if (!replyText.trim() || !reply.ulinc_contact_id) return;
+    if (!replyText.trim() || !canSend) return;
     setSending(true);
     try {
-      const res = await fetch(`${api}/api/ulinc/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contact_id: reply.ulinc_contact_id,
-          message: replyText.trim(),
-          reply_id: reply.id,
-        }),
-      });
+      const res = isHeyreach
+        ? await fetch(`${api}/api/heyreach/reply`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reply_id: reply.id, message: replyText.trim() }),
+          })
+        : await fetch(`${api}/api/ulinc/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contact_id: reply.ulinc_contact_id,
+              message: replyText.trim(),
+              reply_id: reply.id,
+            }),
+          });
       if (res.ok) {
         setSent(true);
         setSending(false);
@@ -228,7 +265,7 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
               {showConvo ? 'Hide' : 'Thread'}
             </button>
           )}
-          {reply.ulinc_contact_id && !sent && (
+          {canSend && !sent && (
             <button
               onClick={() => setShowReply(!showReply)}
               className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-xl border border-indigo-500/20 text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 transition-all"
@@ -261,12 +298,13 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
           <span className="font-medium text-white/50">Suggested Reply:</span>
           <div className="mt-1 space-y-2">
             {reply.draft_response.split(/\n{2,}/).map((block, i) => (
-              <p
+              <div
                 key={i}
-                className="bg-brand-500/10 border border-brand-500/15 rounded-xl p-3 text-white/90 whitespace-pre-line leading-relaxed"
+                className="flex items-start gap-2 bg-brand-500/10 border border-brand-500/15 rounded-xl p-3"
               >
-                {block.trim()}
-              </p>
+                <p className="flex-1 text-white/90 whitespace-pre-line leading-relaxed">{block.trim()}</p>
+                <CopyButton text={stripLabel(block)} />
+              </div>
             ))}
           </div>
         </div>

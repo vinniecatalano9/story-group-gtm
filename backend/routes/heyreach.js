@@ -254,6 +254,62 @@ router.post('/campaign/:id/push', express.json({ limit: '10mb' }), async (req, r
 
 
 /**
+ * POST /api/heyreach/reply
+ * Send a reply into the lead's HeyReach conversation from the dashboard.
+ * Body: { reply_id, message }
+ * Multi-message LinkedIn drafts ("Message 1: ...\n\nMessage 2: ...") are split
+ * on blank lines, "Message N:" labels stripped, and sent as separate
+ * back-to-back messages — the playbook format.
+ */
+router.post('/reply', express.json({ limit: '1mb' }), async (req, res) => {
+  try {
+    const { reply_id, message } = req.body || {};
+    if (!reply_id || !(message || '').trim()) {
+      return res.status(400).json({ error: 'reply_id and message required' });
+    }
+
+    const { db } = require('../services/db');
+    const ref = db.collection('replies').doc(reply_id);
+    const doc = await ref.get();
+    if (!doc.exists) return res.status(404).json({ error: 'reply not found' });
+    const d = doc.data();
+
+    const raw = d.raw_payload?.data || d.raw_payload || {};
+    const conversationId = d.heyreach_conversation_id || raw.conversation_id || null;
+    const linkedInAccountId = Number(d.heyreach_account_id || raw.sender?.id) || null;
+    if (!conversationId || !linkedInAccountId) {
+      return res.status(400).json({ error: 'No HeyReach conversation/account on this reply — answer it in HeyReach directly.' });
+    }
+
+    const blocks = message.split(/\n{2,}/)
+      .map(b => b.replace(/^Message\s*\d+\s*:\s*/i, '').trim())
+      .filter(Boolean);
+
+    const sentBlocks = [];
+    for (const block of blocks) {
+      await axios.post(`${HEYREACH_BASE}/inbox/SendMessage`,
+        { conversationId, linkedInAccountId, message: block },
+        { headers: headers() });
+      sentBlocks.push(block);
+      if (blocks.length > 1) await new Promise(r => setTimeout(r, 1500));
+    }
+
+    await ref.update({
+      handled: true,
+      sent_at: new Date(),
+      sent_text: sentBlocks.join('\n\n'),
+      sent_via: 'heyreach',
+    });
+
+    console.log(`[heyreach reply] Sent ${sentBlocks.length} message(s) to ${d.full_name || conversationId}`);
+    res.json({ ok: true, sent: sentBlocks.length });
+  } catch (e) {
+    console.error('[heyreach reply] Error:', e.response?.data || e.message);
+    res.status(500).json({ error: e.response?.data?.detail || e.response?.data?.error || e.message });
+  }
+});
+
+/**
  * POST /api/heyreach/webhook
  *
  * Heyreach posts here on every Message/InMail reply received.
