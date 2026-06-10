@@ -178,13 +178,45 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
       <div className="flex items-start justify-between">
         <div>
           <span className="text-lg mr-2">{emoji}</span>
-          <span className="font-semibold text-white/90">{reply.contact_name || reply.email}</span>
+          <span className="font-semibold text-white/90">
+            {reply.contact_name || reply.full_name || reply.lead_name || reply.email || 'Unknown'}
+          </span>
+          {reply.company_name && (
+            <span className="ml-1.5 text-xs text-white/30">· {reply.company_name}</span>
+          )}
           {reply.email && reply.contact_name && !reply.email.startsWith('linkedin:') && (
             <span className="ml-1.5 text-xs text-white/30">{reply.email}</span>
           )}
           <span className={`ml-2 inline-block px-2.5 py-0.5 rounded-lg text-xs font-medium ${colors}`}>
             {cls.replace(/_/g, ' ')}
           </span>
+          {reply.auto_tag_interested && (
+            <span className="ml-1.5 inline-block px-2.5 py-0.5 rounded-lg text-xs font-medium bg-green-500/15 text-green-400 border border-green-500/20">
+              ⚡ HeyReach: Interested
+            </span>
+          )}
+          <div className="mt-1 flex items-center gap-3">
+            {reply.profile_url && (
+              <a
+                href={reply.profile_url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-sky-400 hover:text-sky-300 hover:underline"
+              >
+                LinkedIn Profile ↗
+              </a>
+            )}
+            {reply.source === 'heyreach' && (
+              <a
+                href="https://app.heyreach.io/inbox"
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-indigo-400 hover:text-indigo-300 hover:underline"
+              >
+                HeyReach Inbox ↗
+              </a>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs text-white/30">{time}</span>
@@ -227,7 +259,16 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
       {reply.draft_response && !showReply && (
         <div className="text-sm">
           <span className="font-medium text-white/50">Suggested Reply:</span>
-          <p className="mt-1 bg-brand-500/10 border border-brand-500/15 rounded-xl p-3 text-white/90">{reply.draft_response}</p>
+          <div className="mt-1 space-y-2">
+            {reply.draft_response.split(/\n{2,}/).map((block, i) => (
+              <p
+                key={i}
+                className="bg-brand-500/10 border border-brand-500/15 rounded-xl p-3 text-white/90 whitespace-pre-line leading-relaxed"
+              >
+                {block.trim()}
+              </p>
+            ))}
+          </div>
         </div>
       )}
 

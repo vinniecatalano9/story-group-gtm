@@ -373,6 +373,7 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
       heyreach_campaign_id: campaignId,
       heyreach_campaign_name: campaignName,
       heyreach_tags: tags,
+      heyreach_conversation_id: evt.conversation_id || null,
       auto_tag_interested: isInterestedTag,
       raw_payload: payload,
       handled: false,
