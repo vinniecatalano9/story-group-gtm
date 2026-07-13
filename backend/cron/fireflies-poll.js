@@ -22,6 +22,7 @@ async function pollFireflies() {
       const doc = await transcripts.doc(t.id).get();
       const isNew = !doc.exists;
       const hasDraft = doc.exists && !!doc.data().followup_draft;
+      const alreadySkipped = doc.exists && !!doc.data().followup_skipped;
 
       let matchedContacts = doc.exists ? (doc.data().matched_contacts || []) : [];
       let full = null;
@@ -35,10 +36,14 @@ async function pollFireflies() {
       }
 
       const callAgeHours = t.date ? (Date.now() - new Date(t.date).getTime()) / 36e5 : Infinity;
-      if (!hasDraft && matchedContacts.length > 0 && callAgeHours <= DRAFT_WINDOW_HOURS) {
+      if (!hasDraft && !alreadySkipped && callAgeHours <= DRAFT_WINDOW_HOURS) {
         full = full || await fireflies.getTranscript(t.id);
         const r = await generateDraftForTranscript(full, matchedContacts);
         if (r.followup_draft) drafted++;
+        // Remember internal/no-prospect calls so we don't re-check every 15 min
+        if (r.skipped && r.skipped.startsWith('no external')) {
+          await transcripts.doc(t.id).set({ followup_skipped: r.skipped }, { merge: true });
+        }
       }
     } catch (e) {
       console.error(`[fireflies-poll] Failed on transcript ${t.id} ("${t.title}"):`, e.message);

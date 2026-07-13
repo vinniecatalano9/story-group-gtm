@@ -6,10 +6,20 @@ const coteriehq = require('../services/coteriehq');
 const { generateFollowupDraft } = require('../services/followupDrafter');
 
 const MY_EMAILS = ['vincent@storygroup.io', 'vincent@winningrepublicans.com', 'vinnie.catalano3@gmail.com'];
+const INTERNAL_DOMAINS = ['storygroup.io', 'winningrepublicans.com', 'fireflies.ai'];
 
 function isMyCall(participants) {
   const parts = (participants || []).map(p => p.toLowerCase().trim());
   return parts.some(p => MY_EMAILS.includes(p) || p.includes('vinnie') || p.includes('vincent'));
+}
+
+/** Participant emails that aren't Vincent, the team, or the Fireflies bot. */
+function externalParticipants(participants) {
+  return (participants || [])
+    .map(p => p.toLowerCase().trim())
+    .filter(p => p.includes('@'))
+    .filter(p => !MY_EMAILS.includes(p))
+    .filter(p => !INTERNAL_DOMAINS.includes(p.split('@')[1]));
 }
 
 /**
@@ -93,10 +103,13 @@ async function storeAndMatch(transcript) {
  * Idempotent unless force=true. Returns { followup_draft } or { skipped }.
  */
 async function generateDraftForTranscript(transcript, matchedContacts, { force = false, email = null } = {}) {
+  // Recipient: explicit override → matched CRM contact → any external
+  // participant on the call (LinkedIn/Calendly-booked prospects aren't in
+  // the leads DB yet, but they still need a follow-up).
   const target = email
     ? { email: email.toLowerCase().trim() }
-    : (matchedContacts || [])[0];
-  if (!target?.email) return { skipped: 'no matched external contact' };
+    : (matchedContacts || [])[0] || externalParticipants(transcript.participants).map(e => ({ email: e }))[0];
+  if (!target?.email) return { skipped: 'no external participant on this call' };
 
   const ref = transcripts.doc(transcript.id);
   if (!force) {
@@ -163,11 +176,10 @@ router.post('/webhook', async (req, res) => {
 
     // Fire-and-forget: Claude drafting takes 30-120s and Fireflies retries slow
     // webhooks, so respond now and attach the draft when it lands.
-    if (matchedContacts.length > 0) {
-      generateDraftForTranscript(transcript, matchedContacts)
-        .then(r => r.skipped && console.log(`[fireflies] Draft skipped: ${r.skipped}`))
-        .catch(e => console.error('[fireflies] Draft generation failed:', e.message));
-    }
+    // Drafts for matched contacts OR any external participant.
+    generateDraftForTranscript(transcript, matchedContacts)
+      .then(r => r.skipped && console.log(`[fireflies] Draft skipped: ${r.skipped}`))
+      .catch(e => console.error('[fireflies] Draft generation failed:', e.message));
 
     console.log(`[fireflies] Done — matched ${matchedReplies} replies, ${matchedLeads} leads`);
     res.json({
@@ -176,7 +188,7 @@ router.post('/webhook', async (req, res) => {
       title: transcript.title,
       matched_replies: matchedReplies,
       matched_leads: matchedLeads,
-      draft_queued: matchedContacts.length > 0,
+      draft_queued: true,
     });
   } catch (e) {
     console.error('[fireflies] Webhook error:', e);
