@@ -576,6 +576,17 @@ app.post('/api/trigger/daily-metrics', async (req, res) => {
   }
 });
 
+// Pre-call briefs on demand — ?send=false to preview without emailing
+app.post('/api/trigger/precall-brief', async (req, res) => {
+  try {
+    const { runPrecallBrief } = require('./cron/precall-brief');
+    const r = await runPrecallBrief({ send: req.query.send !== 'false' });
+    res.json({ success: true, ...r });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Fireflies poll on demand — pull new transcripts + auto-draft follow-ups
 app.post('/api/trigger/fireflies-poll', async (req, res) => {
   try {
@@ -754,6 +765,19 @@ cron.schedule('0 */6 * * *', async () => {
   const { checkBrains } = require('./cron/healthcheck');
   await checkBrains();
 }, { timezone: 'America/Chicago' });
+
+// Pre-call briefs: every morning 7am ET — research today's booked prospects
+// (site scrape + news + ICP fit + objections + case study) and email the
+// brief to Vincent + McKenna.
+cron.schedule('0 7 * * *', async () => {
+  console.log('[cron] Running pre-call briefs...');
+  try {
+    const { runPrecallBrief } = require('./cron/precall-brief');
+    await runPrecallBrief({ send: true });
+  } catch (e) {
+    console.error('[cron] Pre-call brief error:', e.message);
+  }
+}, { timezone: 'America/New_York' });
 
 // Fireflies poll: every 15 min — webhook safety net. Stores new call
 // transcripts, matches contacts, auto-drafts follow-up emails.

@@ -101,6 +101,22 @@ async function getCampaignAnalytics() {
 }
 
 /**
+ * Send a fresh (non-reply) email via Instantly API v2.
+ * @param {object} opts - { eaccount, to (string|string[]), subject, html, text }
+ */
+async function sendEmail({ eaccount, to, subject, html, text }) {
+  return apiCall('POST', '/emails', {
+    eaccount,
+    to_address_email_list: Array.isArray(to) ? to.join(',') : to,
+    subject,
+    body: {
+      ...(html ? { html } : {}),
+      ...(text ? { text } : {}),
+    },
+  });
+}
+
+/**
  * Reply to an email thread via Instantly API v2.
  * @param {string} replyToUuid - The UUID of the email to reply to
  * @param {string} eaccount - The sending email account connected to Instantly
@@ -196,7 +212,7 @@ async function updateLeadInterestStatus(email, interestStatus, campaignId = null
 module.exports = {
   addLeadsToCampaign, removeLeads, getESGFlaggedLeads,
   getCampaigns, getCampaignLeads, getCampaignAnalytics,
-  replyToEmail, getLeadLabels, getRepliedLeads, getAllRepliedLeads,
+  sendEmail, replyToEmail, getLeadLabels, getRepliedLeads, getAllRepliedLeads,
   getSubsequences, addLeadToSubsequence, updateLeadInterestStatus,
   getSubsequenceEntries,
 };

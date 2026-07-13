@@ -160,4 +160,42 @@ async function getAvailableSlots() {
   }
 }
 
-module.exports = { getAvailableSlots };
+/**
+ * List today's remaining events (ET) from the Story Group calendar,
+ * with attendee emails for prospect detection.
+ */
+async function getTodaysEvents() {
+  const calId = CALENDAR_ID();
+  if (!calId) {
+    console.log('[calendar] No GOOGLE_CALENDAR_ID configured, skipping');
+    return [];
+  }
+  const calendar = getCalendar();
+  const now = new Date();
+  const res = await calendar.events.list({
+    calendarId: calId,
+    timeMin: now.toISOString(),
+    timeMax: new Date(now.getTime() + 24 * 3600 * 1000).toISOString(),
+    singleEvents: true,
+    orderBy: 'startTime',
+    maxResults: 25,
+  });
+  const dayFmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
+  const today = dayFmt.format(now);
+  return (res.data.items || [])
+    .filter(e => {
+      const start = e.start?.dateTime || e.start?.date;
+      return start && dayFmt.format(new Date(start)) === today && e.status !== 'cancelled';
+    })
+    .map(e => ({
+      id: e.id,
+      title: e.summary || '',
+      start: e.start?.dateTime || e.start?.date,
+      description: e.description || '',
+      attendees: (e.attendees || [])
+        .map(a => ({ email: (a.email || '').toLowerCase(), name: a.displayName || '' }))
+        .filter(a => a.email),
+    }));
+}
+
+module.exports = { getAvailableSlots, getTodaysEvents };
