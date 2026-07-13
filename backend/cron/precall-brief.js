@@ -3,7 +3,7 @@ const path = require('path');
 const { getTodaysEvents } = require('../services/calendar');
 const { scrapeWebsite, searchNews, searchGoogle } = require('../services/apify');
 const { claudePrompt } = require('../services/claude');
-const { sendEmail } = require('../services/instantly');
+const { sendMail, isConfigured } = require('../services/mailer');
 
 const TEAM_DOMAINS = ['storygroup.io', 'winningrepublicans.com', 'fireflies.ai', 'group.calendar.google.com', 'resource.calendar.google.com'];
 const FREE_MAIL = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com', 'me.com', 'aol.com', 'proton.me', 'protonmail.com', 'live.com', 'msn.com', 'mac.com'];
@@ -11,7 +11,6 @@ const INTERNAL_TITLES = /l10|leadership|standup|team meeting|one on one|1:1|inte
 const DISCOVERY_TITLES = /discovery|intro|solutions call|strategy call|story ?group &/i;
 
 const RECIPIENTS = () => (process.env.BRIEF_RECIPIENTS || 'vincent@storygroup.io,mmoonan@storygroup.io').split(',').map(s => s.trim());
-const FROM_EACCOUNT = () => process.env.BRIEF_FROM_EACCOUNT;
 
 /** Condensed case-study library from the PR Mastery knowledge base. */
 function loadCaseStudies() {
@@ -154,18 +153,16 @@ async function runPrecallBrief({ send = true } = {}) {
   const result = { calls: briefs.length, sent: false, briefs: briefs.map(b => ({ title: b.event.title, to: b.prospect.email })) };
 
   if (send) {
-    const eaccount = FROM_EACCOUNT();
-    if (!eaccount) {
-      console.warn('[precall-brief] No BRIEF_FROM_EACCOUNT configured — brief generated but not emailed');
-      result.error = 'no BRIEF_FROM_EACCOUNT';
+    if (!isConfigured()) {
+      console.warn('[precall-brief] SMTP not configured — brief generated but not emailed');
+      result.error = 'SMTP_USER/SMTP_PASS not set';
+      result.html = html;
     } else {
-      await sendEmail({
-        eaccount,
+      await sendMail({
         to: RECIPIENTS(),
         subject: `Pre-Call Briefs: ${briefs.length} call${briefs.length > 1 ? 's' : ''} today (${dateStr})`,
         html,
       });
-      console.log(`[precall-brief] Emailed to ${RECIPIENTS().join(', ')}`);
       result.sent = true;
     }
   } else {
