@@ -86,11 +86,66 @@ async function findInterestedNotBooked() {
   return interested.filter(r => r.email && !bookedEmails.has(r.email.toLowerCase()));
 }
 
-async function runReminders({ send = true } = {}) {
-  const [nudges, notBooked] = [await findNudgeCandidates(), await findInterestedNotBooked()];
-  console.log(`[reminders] ${nudges.length} nudge(s) due, ${notBooked.length} interested-not-booked`);
+const TEAM_DOMAINS = ['storygroup.io', 'winningrepublicans.com', 'fireflies.ai'];
 
-  if (!nudges.length && !notBooked.length) return { nudges: 0, notBooked: 0, sent: false };
+/**
+ * Met-but-stalled: we had a real call with them 5-30 days ago, but no
+ * later call happened and nothing is on the calendar with them. Fires
+ * once per transcript (stalled_reminded_at).
+ */
+async function findMetButStalled() {
+  const now = Date.now();
+  const oldest = new Date(now - 30 * 86400e3).toISOString();
+  const newest = new Date(now - 5 * 86400e3).toISOString();
+
+  const snap = await transcripts
+    .where('date', '>=', oldest)
+    .orderBy('date', 'desc')
+    .limit(200)
+    .get();
+  const all = snap.docs.map(d => ({ ref: d.ref, ...d.data() }));
+
+  // Latest call date per prospect email (so a later call clears the flag)
+  const latestCallByEmail = new Map();
+  for (const t of all) {
+    for (const p of (t.participants || []).map(x => x.toLowerCase().trim())) {
+      if (!p.includes('@') || TEAM_DOMAINS.includes(p.split('@')[1]) || p.includes('vincent') || p.includes('vinnie')) continue;
+      if (!latestCallByEmail.has(p) || latestCallByEmail.get(p) < t.date) latestCallByEmail.set(p, t.date);
+    }
+  }
+
+  let futureBooked = new Set();
+  try {
+    const events = await getEventsWindow({ daysBack: 0, daysAhead: 21 });
+    futureBooked = new Set(events.flatMap(e => e.attendees));
+  } catch (e) {
+    console.warn('[reminders] Calendar check failed:', e.message);
+  }
+
+  const stalled = [];
+  const seen = new Set();
+  for (const t of all) {
+    if (t.date > newest || t.stalled_reminded_at) continue;
+    const prospects = (t.participants || []).map(x => x.toLowerCase().trim())
+      .filter(p => p.includes('@') && !TEAM_DOMAINS.includes(p.split('@')[1]) && !p.includes('vincent') && !p.includes('vinnie'));
+    for (const p of prospects) {
+      if (seen.has(p)) continue;
+      if (futureBooked.has(p)) continue;                    // next meeting already booked
+      if (latestCallByEmail.get(p) > t.date) continue;       // they had a later call
+      seen.add(p);
+      stalled.push({ ref: t.ref, email: p, title: t.title, date: t.date, daysAgo: Math.floor((now - new Date(t.date).getTime()) / 86400e3) });
+    }
+  }
+  return stalled;
+}
+
+async function runReminders({ send = true } = {}) {
+  const nudges = await findNudgeCandidates();
+  const notBooked = await findInterestedNotBooked();
+  const stalled = await findMetButStalled();
+  console.log(`[reminders] ${nudges.length} nudge(s) due, ${notBooked.length} interested-not-booked, ${stalled.length} met-but-stalled`);
+
+  if (!nudges.length && !notBooked.length && !stalled.length) return { nudges: 0, notBooked: 0, stalled: 0, sent: false };
 
   // Draft a suggested nudge for each due follow-up
   const nudgeBlocks = [];
@@ -116,6 +171,12 @@ async function runReminders({ send = true } = {}) {
       <pre style="white-space:pre-wrap;font-family:inherit;margin:0">${String(n.suggestion.body).replace(/</g, '&lt;')}</pre>
     </div>` : '<div style="color:#999;font-size:13px;margin-top:8px">(nudge draft failed — write manually)</div>'}
   </div>`).join('')}` : ''}
+  ${stalled.length ? `
+  <h3>Met, but nothing scheduled since (${stalled.length})</h3>
+  <p style="color:#666;font-size:13px">We had a call 5-30 days ago, no later call happened, nothing on the calendar with them:</p>
+  <ul style="font-size:14px;line-height:1.8">
+    ${stalled.map(s => `<li><b>${s.email}</b> — "${s.title}" (${s.daysAgo} days ago)</li>`).join('')}
+  </ul>` : ''}
   ${notBooked.length ? `
   <h3>Replied "interested" but never booked (${notBooked.length})</h3>
   <p style="color:#666;font-size:13px">No calendar event found for these in the last 7 / next 14 days:</p>
@@ -124,18 +185,25 @@ async function runReminders({ send = true } = {}) {
   </ul>` : ''}
 </div>`;
 
-  const result = { nudges: nudgeBlocks.length, notBooked: notBooked.length, sent: false };
+  const result = { nudges: nudgeBlocks.length, notBooked: notBooked.length, stalled: stalled.length, sent: false };
 
   if (send && isConfigured()) {
+    const parts = [];
+    if (nudgeBlocks.length) parts.push(`${nudgeBlocks.length} nudge${nudgeBlocks.length === 1 ? '' : 's'} due`);
+    if (stalled.length) parts.push(`${stalled.length} stalled`);
+    if (notBooked.length) parts.push(`${notBooked.length} unbooked interested`);
     await sendMail({
       to: RECIPIENTS(),
-      subject: `GTM Reminders: ${nudgeBlocks.length} nudge${nudgeBlocks.length === 1 ? '' : 's'} due, ${notBooked.length} unbooked interested`,
+      subject: `GTM Reminders: ${parts.join(', ')}`,
       html,
     });
     result.sent = true;
-    // Mark nudges reminded so they only fire once
+    // Mark reminded so each only fires once
     for (const n of nudgeBlocks) {
       await n.ref.set({ nudge_reminded_at: new Date().toISOString() }, { merge: true });
+    }
+    for (const s of stalled) {
+      await s.ref.set({ stalled_reminded_at: new Date().toISOString() }, { merge: true });
     }
   } else {
     result.html = html;
