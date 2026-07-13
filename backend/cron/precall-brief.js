@@ -21,7 +21,7 @@ function loadCaseStudies() {
     if (!m) return '';
     const cases = JSON.parse(m[1]);
     return cases.map(c =>
-      `- [${c.industry}] "${c.title}" — ${(c.metrics || []).map(x => Array.isArray(x) ? `${x[0]}: ${x[1]}` : String(x)).join('; ')}`
+      `- [${c.industry}] "${c.title}" — challenge: ${(c.challenge || '').substring(0, 160).replace(/\s+/g, ' ')}… — results: ${(c.metrics || []).map(x => Array.isArray(x) ? `${x[0]}: ${x[1]}` : String(x)).join('; ')}`
     ).join('\n');
   } catch (e) {
     console.warn('[precall-brief] Case study load failed:', e.message);
@@ -86,7 +86,7 @@ ${r.person || 'Nothing found'}
 
 STORY GROUP ICP (for fit scoring): CEOs/founders/C-suite of real companies with teams (NOT solo operators, coaches, or self-employed consultants). Sweet spot: $8K-$14K/mo retainers. They need media visibility, thought leadership, or reputation defense. Red flags: no company website, "I help X do Y" positioning, single-person practice.
 
-CASE STUDY LIBRARY (pick ONE that best matches their industry/situation — cite it exactly, or say "no strong match"):
+CASE STUDY LIBRARY (pick ONE — match on BOTH industry AND challenge pattern: launch, crisis, recovery, positioning, authority-building, regulatory, down-market, etc. If the exact industry isn't in the library, pick the closest ADJACENT industry and match on challenge pattern — with this 40-case library there is virtually always a match, so "no match" should be extremely rare. Cases are anonymized by design — cite as industry + descriptor, never invent a client name, never fabricate numbers):
 ${caseLibrary || 'Not available'}
 
 Write a pre-call brief in EXACTLY this format (plain text, no markdown symbols):
