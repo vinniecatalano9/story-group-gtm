@@ -313,6 +313,33 @@ router.post('/send/:firefliesId', async (req, res) => {
 });
 
 /**
+ * PATCH /api/fireflies/draft/:firefliesId
+ * Save edits to a draft (subject/body) before sending.
+ */
+router.patch('/draft/:firefliesId', async (req, res) => {
+  try {
+    const ref = transcripts.doc(req.params.firefliesId);
+    const doc = await ref.get();
+    if (!doc.exists) return res.status(404).json({ error: 'Transcript not found' });
+    const draft = doc.data().followup_draft;
+    if (!draft) return res.status(400).json({ error: 'No draft on this transcript' });
+    if (draft.status === 'sent') return res.status(400).json({ error: 'Already sent — nothing to edit' });
+
+    const updated = {
+      ...draft,
+      ...(req.body?.subject != null ? { subject: String(req.body.subject) } : {}),
+      ...(req.body?.body != null ? { body: String(req.body.body) } : {}),
+      edited_at: new Date().toISOString(),
+    };
+    await ref.set({ followup_draft: updated }, { merge: true });
+    res.json({ success: true, followup_draft: updated });
+  } catch (e) {
+    console.error('[fireflies] Draft edit error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/**
  * DELETE /api/fireflies/draft/:firefliesId
  * Dismiss a follow-up draft. Also marks the call so the poller
  * doesn't regenerate it — manual Generate still works.

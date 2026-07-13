@@ -123,6 +123,40 @@ export default function Transcripts({ api }) {
     }
   };
 
+  const [editingDraft, setEditingDraft] = useState(null); // transcript id in edit mode
+  const [editSubject, setEditSubject] = useState('');
+  const [editBody, setEditBody] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const openEdit = (t) => {
+    setEditingDraft(t.id);
+    setEditSubject(t.followup_draft.subject);
+    setEditBody(t.followup_draft.body);
+    setConfirmSend(null);
+    setDraftError(null);
+  };
+
+  const saveEdit = async (t) => {
+    setSavingEdit(true);
+    try {
+      const r = await fetch(`${api}/api/fireflies/draft/${t.fireflies_id || t.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject: editSubject, body: editBody }),
+      });
+      const res = await r.json();
+      if (res.success) {
+        setTranscripts(prev => prev.map(x => x.id === t.id ? { ...x, followup_draft: res.followup_draft } : x));
+        setEditingDraft(null);
+      } else {
+        setDraftError({ id: t.id, message: res.error || 'Save failed' });
+      }
+    } catch {
+      setDraftError({ id: t.id, message: 'Save failed — is the backend up?' });
+    }
+    setSavingEdit(false);
+  };
+
   const copyDraft = (t) => {
     const d = t.followup_draft;
     navigator.clipboard.writeText(`Subject: ${d.subject}\n\n${d.body}`);
@@ -266,6 +300,12 @@ export default function Transcripts({ api }) {
                             {t.followup_draft.status !== 'sent' && (
                               <>
                                 <button
+                                  onClick={e => { e.stopPropagation(); editingDraft === t.id ? setEditingDraft(null) : openEdit(t); }}
+                                  className="px-3 py-1 text-xs font-medium rounded-lg border border-white/10 text-white/60 bg-white/5 hover:bg-white/10 transition-all"
+                                >
+                                  Edit ✎
+                                </button>
+                                <button
                                   onClick={e => { e.stopPropagation(); generateDraft(t); }}
                                   disabled={drafting === t.id}
                                   className="px-3 py-1 text-xs font-medium rounded-lg border border-white/10 text-white/50 bg-white/5 hover:bg-white/10 transition-all disabled:opacity-50"
@@ -323,13 +363,44 @@ export default function Transcripts({ api }) {
                             </div>
                           </div>
                         )}
-                        <div className="bg-brand-500/5 rounded-xl p-4 border border-brand-500/15 space-y-2">
-                          <p className="text-sm font-semibold text-white/80">{t.followup_draft.subject}</p>
-                          <p className="text-sm text-white/60 whitespace-pre-wrap">{t.followup_draft.body}</p>
-                          {t.followup_draft.generated_at && (
-                            <p className="text-xs text-white/25 pt-1">Drafted {formatDate(t.followup_draft.generated_at)}</p>
-                          )}
-                        </div>
+                        {editingDraft === t.id && t.followup_draft.status !== 'sent' ? (
+                          <div className="bg-brand-500/5 rounded-xl p-4 border border-brand-500/25 space-y-3" onClick={e => e.stopPropagation()}>
+                            <input
+                              value={editSubject}
+                              onChange={e => setEditSubject(e.target.value)}
+                              className="glass-input rounded-lg px-3 py-2 text-sm font-semibold w-full"
+                              placeholder="Subject"
+                            />
+                            <textarea
+                              value={editBody}
+                              onChange={e => setEditBody(e.target.value)}
+                              rows={Math.min(16, Math.max(6, editBody.split('\n').length + 2))}
+                              className="glass-input rounded-lg px-3 py-2 text-sm w-full leading-relaxed"
+                              placeholder="Email body"
+                            />
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => saveEdit(t)}
+                                disabled={savingEdit}
+                                className="px-4 py-1.5 text-xs font-bold rounded-lg bg-brand-500/25 text-brand-300 border border-brand-500/40 hover:bg-brand-500/35 transition-all disabled:opacity-50"
+                              >
+                                {savingEdit ? 'Saving…' : 'Save'}
+                              </button>
+                              <button onClick={() => setEditingDraft(null)} className="px-3 py-1.5 text-xs rounded-lg border border-white/10 text-white/50 bg-white/5 hover:bg-white/10">Cancel</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="bg-brand-500/5 rounded-xl p-4 border border-brand-500/15 space-y-2">
+                            <p className="text-sm font-semibold text-white/80">{t.followup_draft.subject}</p>
+                            <p className="text-sm text-white/60 whitespace-pre-wrap">{t.followup_draft.body}</p>
+                            {t.followup_draft.generated_at && (
+                              <p className="text-xs text-white/25 pt-1">
+                                Drafted {formatDate(t.followup_draft.generated_at)}
+                                {t.followup_draft.edited_at ? ' · edited' : ''}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ) : hasMatch && (
                       <div>
