@@ -56,17 +56,23 @@ Subject should thread naturally (e.g. "Re: ${d.subject}").`;
  */
 async function findInterestedNotBooked() {
   const since = new Date(Date.now() - 14 * 86400e3);
+  // Grace period: give them a few days to book before flagging
+  const graceCutoff = new Date(Date.now() - 3 * 86400e3);
   const snap = await replies
     .where('classification', '==', 'interested')
     .limit(300)
     .get();
 
-  const interested = snap.docs
-    .map(doc => ({ id: doc.id, ...doc.data() }))
-    .filter(r => {
-      const created = r.created_at?.toDate ? r.created_at.toDate() : new Date(r.created_at);
-      return created >= since && !r.had_meeting && !r.booked_check_dismissed;
-    });
+  const byEmail = new Map();
+  for (const doc of snap.docs) {
+    const r = { id: doc.id, ...doc.data() };
+    const created = r.created_at?.toDate ? r.created_at.toDate() : new Date(r.created_at);
+    if (created < since || created > graceCutoff) continue;
+    if (r.had_meeting || r.booked_check_dismissed || !r.email) continue;
+    const key = r.email.toLowerCase();
+    if (!byEmail.has(key)) byEmail.set(key, r);
+  }
+  const interested = [...byEmail.values()];
   if (!interested.length) return [];
 
   let bookedEmails = new Set();
