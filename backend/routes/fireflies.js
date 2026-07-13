@@ -260,6 +260,30 @@ router.post('/draft/:firefliesId', async (req, res) => {
 });
 
 /**
+ * DELETE /api/fireflies/draft/:firefliesId
+ * Dismiss a follow-up draft. Also marks the call so the poller
+ * doesn't regenerate it — manual Generate still works.
+ */
+router.delete('/draft/:firefliesId', async (req, res) => {
+  try {
+    const { FieldValue } = require('firebase-admin/firestore');
+    const ref = transcripts.doc(req.params.firefliesId);
+    const doc = await ref.get();
+    if (!doc.exists) return res.status(404).json({ error: 'Transcript not found' });
+
+    await ref.update({
+      followup_draft: FieldValue.delete(),
+      followup_skipped: 'dismissed',
+    });
+    console.log(`[fireflies] Draft dismissed for "${doc.data().title}"`);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('[fireflies] Dismiss error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/**
  * GET /api/fireflies/transcripts
  * Serves transcripts from Firestore (no live API call).
  * Hit "Sync & Match" to pull latest from Fireflies.

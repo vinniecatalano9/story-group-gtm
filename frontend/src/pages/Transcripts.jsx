@@ -59,6 +59,21 @@ export default function Transcripts({ api }) {
     setDrafting(null);
   };
 
+  const dismissDraft = async (t) => {
+    if (!window.confirm('Trash this draft? The poller won\'t regenerate it (you can still Generate manually).')) return;
+    try {
+      const r = await fetch(`${api}/api/fireflies/draft/${t.fireflies_id || t.id}`, { method: 'DELETE' });
+      const d = await r.json();
+      if (d.success) {
+        setTranscripts(prev => prev.map(x => x.id === t.id ? { ...x, followup_draft: null } : x));
+      } else {
+        setDraftError({ id: t.id, message: d.error || 'Dismiss failed' });
+      }
+    } catch {
+      setDraftError({ id: t.id, message: 'Dismiss failed — is the backend up?' });
+    }
+  };
+
   const copyDraft = (t) => {
     const d = t.followup_draft;
     navigator.clipboard.writeText(`Subject: ${d.subject}\n\n${d.body}`);
@@ -186,6 +201,12 @@ export default function Transcripts({ api }) {
                               className="px-3 py-1 text-xs font-medium rounded-lg border border-white/10 text-white/50 bg-white/5 hover:bg-white/10 transition-all disabled:opacity-50"
                             >
                               {drafting === t.id ? 'Drafting…' : 'Regenerate'}
+                            </button>
+                            <button
+                              onClick={e => { e.stopPropagation(); dismissDraft(t); }}
+                              className="px-3 py-1 text-xs font-medium rounded-lg border border-red-500/20 text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-all"
+                            >
+                              Trash
                             </button>
                           </div>
                         </div>
