@@ -59,6 +59,27 @@ export default function Transcripts({ api }) {
     setDrafting(null);
   };
 
+  const [sending, setSending] = useState(null);
+
+  const sendDraft = async (t) => {
+    const d = t.followup_draft;
+    if (!window.confirm(`Send this follow-up to ${d.to} from vincent@storygroup.io? Teammates on the call get CC'd.`)) return;
+    setSending(t.id);
+    setDraftError(null);
+    try {
+      const r = await fetch(`${api}/api/fireflies/send/${t.fireflies_id || t.id}`, { method: 'POST' });
+      const res = await r.json();
+      if (res.success) {
+        setTranscripts(prev => prev.map(x => x.id === t.id ? { ...x, followup_draft: res.followup_draft } : x));
+      } else {
+        setDraftError({ id: t.id, message: res.error || 'Send failed' });
+      }
+    } catch {
+      setDraftError({ id: t.id, message: 'Send failed — is the backend up?' });
+    }
+    setSending(null);
+  };
+
   const dismissDraft = async (t) => {
     if (!window.confirm('Trash this draft? The poller won\'t regenerate it (you can still Generate manually).')) return;
     try {
@@ -189,25 +210,42 @@ export default function Transcripts({ api }) {
                             Follow-Up Draft → {t.followup_draft.to}
                           </p>
                           <div className="flex items-center gap-2">
+                            {t.followup_draft.status === 'sent' ? (
+                              <span className="px-3 py-1 text-xs font-medium rounded-lg bg-green-500/15 text-green-400 border border-green-500/20">
+                                Sent ✓ {t.followup_draft.sent_at ? formatDate(t.followup_draft.sent_at) : ''}
+                              </span>
+                            ) : (
+                              <button
+                                onClick={e => { e.stopPropagation(); sendDraft(t); }}
+                                disabled={sending === t.id}
+                                className="px-3 py-1 text-xs font-bold rounded-lg bg-green-500/20 text-green-300 border border-green-500/30 hover:bg-green-500/30 transition-all disabled:opacity-50"
+                              >
+                                {sending === t.id ? 'Sending…' : 'Send ➤'}
+                              </button>
+                            )}
                             <button
                               onClick={e => { e.stopPropagation(); copyDraft(t); }}
                               className="px-3 py-1 text-xs font-medium rounded-lg border border-brand-500/20 text-brand-400 bg-brand-500/10 hover:bg-brand-500/20 transition-all"
                             >
                               {copied === t.id ? 'Copied ✓' : 'Copy'}
                             </button>
-                            <button
-                              onClick={e => { e.stopPropagation(); generateDraft(t); }}
-                              disabled={drafting === t.id}
-                              className="px-3 py-1 text-xs font-medium rounded-lg border border-white/10 text-white/50 bg-white/5 hover:bg-white/10 transition-all disabled:opacity-50"
-                            >
-                              {drafting === t.id ? 'Drafting…' : 'Regenerate'}
-                            </button>
-                            <button
-                              onClick={e => { e.stopPropagation(); dismissDraft(t); }}
-                              className="px-3 py-1 text-xs font-medium rounded-lg border border-red-500/20 text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-all"
-                            >
-                              Trash
-                            </button>
+                            {t.followup_draft.status !== 'sent' && (
+                              <>
+                                <button
+                                  onClick={e => { e.stopPropagation(); generateDraft(t); }}
+                                  disabled={drafting === t.id}
+                                  className="px-3 py-1 text-xs font-medium rounded-lg border border-white/10 text-white/50 bg-white/5 hover:bg-white/10 transition-all disabled:opacity-50"
+                                >
+                                  {drafting === t.id ? 'Drafting…' : 'Regenerate'}
+                                </button>
+                                <button
+                                  onClick={e => { e.stopPropagation(); dismissDraft(t); }}
+                                  className="px-3 py-1 text-xs font-medium rounded-lg border border-red-500/20 text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-all"
+                                >
+                                  Trash
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
                         <div className="bg-brand-500/5 rounded-xl p-4 border border-brand-500/15 space-y-2">

@@ -576,6 +576,17 @@ app.post('/api/trigger/daily-metrics', async (req, res) => {
   }
 });
 
+// GTM reminders on demand — nudges due + interested-not-booked (?send=false to preview)
+app.post('/api/trigger/reminders', async (req, res) => {
+  try {
+    const { runReminders } = require('./cron/reminders');
+    const r = await runReminders({ send: req.query.send !== 'false' });
+    res.json({ success: true, ...r });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Pre-call briefs on demand — ?send=false to preview without emailing
 app.post('/api/trigger/precall-brief', async (req, res) => {
   try {
@@ -776,6 +787,18 @@ cron.schedule('0 7 * * *', async () => {
     await runPrecallBrief({ send: true });
   } catch (e) {
     console.error('[cron] Pre-call brief error:', e.message);
+  }
+}, { timezone: 'America/New_York' });
+
+// GTM reminders: every morning 8am ET — follow-ups gone quiet (with
+// suggested nudge text) + interested repliers who never booked.
+cron.schedule('0 8 * * *', async () => {
+  console.log('[cron] Running GTM reminders...');
+  try {
+    const { runReminders } = require('./cron/reminders');
+    await runReminders({ send: true });
+  } catch (e) {
+    console.error('[cron] Reminders error:', e.message);
   }
 }, { timezone: 'America/New_York' });
 

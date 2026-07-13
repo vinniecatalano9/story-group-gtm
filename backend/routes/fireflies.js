@@ -260,6 +260,53 @@ router.post('/draft/:firefliesId', async (req, res) => {
 });
 
 /**
+ * POST /api/fireflies/send/:firefliesId
+ * Send the follow-up draft via Gmail SMTP from Vincent's mailbox.
+ * Team members who were on the call are CC'd. Body may override
+ * { subject, body } (frontend sends the current draft text).
+ */
+router.post('/send/:firefliesId', async (req, res) => {
+  try {
+    const { sendMail, isConfigured } = require('../services/mailer');
+    if (!isConfigured()) return res.status(400).json({ error: 'SMTP not configured' });
+
+    const ref = transcripts.doc(req.params.firefliesId);
+    const doc = await ref.get();
+    if (!doc.exists) return res.status(404).json({ error: 'Transcript not found' });
+    const t = doc.data();
+    const draft = t.followup_draft;
+    if (!draft?.to) return res.status(400).json({ error: 'No draft on this transcript' });
+    if (draft.status === 'sent') return res.status(400).json({ error: 'Already sent' });
+
+    // CC teammates who were on the call (not the sender)
+    const sender = (process.env.SMTP_USER || 'vincent@storygroup.io').toLowerCase();
+    const cc = (t.participants || [])
+      .map(p => p.toLowerCase().trim())
+      .filter(p => p.includes('@') && p !== sender)
+      .filter(p => ['storygroup.io', 'winningrepublicans.com'].includes(p.split('@')[1]));
+
+    const subject = req.body?.subject || draft.subject;
+    const body = req.body?.body || draft.body;
+
+    await sendMail({
+      to: draft.to,
+      cc,
+      subject,
+      text: body,
+      fromName: 'Vincent Catalano',
+    });
+
+    const sent = { ...draft, subject, body, status: 'sent', sent_at: new Date().toISOString(), cc };
+    await ref.set({ followup_draft: sent }, { merge: true });
+    console.log(`[fireflies] Follow-up SENT to ${draft.to} (cc: ${cc.join(', ') || 'none'})`);
+    res.json({ success: true, followup_draft: sent });
+  } catch (e) {
+    console.error('[fireflies] Send error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/**
  * DELETE /api/fireflies/draft/:firefliesId
  * Dismiss a follow-up draft. Also marks the call so the poller
  * doesn't regenerate it — manual Generate still works.

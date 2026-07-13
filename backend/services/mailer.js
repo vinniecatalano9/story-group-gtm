@@ -24,14 +24,15 @@ function isConfigured() {
   return !!(SMTP_USER() && SMTP_PASS());
 }
 
-async function sendMail({ to, subject, html, text }) {
+async function sendMail({ to, cc, subject, html, text, fromName = 'Story Group GTM' }) {
   if (!isConfigured()) {
     console.warn('[mailer] SMTP_USER/SMTP_PASS not configured — email not sent');
     return null;
   }
   const info = await getTransport().sendMail({
-    from: `"Story Group GTM" <${SMTP_USER()}>`,
+    from: `"${fromName}" <${SMTP_USER()}>`,
     to: Array.isArray(to) ? to.join(', ') : to,
+    ...(cc && cc.length ? { cc: Array.isArray(cc) ? cc.join(', ') : cc } : {}),
     subject,
     html,
     text,

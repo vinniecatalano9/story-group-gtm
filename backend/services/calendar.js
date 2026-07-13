@@ -198,4 +198,28 @@ async function getTodaysEvents() {
     }));
 }
 
-module.exports = { getAvailableSlots, getTodaysEvents };
+/**
+ * List events from `daysBack` ago to `daysAhead` from now, with attendees.
+ * Used to check whether a prospect ever booked.
+ */
+async function getEventsWindow({ daysBack = 7, daysAhead = 14 } = {}) {
+  const calId = CALENDAR_ID();
+  if (!calId) return [];
+  const calendar = getCalendar();
+  const now = Date.now();
+  const res = await calendar.events.list({
+    calendarId: calId,
+    timeMin: new Date(now - daysBack * 86400e3).toISOString(),
+    timeMax: new Date(now + daysAhead * 86400e3).toISOString(),
+    singleEvents: true,
+    orderBy: 'startTime',
+    maxResults: 250,
+  });
+  return (res.data.items || []).map(e => ({
+    title: e.summary || '',
+    start: e.start?.dateTime || e.start?.date,
+    attendees: (e.attendees || []).map(a => (a.email || '').toLowerCase()).filter(Boolean),
+  }));
+}
+
+module.exports = { getAvailableSlots, getTodaysEvents, getEventsWindow };
