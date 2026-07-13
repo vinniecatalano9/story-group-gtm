@@ -331,6 +331,67 @@ router.delete('/draft/:firefliesId', async (req, res) => {
 });
 
 /**
+ * GET /api/fireflies/docx/:firefliesId
+ * Download the transcript as a Word document (title, summary,
+ * action items, full speaker-by-speaker transcript).
+ */
+router.get('/docx/:firefliesId', async (req, res) => {
+  try {
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel } = require('docx');
+    const stored = await transcripts.doc(req.params.firefliesId).get();
+    if (!stored.exists) return res.status(404).json({ error: 'Transcript not found' });
+    const t = stored.data();
+
+    // Sentences aren't stored — fetch live from Fireflies
+    let sentences = [];
+    try {
+      const live = await fireflies.getTranscript(req.params.firefliesId);
+      sentences = live?.sentences || [];
+    } catch (e) {
+      console.warn(`[fireflies] Live sentence fetch failed for docx (${req.params.firefliesId}):`, e.message);
+    }
+
+    const children = [
+      new Paragraph({ text: t.title || 'Call Transcript', heading: HeadingLevel.HEADING_1 }),
+      new Paragraph({ children: [new TextRun({ text: `${t.date ? new Date(t.date).toLocaleString('en-US', { timeZone: 'America/New_York', dateStyle: 'long', timeStyle: 'short' }) + ' ET' : ''}${t.duration ? ` · ${Math.round(t.duration)} min` : ''}`, italics: true })] }),
+      new Paragraph({ children: [new TextRun({ text: `Participants: ${(t.participants || []).join(', ')}`, size: 20 })] }),
+      new Paragraph({ text: '' }),
+    ];
+    if (t.overview) {
+      children.push(new Paragraph({ text: 'Summary', heading: HeadingLevel.HEADING_2 }));
+      children.push(new Paragraph({ text: t.overview }));
+    }
+    if (t.action_items) {
+      children.push(new Paragraph({ text: 'Action Items', heading: HeadingLevel.HEADING_2 }));
+      String(t.action_items).split('\n').filter(Boolean).forEach(line => children.push(new Paragraph({ text: line })));
+    }
+    if (sentences.length) {
+      children.push(new Paragraph({ text: 'Transcript', heading: HeadingLevel.HEADING_2 }));
+      for (const s of sentences) {
+        children.push(new Paragraph({
+          children: [
+            new TextRun({ text: `${s.speaker_name || 'Speaker'}: `, bold: true }),
+            new TextRun({ text: s.text || '' }),
+          ],
+        }));
+      }
+    } else {
+      children.push(new Paragraph({ children: [new TextRun({ text: 'Full transcript unavailable — summary only.', italics: true })] }));
+    }
+
+    const doc = new Document({ sections: [{ children }] });
+    const buffer = await Packer.toBuffer(doc);
+    const safeName = (t.title || 'transcript').replace(/[^a-z0-9 _-]/gi, '').trim().replace(/\s+/g, '_').slice(0, 60);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName}.docx"`);
+    res.send(buffer);
+  } catch (e) {
+    console.error('[fireflies] DOCX error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/**
  * GET /api/fireflies/transcripts
  * Serves transcripts from Firestore (no live API call).
  * Hit "Sync & Match" to pull latest from Fireflies.

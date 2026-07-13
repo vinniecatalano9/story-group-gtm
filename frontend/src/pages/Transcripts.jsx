@@ -195,6 +195,13 @@ export default function Transcripts({ api }) {
                           View ↗
                         </a>
                       )}
+                      <a
+                        href={`${api}/api/fireflies/docx/${t.fireflies_id || t.id}`}
+                        className="px-3 py-1.5 text-xs font-medium rounded-xl border border-white/10 text-white/60 bg-white/5 hover:bg-white/10 transition-all"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        DOCX ⬇
+                      </a>
                       <span className="text-white/20 text-sm">{isExpanded ? '▲' : '▼'}</span>
                     </div>
                   </div>
