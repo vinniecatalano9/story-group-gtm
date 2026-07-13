@@ -133,7 +133,36 @@ async function findMetButStalled() {
       if (futureBooked.has(p)) continue;                    // next meeting already booked
       if (latestCallByEmail.get(p) > t.date) continue;       // they had a later call
       seen.add(p);
-      stalled.push({ ref: t.ref, email: p, title: t.title, date: t.date, daysAgo: Math.floor((now - new Date(t.date).getTime()) / 86400e3) });
+
+      // Last contact + whose move it is
+      const callDate = new Date(t.date);
+      const sentAt = t.followup_draft?.status === 'sent' ? new Date(t.followup_draft.sent_at) : null;
+      let lastInbound = null;
+      try {
+        const rSnap = await replies.where('email', '==', p).limit(5).get();
+        for (const rd of rSnap.docs) {
+          const r = rd.data();
+          const created = r.created_at?.toDate ? r.created_at.toDate() : new Date(r.created_at);
+          if (!isNaN(created) && (!lastInbound || created > lastInbound)) lastInbound = created;
+        }
+      } catch { /* replies lookup is best-effort */ }
+
+      let lastContact = callDate, lastContactWhat = 'the call';
+      if (sentAt && sentAt > lastContact) { lastContact = sentAt; lastContactWhat = 'we emailed'; }
+      if (lastInbound && lastInbound > lastContact) { lastContact = lastInbound; lastContactWhat = 'they replied'; }
+
+      let nextMove;
+      if (lastContactWhat === 'they replied') nextMove = '🔴 They wrote last — WE owe a response';
+      else if (lastContactWhat === 'we emailed') nextMove = '🟡 Ball in their court — nudge if still quiet';
+      else nextMove = '🔴 No follow-up ever sent — WE owe them one';
+
+      const actionItems = t.action_items ? String(t.action_items).replace(/\s+/g, ' ').substring(0, 180) : null;
+
+      stalled.push({
+        ref: t.ref, email: p, title: t.title, date: t.date,
+        daysAgo: Math.floor((now - callDate.getTime()) / 86400e3),
+        lastContact, lastContactWhat, nextMove, actionItems,
+      });
     }
   }
   return stalled;
@@ -174,9 +203,13 @@ async function runReminders({ send = true } = {}) {
   ${stalled.length ? `
   <h3>Met, but nothing scheduled since (${stalled.length})</h3>
   <p style="color:#666;font-size:13px">We had a call 5-30 days ago, no later call happened, nothing on the calendar with them:</p>
-  <ul style="font-size:14px;line-height:1.8">
-    ${stalled.map(s => `<li><b>${s.email}</b> — "${s.title}" (${s.daysAgo} days ago)</li>`).join('')}
-  </ul>` : ''}
+  ${stalled.map(s => `
+  <div style="border:1px solid #e0e0e8;border-radius:8px;padding:14px;margin:10px 0;font-size:14px">
+    <div><b>${s.email}</b> — "${s.title}" (${s.daysAgo} days ago)</div>
+    <div style="color:#666;margin-top:4px">Last contact: ${s.lastContact.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} (${s.lastContactWhat})</div>
+    <div style="margin-top:4px">${s.nextMove}</div>
+    ${s.actionItems ? `<div style="color:#888;font-size:12px;margin-top:6px">Call action items: ${s.actionItems.replace(/</g, '&lt;')}…</div>` : ''}
+  </div>`).join('')}` : ''}
   ${notBooked.length ? `
   <h3>Replied "interested" but never booked (${notBooked.length})</h3>
   <p style="color:#666;font-size:13px">No calendar event found for these in the last 7 / next 14 days:</p>
