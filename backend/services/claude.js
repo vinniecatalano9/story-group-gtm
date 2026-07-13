@@ -11,7 +11,7 @@ function claudePrompt(prompt, { maxTokens = 4096, timeout = 120000 } = {}) {
     const child = execFile(
       CLAUDE_PATH,
       ['-p', '--output-format', 'text'],
-      { timeout, maxBuffer: 1024 * 1024, env: { ...process.env, HOME: '/root' } },
+      { timeout, maxBuffer: 1024 * 1024, env: { ...process.env, HOME: process.env.CLAUDE_HOME || '/root' } },
       (error, stdout, stderr) => {
         if (error) {
           console.error('[claude] Error:', error.message, '| killed:', error.killed, '| signal:', error.signal, '| code:', error.code);

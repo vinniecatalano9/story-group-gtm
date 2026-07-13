@@ -60,6 +60,17 @@ async function listCompanies(params = {}) {
   return apiCall('GET', `/companies${qs ? '?' + qs : ''}`);
 }
 
+// ── Tasks ──
+
+async function createTask(data) {
+  return apiCall('POST', '/tasks', data);
+}
+
+async function listTasks(params = {}) {
+  const qs = new URLSearchParams(params).toString();
+  return apiCall('GET', `/tasks${qs ? '?' + qs : ''}`);
+}
+
 // ── Deals ──
 
 async function createDeal(data) {
@@ -114,7 +125,8 @@ async function syncReply(reply, options = {}) {
   // If they had a meeting or booked, create a deal
   if (options.createDeal && (reply.had_meeting || reply.status === 'booked')) {
     const dealData = {
-      name: `${reply.full_name || reply.email} - Story Group`,
+      // CoterieHQ API expects `title` on deals, not `name`
+      title: `${reply.full_name || reply.email} - Story Group`,
       contact_id: syncResult.contactId,
       stage: reply.status === 'booked' ? 'qualified' : 'meeting',
     };
@@ -126,6 +138,38 @@ async function syncReply(reply, options = {}) {
   return syncResult;
 }
 
+/**
+ * Log a completed call to CoterieHQ: ensure the contact exists,
+ * then create a "send follow-up" task due tomorrow so the call
+ * shows up as actionable work in the CRM.
+ */
+async function logCallFollowup({ email, name, callTitle, callDate, draftSubject, transcriptUrl }) {
+  const key = API_KEY();
+  if (!key || key === 'REPLACE_ME') return null;
+
+  let contact = await findContactByEmail(email);
+  if (!contact) {
+    const created = await createContact({ name: name || email, email, type: 'lead' });
+    contact = created?.data || null;
+  }
+  const contactId = contact?.id;
+
+  const due = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const task = await createTask({
+    title: `Send follow-up: ${name || email}${callTitle ? ` — ${callTitle}` : ''}`,
+    due_date: due,
+    description: [
+      draftSubject && `Draft subject: ${draftSubject}`,
+      callDate && `Call date: ${callDate}`,
+      transcriptUrl && `Transcript: ${transcriptUrl}`,
+    ].filter(Boolean).join('\n'),
+    ...(contactId ? { contact_id: contactId } : {}),
+  });
+  if (task) console.log(`[coteriehq] Created follow-up task for ${email}`);
+
+  return { contactId, task };
+}
+
 module.exports = {
   listContacts,
   getContact,
@@ -134,9 +178,12 @@ module.exports = {
   findContactByEmail,
   createCompany,
   listCompanies,
+  createTask,
+  listTasks,
   createDeal,
   updateDeal,
   listDeals,
   syncLead,
   syncReply,
+  logCallFollowup,
 };

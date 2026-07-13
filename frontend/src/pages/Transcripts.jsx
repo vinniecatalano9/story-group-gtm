@@ -19,6 +19,9 @@ export default function Transcripts({ api }) {
   const [syncing, setSyncing] = useState(false);
   const [expanded, setExpanded] = useState(null);
   const [filter, setFilter] = useState('all'); // all, matched, unmatched
+  const [drafting, setDrafting] = useState(null); // transcript id being drafted
+  const [copied, setCopied] = useState(null); // transcript id just copied
+  const [draftError, setDraftError] = useState(null); // { id, message }
 
   const fetchTranscripts = () => {
     setLoading(true);
@@ -37,6 +40,30 @@ export default function Transcripts({ api }) {
       fetchTranscripts();
     } catch { /* ignore */ }
     setSyncing(false);
+  };
+
+  const generateDraft = async (t) => {
+    setDrafting(t.id);
+    setDraftError(null);
+    try {
+      const r = await fetch(`${api}/api/fireflies/draft/${t.fireflies_id || t.id}`, { method: 'POST' });
+      const d = await r.json();
+      if (d.followup_draft) {
+        setTranscripts(prev => prev.map(x => x.id === t.id ? { ...x, followup_draft: d.followup_draft } : x));
+      } else {
+        setDraftError({ id: t.id, message: d.error || 'Draft generation failed' });
+      }
+    } catch {
+      setDraftError({ id: t.id, message: 'Draft generation failed — is the backend up?' });
+    }
+    setDrafting(null);
+  };
+
+  const copyDraft = (t) => {
+    const d = t.followup_draft;
+    navigator.clipboard.writeText(`Subject: ${d.subject}\n\n${d.body}`);
+    setCopied(t.id);
+    setTimeout(() => setCopied(null), 2000);
   };
 
   const filtered = transcripts.filter(t => {
@@ -139,6 +166,52 @@ export default function Transcripts({ api }) {
 
                 {isExpanded && (
                   <div className="border-t border-white/5 p-5 space-y-4">
+                    {/* Follow-up draft */}
+                    {t.followup_draft ? (
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-xs font-medium text-white/40 uppercase tracking-wide">
+                            Follow-Up Draft → {t.followup_draft.to}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={e => { e.stopPropagation(); copyDraft(t); }}
+                              className="px-3 py-1 text-xs font-medium rounded-lg border border-brand-500/20 text-brand-400 bg-brand-500/10 hover:bg-brand-500/20 transition-all"
+                            >
+                              {copied === t.id ? 'Copied ✓' : 'Copy'}
+                            </button>
+                            <button
+                              onClick={e => { e.stopPropagation(); generateDraft(t); }}
+                              disabled={drafting === t.id}
+                              className="px-3 py-1 text-xs font-medium rounded-lg border border-white/10 text-white/50 bg-white/5 hover:bg-white/10 transition-all disabled:opacity-50"
+                            >
+                              {drafting === t.id ? 'Drafting…' : 'Regenerate'}
+                            </button>
+                          </div>
+                        </div>
+                        <div className="bg-brand-500/5 rounded-xl p-4 border border-brand-500/15 space-y-2">
+                          <p className="text-sm font-semibold text-white/80">{t.followup_draft.subject}</p>
+                          <p className="text-sm text-white/60 whitespace-pre-wrap">{t.followup_draft.body}</p>
+                          {t.followup_draft.generated_at && (
+                            <p className="text-xs text-white/25 pt-1">Drafted {formatDate(t.followup_draft.generated_at)}</p>
+                          )}
+                        </div>
+                      </div>
+                    ) : hasMatch && (
+                      <div>
+                        <button
+                          onClick={e => { e.stopPropagation(); generateDraft(t); }}
+                          disabled={drafting === t.id}
+                          className="px-4 py-2 text-sm font-medium rounded-xl border border-brand-500/20 text-brand-400 bg-brand-500/10 hover:bg-brand-500/20 transition-all disabled:opacity-50"
+                        >
+                          {drafting === t.id ? 'Drafting with Claude… (~1 min)' : '✍️ Generate Follow-Up Draft'}
+                        </button>
+                      </div>
+                    )}
+                    {draftError?.id === t.id && (
+                      <p className="text-xs text-red-400">{draftError.message}</p>
+                    )}
+
                     {/* Matched contacts */}
                     {hasMatch && (
                       <div>

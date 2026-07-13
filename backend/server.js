@@ -576,6 +576,17 @@ app.post('/api/trigger/daily-metrics', async (req, res) => {
   }
 });
 
+// Fireflies poll on demand — pull new transcripts + auto-draft follow-ups
+app.post('/api/trigger/fireflies-poll', async (req, res) => {
+  try {
+    const { pollFireflies } = require('./cron/fireflies-poll');
+    const r = await pollFireflies();
+    res.json({ success: true, ...r });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Morning GTM Brief — fire to Slack on demand
 app.post('/api/trigger/brief', async (req, res) => {
   try {
@@ -742,6 +753,17 @@ cron.schedule('0 */6 * * *', async () => {
   console.log('[cron] Brains health check...');
   const { checkBrains } = require('./cron/healthcheck');
   await checkBrains();
+}, { timezone: 'America/Chicago' });
+
+// Fireflies poll: every 15 min — webhook safety net. Stores new call
+// transcripts, matches contacts, auto-drafts follow-up emails.
+cron.schedule('*/15 * * * *', async () => {
+  try {
+    const { pollFireflies } = require('./cron/fireflies-poll');
+    await pollFireflies();
+  } catch (e) {
+    console.error('[cron] Fireflies poll error:', e.message);
+  }
 }, { timezone: 'America/Chicago' });
 
 // LinkedIn queue sync: every 30 min — clear replies already answered in

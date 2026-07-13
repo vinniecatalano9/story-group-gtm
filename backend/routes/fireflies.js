@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { leads, replies, upsertTranscript, getStoredTranscripts } = require('../services/db');
+const { leads, replies, transcripts, upsertTranscript, getStoredTranscripts } = require('../services/db');
 const fireflies = require('../services/fireflies');
 const coteriehq = require('../services/coteriehq');
+const { generateFollowupDraft } = require('../services/followupDrafter');
 
 const MY_EMAILS = ['vincent@storygroup.io', 'vincent@winningrepublicans.com', 'vinnie.catalano3@gmail.com'];
 
@@ -87,6 +88,50 @@ async function storeAndMatch(transcript) {
 }
 
 /**
+ * Generate a follow-up email draft for a transcript's matched contact,
+ * store it on the transcript doc, and log a follow-up task to CoterieHQ.
+ * Idempotent unless force=true. Returns { followup_draft } or { skipped }.
+ */
+async function generateDraftForTranscript(transcript, matchedContacts, { force = false, email = null } = {}) {
+  const target = email
+    ? { email: email.toLowerCase().trim() }
+    : (matchedContacts || [])[0];
+  if (!target?.email) return { skipped: 'no matched external contact' };
+
+  const ref = transcripts.doc(transcript.id);
+  if (!force) {
+    const doc = await ref.get();
+    if (doc.exists && doc.data().followup_draft) return { skipped: 'draft already exists', followup_draft: doc.data().followup_draft };
+  }
+
+  const draft = await generateFollowupDraft(transcript, target.email);
+  const followup_draft = {
+    to: target.email,
+    subject: draft.subject,
+    body: draft.body,
+    generated_at: new Date().toISOString(),
+    status: 'draft',
+  };
+  await ref.set({ followup_draft }, { merge: true });
+  console.log(`[fireflies] Follow-up draft generated for ${target.email} ("${draft.subject}")`);
+
+  try {
+    await coteriehq.logCallFollowup({
+      email: target.email,
+      name: target.name || null,
+      callTitle: transcript.title,
+      callDate: transcript.date ? new Date(transcript.date).toISOString().slice(0, 10) : null,
+      draftSubject: draft.subject,
+      transcriptUrl: transcript.transcript_url || null,
+    });
+  } catch (e) {
+    console.warn(`[fireflies] CoterieHQ follow-up task failed for ${target.email}:`, e.message);
+  }
+
+  return { followup_draft };
+}
+
+/**
  * POST /api/fireflies/webhook
  * Fireflies webhook — fires on transcription.complete.
  * Downloads and stores the transcript immediately.
@@ -114,7 +159,15 @@ router.post('/webhook', async (req, res) => {
     if (!transcript) return res.status(404).json({ error: 'Transcript not found' });
 
     console.log(`[fireflies] Storing transcript "${transcript.title}" (${(transcript.participants || []).length} participants)`);
-    const { matchedReplies, matchedLeads } = await storeAndMatch(transcript);
+    const { matchedReplies, matchedLeads, matchedContacts } = await storeAndMatch(transcript);
+
+    // Fire-and-forget: Claude drafting takes 30-120s and Fireflies retries slow
+    // webhooks, so respond now and attach the draft when it lands.
+    if (matchedContacts.length > 0) {
+      generateDraftForTranscript(transcript, matchedContacts)
+        .then(r => r.skipped && console.log(`[fireflies] Draft skipped: ${r.skipped}`))
+        .catch(e => console.error('[fireflies] Draft generation failed:', e.message));
+    }
 
     console.log(`[fireflies] Done — matched ${matchedReplies} replies, ${matchedLeads} leads`);
     res.json({
@@ -123,6 +176,7 @@ router.post('/webhook', async (req, res) => {
       title: transcript.title,
       matched_replies: matchedReplies,
       matched_leads: matchedLeads,
+      draft_queued: matchedContacts.length > 0,
     });
   } catch (e) {
     console.error('[fireflies] Webhook error:', e);
@@ -158,6 +212,42 @@ router.post('/sync', async (req, res) => {
 });
 
 /**
+ * POST /api/fireflies/draft/:firefliesId
+ * Generate (or regenerate) the follow-up draft for a stored transcript.
+ * Body (optional): { email } to override the recipient.
+ * Re-fetches the full transcript from Fireflies so Claude gets the sentences.
+ */
+router.post('/draft/:firefliesId', async (req, res) => {
+  try {
+    const { firefliesId } = req.params;
+    const stored = await transcripts.doc(firefliesId).get();
+    if (!stored.exists) return res.status(404).json({ error: 'Transcript not stored — run Sync & Match first' });
+
+    let transcript;
+    try {
+      transcript = await fireflies.getTranscript(firefliesId);
+    } catch (e) {
+      console.warn(`[fireflies] Live fetch failed for ${firefliesId}, drafting from stored summary:`, e.message);
+    }
+    // Fall back to the stored doc (summary-only) if the live fetch failed
+    transcript = transcript || { id: firefliesId, ...stored.data() };
+    transcript.id = firefliesId;
+
+    const matchedContacts = stored.data().matched_contacts || [];
+    const result = await generateDraftForTranscript(transcript, matchedContacts, {
+      force: true,
+      email: req.body?.email || null,
+    });
+
+    if (result.skipped) return res.status(400).json({ error: result.skipped });
+    res.json({ success: true, followup_draft: result.followup_draft });
+  } catch (e) {
+    console.error('[fireflies] Draft endpoint error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/**
  * GET /api/fireflies/transcripts
  * Serves transcripts from Firestore (no live API call).
  * Hit "Sync & Match" to pull latest from Fireflies.
@@ -178,3 +268,6 @@ router.get('/transcripts', async (req, res) => {
 });
 
 module.exports = router;
+// Shared with cron/fireflies-poll.js (webhook safety net)
+module.exports.storeAndMatch = storeAndMatch;
+module.exports.generateDraftForTranscript = generateDraftForTranscript;
