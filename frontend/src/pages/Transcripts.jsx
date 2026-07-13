@@ -60,17 +60,45 @@ export default function Transcripts({ api }) {
   };
 
   const [sending, setSending] = useState(null);
+  const [confirmSend, setConfirmSend] = useState(null); // transcript id with confirm panel open
+  const [ccList, setCcList] = useState([]);
+  const [ccInput, setCcInput] = useState('');
+
+  const SENDER = 'vincent@storygroup.io';
+  const TEAM_DOMAINS = ['storygroup.io', 'winningrepublicans.com'];
+
+  const defaultCc = (t) => (t.participants || [])
+    .map(p => p.toLowerCase().trim())
+    .filter(p => p.includes('@') && p !== SENDER)
+    .filter(p => TEAM_DOMAINS.includes(p.split('@')[1]));
+
+  const openSendConfirm = (t) => {
+    setConfirmSend(t.id);
+    setCcList(defaultCc(t));
+    setCcInput('');
+    setDraftError(null);
+  };
+
+  const addCc = () => {
+    const e = ccInput.toLowerCase().trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return;
+    if (!ccList.includes(e)) setCcList([...ccList, e]);
+    setCcInput('');
+  };
 
   const sendDraft = async (t) => {
-    const d = t.followup_draft;
-    if (!window.confirm(`Send this follow-up to ${d.to} from vincent@storygroup.io? Teammates on the call get CC'd.`)) return;
     setSending(t.id);
     setDraftError(null);
     try {
-      const r = await fetch(`${api}/api/fireflies/send/${t.fireflies_id || t.id}`, { method: 'POST' });
+      const r = await fetch(`${api}/api/fireflies/send/${t.fireflies_id || t.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cc: ccList }),
+      });
       const res = await r.json();
       if (res.success) {
         setTranscripts(prev => prev.map(x => x.id === t.id ? { ...x, followup_draft: res.followup_draft } : x));
+        setConfirmSend(null);
       } else {
         setDraftError({ id: t.id, message: res.error || 'Send failed' });
       }
@@ -223,11 +251,10 @@ export default function Transcripts({ api }) {
                               </span>
                             ) : (
                               <button
-                                onClick={e => { e.stopPropagation(); sendDraft(t); }}
-                                disabled={sending === t.id}
-                                className="px-3 py-1 text-xs font-bold rounded-lg bg-green-500/20 text-green-300 border border-green-500/30 hover:bg-green-500/30 transition-all disabled:opacity-50"
+                                onClick={e => { e.stopPropagation(); confirmSend === t.id ? setConfirmSend(null) : openSendConfirm(t); }}
+                                className="px-3 py-1 text-xs font-bold rounded-lg bg-green-500/20 text-green-300 border border-green-500/30 hover:bg-green-500/30 transition-all"
                               >
-                                {sending === t.id ? 'Sending…' : 'Send ➤'}
+                                Send ➤
                               </button>
                             )}
                             <button
@@ -255,6 +282,47 @@ export default function Transcripts({ api }) {
                             )}
                           </div>
                         </div>
+                        {confirmSend === t.id && t.followup_draft.status !== 'sent' && (
+                          <div className="bg-green-500/5 rounded-xl p-4 border border-green-500/20 mb-3 space-y-3" onClick={e => e.stopPropagation()}>
+                            <p className="text-sm font-semibold text-green-300">Confirm send</p>
+                            <div className="text-xs text-white/60 space-y-1">
+                              <p><span className="text-white/35">From:</span> {SENDER}</p>
+                              <p><span className="text-white/35">To:</span> {t.followup_draft.to}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-white/35 mb-1.5">CC:</p>
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {ccList.map(e => (
+                                  <span key={e} className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs bg-white/10 text-white/70 border border-white/10">
+                                    {e}
+                                    <button onClick={() => setCcList(ccList.filter(x => x !== e))} className="text-white/40 hover:text-red-400">×</button>
+                                  </span>
+                                ))}
+                                {ccList.length === 0 && <span className="text-xs text-white/30 italic">no one CC'd</span>}
+                              </div>
+                              <div className="flex items-center gap-2 mt-2">
+                                <input
+                                  value={ccInput}
+                                  onChange={e => setCcInput(e.target.value)}
+                                  onKeyDown={e => e.key === 'Enter' && addCc()}
+                                  placeholder="add email + Enter"
+                                  className="glass-input rounded-lg px-2 py-1 text-xs w-52"
+                                />
+                                <button onClick={addCc} className="px-2 py-1 text-xs rounded-lg border border-white/10 text-white/50 bg-white/5 hover:bg-white/10">Add</button>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 pt-1">
+                              <button
+                                onClick={() => sendDraft(t)}
+                                disabled={sending === t.id}
+                                className="px-4 py-1.5 text-xs font-bold rounded-lg bg-green-500/25 text-green-300 border border-green-500/40 hover:bg-green-500/35 transition-all disabled:opacity-50"
+                              >
+                                {sending === t.id ? 'Sending…' : `Yes, send it`}
+                              </button>
+                              <button onClick={() => setConfirmSend(null)} className="px-3 py-1.5 text-xs rounded-lg border border-white/10 text-white/50 bg-white/5 hover:bg-white/10">Cancel</button>
+                            </div>
+                          </div>
+                        )}
                         <div className="bg-brand-500/5 rounded-xl p-4 border border-brand-500/15 space-y-2">
                           <p className="text-sm font-semibold text-white/80">{t.followup_draft.subject}</p>
                           <p className="text-sm text-white/60 whitespace-pre-wrap">{t.followup_draft.body}</p>

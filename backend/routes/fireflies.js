@@ -278,12 +278,18 @@ router.post('/send/:firefliesId', async (req, res) => {
     if (!draft?.to) return res.status(400).json({ error: 'No draft on this transcript' });
     if (draft.status === 'sent') return res.status(400).json({ error: 'Already sent' });
 
-    // CC teammates who were on the call (not the sender)
+    // CC: frontend-provided list wins (user can add/remove); default
+    // is teammates who were on the call (not the sender)
     const sender = (process.env.SMTP_USER || 'vincent@storygroup.io').toLowerCase();
-    const cc = (t.participants || [])
-      .map(p => p.toLowerCase().trim())
-      .filter(p => p.includes('@') && p !== sender)
-      .filter(p => ['storygroup.io', 'winningrepublicans.com'].includes(p.split('@')[1]));
+    let cc;
+    if (Array.isArray(req.body?.cc)) {
+      cc = req.body.cc.map(e => String(e).toLowerCase().trim()).filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) && e !== sender);
+    } else {
+      cc = (t.participants || [])
+        .map(p => p.toLowerCase().trim())
+        .filter(p => p.includes('@') && p !== sender)
+        .filter(p => ['storygroup.io', 'winningrepublicans.com'].includes(p.split('@')[1]));
+    }
 
     const subject = req.body?.subject || draft.subject;
     const body = req.body?.body || draft.body;
