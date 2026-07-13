@@ -1,0 +1,1626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Story Group · PR Sales Mastery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600;1,700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#00193B; --navy2:#001230; --pink:#FF2257; --coral:#FF743F;
+    --body:#E8ECF1; --muted:#8A99B0; --card:#0D1F3C; --border:#2A3F5F;
+    --serif:'Playfair Display', Georgia, 'Times New Roman', serif;
+    --sans:'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--navy); color:var(--body); font-family:var(--sans); font-size:15px; line-height:1.6; -webkit-font-smoothing:antialiased;}
+  ::selection{background:var(--pink); color:#fff}
+
+  /* top pink bar */
+  .topbar{position:fixed; top:0; left:0; right:0; height:6px; background:var(--pink); z-index:200}
+
+  /* layout */
+  .shell{display:flex; min-height:100vh; padding-top:6px}
+  .sidebar{width:248px; flex:0 0 248px; background:var(--navy2); border-right:1px solid var(--border);
+    position:fixed; top:6px; bottom:0; left:0; overflow-y:auto; z-index:150; padding:24px 0 40px}
+  .main{margin-left:248px; flex:1; max-width:980px; padding:48px 56px 120px}
+
+  /* logo */
+  .logo{padding:0 24px 8px; display:flex; align-items:baseline; gap:0; font-size:26px; line-height:1}
+  .logo .s{font-family:var(--serif); font-style:italic; font-weight:700; color:var(--pink)}
+  .logo .g{font-family:var(--sans); font-weight:500; color:var(--muted)}
+  .logo-rule{height:2px; width:50px; background:var(--pink); margin:10px 24px 4px}
+  .logo-sub{padding:0 24px 18px; font-size:9px; letter-spacing:2.5px; color:var(--muted); text-transform:uppercase}
+
+  /* search */
+  .searchwrap{padding:6px 18px 14px}
+  #globalSearch{width:100%; background:var(--card); border:1px solid var(--border); color:var(--body);
+    padding:10px 12px; border-radius:8px; font-family:var(--sans); font-size:13px; outline:none}
+  #globalSearch:focus{border-color:var(--pink)}
+  #globalSearch::placeholder{color:var(--muted)}
+
+  /* nav */
+  nav{padding:4px 12px}
+  .navbtn{display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:none; border:none;
+    color:var(--body); font-family:var(--sans); font-size:13.5px; font-weight:500; padding:10px 12px; border-radius:8px; cursor:pointer; transition:.15s}
+  .navbtn:hover{background:rgba(255,255,255,.05)}
+  .navbtn.active{background:var(--pink); color:#fff}
+  .navbtn .ico{font-size:15px; width:18px; text-align:center; opacity:.9}
+  .navhint{padding:18px 24px 6px; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--muted)}
+
+  /* sections */
+  .section{display:none; animation:fade .25s ease}
+  .section.active{display:block}
+  @keyframes fade{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
+
+  .eyebrow{font-size:10px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:var(--pink); margin-bottom:14px}
+  h1.title{font-family:var(--serif); font-weight:600; font-size:40px; line-height:1.12; color:var(--body); margin-bottom:10px}
+  h1.title em{font-style:italic; color:var(--pink); font-weight:700}
+  .lede{color:var(--muted); font-size:16px; max-width:680px; margin-bottom:34px; line-height:1.55}
+
+  h2{font-family:var(--serif); font-weight:600; font-size:25px; color:var(--body); margin:42px 0 16px}
+  h2 em{font-style:italic; color:var(--pink)}
+  h3{font-family:var(--sans); font-weight:700; font-size:15px; color:var(--body); margin:0 0 6px; letter-spacing:.2px}
+  p{margin-bottom:12px}
+  a{color:var(--pink)}
+
+  /* cards */
+  .card{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:24px; margin-bottom:16px}
+  .card.tight{padding:18px 20px}
+  .grid{display:grid; gap:16px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:1fr 1fr 1fr}
+  @media(max-width:860px){.g2,.g3{grid-template-columns:1fr}}
+
+  .pill{display:inline-block; font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--pink); border:1px solid var(--border); border-radius:20px; padding:4px 11px; margin-bottom:10px}
+  .price{font-family:var(--serif); font-size:30px; color:var(--pink); font-weight:600; line-height:1}
+  .priceunit{font-size:13px; color:var(--muted); font-family:var(--sans)}
+
+  ul.dot{list-style:none; margin:8px 0}
+  ul.dot li{position:relative; padding-left:22px; margin-bottom:7px; color:var(--body)}
+  ul.dot li::before{content:"●"; position:absolute; left:0; top:0; color:var(--pink); font-size:9px; top:5px}
+  ul.x li::before{content:"—"; color:var(--muted)}
+  .muted{color:var(--muted)}
+  .small{font-size:13px}
+  .analogy{font-style:italic; color:var(--muted); font-size:13.5px; border-left:2px solid var(--pink); padding-left:12px; margin-top:12px}
+
+  /* quick start tiles */
+  .tiles{display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin:28px 0 8px}
+  @media(max-width:860px){.tiles{grid-template-columns:1fr}}
+  .tile{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:22px; cursor:pointer; transition:.18s}
+  .tile:hover{border-color:var(--pink); transform:translateY(-3px)}
+  .tile .tico{font-size:24px; margin-bottom:12px}
+  .tile h3{margin-bottom:5px}
+  .tile p{font-size:13px; color:var(--muted); margin:0}
+
+  /* steps */
+  .step{display:flex; gap:18px; margin-bottom:14px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:22px}
+  .step .num{font-family:var(--serif); font-size:34px; color:var(--pink); font-weight:700; line-height:1; flex:0 0 44px}
+  .step .stepbody{flex:1}
+  .quote{background:rgba(255,34,87,.07); border-left:3px solid var(--pink); border-radius:0 8px 8px 0;
+    padding:12px 16px; margin:10px 0; font-style:italic; color:var(--body); font-size:14px}
+  .listen{font-size:12.5px; color:var(--muted); margin-top:8px}
+  .listen b{color:var(--coral); font-weight:600; font-style:normal}
+
+  /* table */
+  table{width:100%; border-collapse:collapse; margin:8px 0 4px; font-size:13.5px}
+  th,td{text-align:left; padding:11px 12px; border-bottom:1px solid var(--border); vertical-align:top}
+  th{color:var(--pink); font-size:10px; letter-spacing:1.5px; text-transform:uppercase; font-weight:700}
+  td .t{color:var(--body); font-weight:600}
+  tr:last-child td{border-bottom:none}
+
+  /* objection / accordion */
+  .acc{background:var(--card); border:1px solid var(--border); border-radius:12px; margin-bottom:12px; overflow:hidden}
+  .acc summary{cursor:pointer; list-style:none; padding:18px 22px; display:flex; justify-content:space-between; align-items:center; gap:14px}
+  .acc summary::-webkit-details-marker{display:none}
+  .acc summary .qtxt{font-weight:600; color:var(--body); font-size:14.5px}
+  .acc summary .arr{color:var(--pink); font-size:18px; transition:.2s; flex:0 0 auto}
+  .acc[open] summary .arr{transform:rotate(45deg)}
+  .acc .accbody{padding:0 22px 20px; color:var(--body); font-size:14px}
+  .acc .saytag{font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--coral); font-weight:700; display:block; margin:6px 0 4px}
+  .acc .saytag.you{color:var(--pink)}
+
+  /* glossary */
+  .glossitem{padding:16px 0; border-bottom:1px solid var(--border)}
+  .glossitem h3{color:var(--pink); font-family:var(--serif); font-style:italic; font-size:18px; font-weight:600}
+  .glossitem p{margin:4px 0 0; font-size:14px; color:var(--body)}
+  .nores{color:var(--muted); font-style:italic; padding:20px 0}
+
+  /* flashcards */
+  .deckbar{display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 22px}
+  .deckbtn{background:var(--card); border:1px solid var(--border); color:var(--body); padding:8px 16px; border-radius:30px;
+    cursor:pointer; font-family:var(--sans); font-size:13px; font-weight:500}
+  .deckbtn.active{background:var(--pink); border-color:var(--pink); color:#fff}
+  .flashstage{display:flex; flex-direction:column; align-items:center}
+  .flashcard{width:100%; max-width:560px; height:300px; perspective:1400px; cursor:pointer; margin-bottom:18px}
+  .flashinner{position:relative; width:100%; height:100%; transition:transform .5s; transform-style:preserve-3d}
+  .flashcard.flipped .flashinner{transform:rotateY(180deg)}
+  .flashface{position:absolute; inset:0; backface-visibility:hidden; border-radius:16px; border:1px solid var(--border);
+    background:var(--card); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:34px; text-align:center}
+  .flashface .tag{font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:14px}
+  .flashfront .ftxt{font-family:var(--serif); font-size:26px; color:var(--body); line-height:1.25}
+  .flashfront .ftxt em{color:var(--pink); font-style:italic}
+  .flashback{transform:rotateY(180deg); background:var(--navy2)}
+  .flashback .btxt{font-size:15px; color:var(--body); line-height:1.55}
+  .flashback .tag{color:var(--pink)}
+  .fliphint{font-size:11px; color:var(--muted); margin-top:18px; letter-spacing:1px}
+  .flashctrl{display:flex; gap:12px; align-items:center; margin-top:6px}
+  .fbtn{background:var(--card); border:1px solid var(--border); color:var(--body); width:46px; height:46px; border-radius:50%;
+    cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center}
+  .fbtn:hover{border-color:var(--pink); color:var(--pink)}
+  .fcount{font-size:13px; color:var(--muted); min-width:64px; text-align:center}
+  .shufflebtn{background:none; border:1px solid var(--border); color:var(--muted); padding:8px 16px; border-radius:30px; cursor:pointer; font-family:var(--sans); font-size:12px; margin-top:18px}
+  .shufflebtn:hover{color:var(--pink); border-color:var(--pink)}
+
+  /* cheat sheet */
+  .cheatgrid{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media(max-width:860px){.cheatgrid{grid-template-columns:1fr}}
+  .cheatbox{background:var(--card); border:1px solid var(--border); border-radius:10px; padding:18px}
+  .cheatbox h3{color:var(--pink); font-size:11px; letter-spacing:2px; text-transform:uppercase; margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px}
+  .cheatbox ul{list-style:none}
+  .cheatbox li{font-size:13px; margin-bottom:7px; padding-left:16px; position:relative}
+  .cheatbox li::before{content:"▸"; position:absolute; left:0; color:var(--coral)}
+  .cheatbox .tierline{display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px}
+  .cheatbox .tierline b{color:var(--body)} .cheatbox .tierline span{color:var(--pink); font-weight:600}
+  .printbtn{background:var(--pink); color:#fff; border:none; padding:11px 22px; border-radius:8px; font-family:var(--sans);
+    font-weight:600; font-size:13px; cursor:pointer; margin-bottom:20px}
+
+  /* power phrases */
+  .phrase{background:var(--card); border:1px solid var(--border); border-left:3px solid var(--coral); border-radius:0 10px 10px 0; padding:14px 18px; margin-bottom:10px; font-size:14px}
+  .phrase .ctx{display:block; font-size:11px; color:var(--muted); margin-top:5px; font-style:italic}
+
+  /* mobile nav */
+  .menubtn{display:none; position:fixed; top:16px; right:16px; z-index:300; background:var(--pink); color:#fff;
+    border:none; width:46px; height:46px; border-radius:10px; font-size:20px; cursor:pointer}
+  .overlay{display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:140}
+  @media(max-width:900px){
+    .sidebar{transform:translateX(-100%); transition:.25s}
+    .sidebar.open{transform:none}
+    .overlay.show{display:block}
+    .main{margin-left:0; padding:64px 22px 100px}
+    .menubtn{display:block}
+    h1.title{font-size:30px}
+  }
+
+  .footer{margin-top:60px; padding-top:20px; border-top:.5px solid var(--pink); font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--muted)}
+
+  /* source citation */
+  .src{display:block; font-size:11px; color:var(--muted); font-style:italic; margin-top:6px}
+  .src a{color:var(--muted); text-decoration:underline; text-decoration-color:var(--border)}
+  .src a:hover{color:var(--pink); text-decoration-color:var(--pink)}
+  .stat{font-family:var(--serif); color:var(--pink); font-weight:600}
+  /* note sheet (white paper) */
+  .notepaper{background:#fff; color:#10233f; border-radius:8px; padding:18px 20px; box-shadow:0 12px 44px rgba(0,0,0,.38); margin:6px 0 8px}
+  .notepaper .ns-head{display:flex; justify-content:space-between; align-items:baseline; border-bottom:2px solid #FF2257; padding-bottom:8px; margin-bottom:12px; gap:12px}
+  .notepaper .ns-head b{font-family:var(--serif); font-size:16px; color:#00193B; letter-spacing:.5px}
+  .notepaper .ns-head span{font-size:10px; color:#8090a4; letter-spacing:.4px; text-align:right}
+  .notepaper .ns-grid{display:grid; grid-template-columns:1.7fr 1fr; gap:16px}
+  .notepaper .ns-sec{font-size:9px; letter-spacing:2px; color:#FF2257; font-weight:700; text-transform:uppercase; margin-bottom:8px}
+  .notepaper .ns-beat{margin-bottom:9px}
+  .notepaper .ns-beat .lbl{font-size:11px; font-weight:700; color:#00193B}
+  .notepaper .ns-beat .lbl .n{display:inline-block; color:#fff; background:#FF2257; width:15px; height:15px; border-radius:50%; text-align:center; line-height:15px; font-size:9px; margin-right:7px}
+  .notepaper .ns-beat .pr{font-size:10px; color:#5a6b82; font-style:italic; display:block; margin:2px 0 3px 22px}
+  .notepaper .ns-write{margin-left:22px; min-height:30px; background-image:repeating-linear-gradient(#fff,#fff 17px,#e3e8ef 17px,#e3e8ef 18px)}
+  .notepaper .ns-box{border:1px solid #d6dde6; border-radius:6px; padding:8px 10px; margin-bottom:10px}
+  .notepaper .ns-box .bx{font-size:10px; font-weight:700; color:#00193B; letter-spacing:1px; text-transform:uppercase; display:block; margin-bottom:2px}
+  .notepaper .ns-box .hint{font-size:9px; color:#93a1b5; font-style:italic; font-weight:400; letter-spacing:0; text-transform:none}
+  .notepaper .ns-box .chk{font-size:10px; color:#5a6b82; float:right; font-weight:400; letter-spacing:0; text-transform:none}
+  .notepaper .ns-write.sm{min-height:22px}
+  .notepaper .ns-write.tall{min-height:46px}
+  .notepaper .ns-pc{font-size:10.5px; color:#00193B; margin:6px 0 1px}
+  .notepaper .ns-pc b{color:#FF2257}
+  .notepaper .ns-bottom{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:6px}
+
+  /* scorecard */
+  .sc-summary{position:sticky; top:14px; background:var(--navy2); border:1px solid var(--border); border-radius:12px; padding:18px 22px; margin-bottom:20px; z-index:50}
+  .sc-scorebig{font-family:var(--serif); font-size:46px; color:var(--pink); font-weight:700; line-height:1}
+  .sc-track{height:8px; background:var(--card); border-radius:6px; overflow:hidden; margin:12px 0 10px}
+  #scoreBar{height:100%; width:0; background:var(--pink); transition:width .25s, background .25s}
+  .sc-verdicttext{font-size:14px; min-height:20px}
+  .sc-cat{margin-bottom:18px}
+  .sc-cat h3{color:var(--pink); font-size:11px; letter-spacing:2px; text-transform:uppercase; margin-bottom:10px}
+  .sc-item{display:flex; align-items:flex-start; gap:12px; padding:9px 13px; border:1px solid var(--border); border-radius:8px; margin-bottom:7px; cursor:pointer; background:var(--card)}
+  .sc-item:hover{border-color:var(--pink)}
+  .sc-item input{margin-top:2px; width:16px; height:16px; accent-color:var(--pink); flex:0 0 auto; cursor:pointer}
+  .sc-lbl{flex:1; font-size:13.5px; color:var(--body)}
+  .sc-pts{flex:0 0 auto; font-size:11px; color:var(--muted); font-weight:600}
+  .sc-item.fail{border-color:#5a2330}
+  .sc-item.fail input{accent-color:var(--coral)}
+  #scoreFail{display:none; background:rgba(255,116,63,.12); border:1px solid var(--coral); border-radius:10px; padding:14px 16px; margin-bottom:16px; color:var(--coral); font-size:14px; font-weight:600}
+  /* fillable note fields */
+  .notepaper textarea.ns-field{width:100%; border:none; border-bottom:1px solid #d3dae3; background:transparent; font-family:var(--sans); font-size:12.5px; color:#10233f; padding:3px 2px; resize:vertical; outline:none; line-height:1.55; min-height:30px}
+  .notepaper textarea.ns-field:focus{border-bottom-color:#FF2257; background:#fff7f9}
+  .notepaper .ns-field::placeholder{color:#aeb8c6}
+  .notepaper .ns-box .chk label{cursor:pointer}
+  .notepaper .ns-box .chk input{width:auto; margin-right:3px; vertical-align:middle}
+  .note-toolbar{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:6px 0 12px}
+  .note-toolbar input, .note-toolbar select{background:var(--card); border:1px solid var(--border); color:var(--body); padding:9px 12px; border-radius:8px; font-family:var(--sans); font-size:13px; outline:none}
+  .note-toolbar input:focus, .note-toolbar select:focus{border-color:var(--pink)}
+  .note-btn{background:var(--pink); color:#fff; border:none; padding:9px 15px; border-radius:8px; font-family:var(--sans); font-weight:600; font-size:13px; cursor:pointer}
+  .note-btn.ghost{background:none; border:1px solid var(--border); color:var(--muted)}
+  .note-btn.ghost:hover{border-color:var(--pink); color:var(--pink)}
+  .note-status{font-size:11px; color:var(--pink); font-style:italic; min-width:60px}
+  @media print{
+    .sidebar,.menubtn,.overlay,.topbar,.printbtn{display:none!important}
+    .main{margin:0; max-width:100%}
+    body{background:#fff; color:#111}
+    .section{display:none!important}
+    #sec-cheat{display:block!important}
+    .cheatbox{border:1px solid #ccc; background:#fff}
+    .cheatbox h3,.cheatbox .tierline span{color:#c00}
+    h1.title,h1.title em{color:#111}
+  }
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<button class="menubtn" onclick="toggleNav()">☰</button>
+<div class="overlay" id="overlay" onclick="toggleNav()"></div>
+
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="logo"><span class="s">story</span><span class="g">group</span></div>
+    <div class="logo-rule"></div>
+    <div class="logo-sub">PR Sales Mastery</div>
+    <div class="searchwrap">
+      <input id="globalSearch" type="text" placeholder="Search terms, Q&A, objections…" oninput="doSearch(this.value)">
+    </div>
+    <nav id="nav"></nav>
+    <div class="navhint">Vincent Catalano · VP Growth</div>
+  </aside>
+
+  <main class="main" id="main">
+
+    <!-- ===================== START HERE ===================== -->
+    <section class="section active" id="sec-start">
+      <div class="eyebrow">YOUR FIELD GUIDE</div>
+      <h1 class="title">Sell PR like you've <em>done it for years.</em></h1>
+      <p class="lede">You don't need to have run a newsroom to sound like the smartest person on the call. This tool gives you two things: a real working knowledge of how PR actually functions, and the exact system Story Group uses to turn a conversation into a retainer.</p>
+
+      <div class="tiles">
+        <div class="tile" onclick="go('cheat')"><div class="tico">⚡</div><h3>I have a call now</h3><p>Jump to the one-screen cheat sheet — tiers, steps, top objections.</p></div>
+        <div class="tile" onclick="go('pr101')"><div class="tico">📚</div><h3>Teach me PR</h3><p>From zero. What PR is, how it works, and the language experts use.</p></div>
+        <div class="tile" onclick="go('objections')"><div class="tico">🛡️</div><h3>Handle an objection</h3><p>They say X → you say Y. Word-for-word responses.</p></div>
+      </div>
+
+      <h2>The <em>one belief</em> that changes everything</h2>
+      <div class="card">
+        <h3>You are a strategic advisor, not a vendor.</h3>
+        <p class="muted small">Your job is not to read a menu and ask what they want. It's to understand their ambition and their risk — then tell them what they need. You're a doctor diagnosing, not a waiter taking an order. Everything in this tool serves that one idea. Price signals seniority: you're selling senior judgment, access, and protection — not press releases.</p>
+      </div>
+
+      <h2>Become dangerous in <em>7 short sessions</em></h2>
+      <div class="card">
+        <ul class="dot">
+          <li><b>Day 1 — PR 101:</b> Learn what earned media actually is and why a journalist's word beats any ad.</li>
+          <li><b>Day 2 — PR in the AI Era:</b> The 2026 edge. Learn why 85%+ of what ChatGPT cites is earned media — this alone will set you apart.</li>
+          <li><b>Day 3 — The Offer:</b> Learn the 4 tiers cold. Explain the Amplify→Influence jump in your sleep.</li>
+          <li><b>Day 4 — The Call + Objections:</b> Memorize the 7 beats (not a script) and the answers to common pushback.</li>
+          <li><b>Day 5 — Expert Q&amp;A + The Craft:</b> Be able to answer anything and talk shop about how PR is actually made.</li>
+          <li><b>Day 6 — By Industry + Media Map:</b> Pick your top 2 verticals; learn their angles and the real outlets that serve them.</li>
+          <li><b>Day 7 — Glossary + Flashcards:</b> Drill every deck until it's reflex. If you can pass these, you can run the call.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ===================== PR 101 ===================== -->
+    <section class="section" id="sec-pr101">
+      <div class="eyebrow">BECOME THE EXPERT</div>
+      <h1 class="title">PR 101 — <em>everything no one told you.</em></h1>
+      <p class="lede">Read this once and you'll understand more about how media actually works than most people who claim to "do PR." This is the foundation that makes the rest make sense.</p>
+
+      <h2>What PR <em>actually</em> is</h2>
+      <div class="card">
+        <p><b>Public Relations is earning attention and credibility through other people</b> — journalists, podcast hosts, conference stages, industry awards — instead of buying it.</p>
+        <p>The core trade is this: <b>you give up control of the message in exchange for credibility.</b> An ad you write yourself is 100% on-message but everyone knows you paid for it. A journalist at Forbes writing that you're a leader in your space? You can't fully control what they say — but it's worth ten times more, because the audience trusts <i>them</i>, not you.</p>
+        <p class="muted small">That single sentence — "you trade control for credibility" — is the most important thing on this page. It explains why PR is hard, why it can't be guaranteed, and why it's worth real money.</p>
+      </div>
+
+      <h2>The map: the <em>PESO model</em></h2>
+      <div class="card">
+        <p>Every kind of media falls into four buckets. Knowing this instantly makes you sound fluent:</p>
+        <ul class="dot">
+          <li><b>P — Paid:</b> Ads. You pay, you control the message. (Facebook ads, TV spots, sponsored posts.)</li>
+          <li><b>E — Earned:</b> Coverage a journalist gives you because the story is worth telling. <b>This is the heart of PR — and it's what Story Group sells.</b></li>
+          <li><b>S — Shared:</b> Social media — your posts, reposts, engagement.</li>
+          <li><b>O — Owned:</b> Channels you control — your website, blog, newsletter. (Bylines live at the edge of earned + owned.)</li>
+        </ul>
+        <p class="analogy">When a prospect says "we already do marketing," they almost always mean Paid + Shared + Owned. The gap you fill is <b>Earned</b> — the one bucket you can't buy your way into.</p>
+      </div>
+
+      <h2>How earned media <em>really</em> happens</h2>
+      <div class="card">
+        <p>Coverage isn't magic and it isn't a press-release blast. It's a pipeline. Knowing it lets you talk process like a pro:</p>
+        <ul class="dot">
+          <li><b>1. The angle (news hook):</b> Decide what story is actually worth telling — tied to something happening now.</li>
+          <li><b>2. The media list:</b> Identify the specific journalists who cover that exact beat. Not a database dump — the right 30–75 names.</li>
+          <li><b>3. The pitch:</b> A short, personalized email to <i>one</i> journalist proposing the story (not "please cover us").</li>
+          <li><b>4. The follow-up:</b> Most pitches get ignored. Human, persistent follow-up is where placements are actually won.</li>
+          <li><b>5. The placement:</b> The journalist writes the story or quotes your exec. That's "earned coverage" — a hit, a clip.</li>
+          <li><b>6. Amplification:</b> You share the coverage (owned + shared) to multiply its value.</li>
+        </ul>
+        <p class="muted small">When a prospect asks "so what do you actually do all month?" — this pipeline, on repeat, across multiple storylines, is the answer.</p>
+      </div>
+
+      <h2>What journalists <em>actually want</em></h2>
+      <div class="card">
+        <p>Journalists don't care that you're great. They care about <b>newsworthiness.</b> A pitch lands when it has one of these:</p>
+        <ul class="dot">
+          <li><b>Timeliness</b> — it ties to something in the news right now.</li>
+          <li><b>Data or exclusivity</b> — a new survey, original numbers, a story they'd be first to report.</li>
+          <li><b>A trend they're already covering</b> — and you're the perfect example or expert source.</li>
+          <li><b>A real human story</b> — conflict, transformation, an underdog.</li>
+        </ul>
+        <p class="analogy">"We're excited to announce…" is not news. This is exactly why companies need a strategist — finding the hook is the skill they're paying for.</p>
+      </div>
+
+      <h2>The assets, <em>explained simply</em></h2>
+      <div class="grid g2">
+        <div class="card tight"><h3>Press release</h3><p class="small muted">An official announcement (funding, launch, big hire) written and distributed to outlets. Useful, but the weakest tool alone.</p></div>
+        <div class="card tight"><h3>Media pitch</h3><p class="small muted">A personalized email to <i>one</i> journalist proposing a story. Far more effective than a mass release.</p></div>
+        <div class="card tight"><h3>Byline / contributed article</h3><p class="small muted">An article published under your exec's name (e.g. a Forbes council piece). Pure thought leadership.</p></div>
+        <div class="card tight"><h3>Op-ed</h3><p class="small muted">An opinion piece arguing a position, run in a news outlet. Positions your leader as a voice with a point of view.</p></div>
+        <div class="card tight"><h3>Earned interview / quote</h3><p class="small muted">A journalist quotes your exec inside their own story. The classic "we got mentioned in…" win.</p></div>
+        <div class="card tight"><h3>Podcast placement</h3><p class="small muted">Booking your exec as a guest on relevant shows. Long-form trust-building at scale.</p></div>
+        <div class="card tight"><h3>Speaking placement</h3><p class="small muted">Getting your leader on a conference stage or panel. Authority you can't fake.</p></div>
+        <div class="card tight"><h3>Awards</h3><p class="small muted">Industry award submissions for third-party validation. Cheap credibility.</p></div>
+      </div>
+
+      <h2>Campaigns worth <em>name-dropping</em></h2>
+      <div class="card">
+        <p class="muted small">A few legendary campaigns. Reference one and you instantly sound like you live in this world:</p>
+        <ul class="dot small">
+          <li><b>Dove "Real Beauty" (2004)</b> — sparked by a finding that only 2% of women felt beautiful; used real women, not models. Sales went from $2.5B to $4B+ in a decade. "It's not about the soap — it's about what Dove stands for."</li>
+          <li><b>IKEA / Mark Malkoff</b> — a comedian "lived inside an IKEA store" and filmed it. Sold the <i>feeling</i> of home, not products — won Campaign of the Year.</li>
+          <li><b>KFC, COVID</b> — blurred out "Finger Lickin'" from its slogan and defused backlash with humor. Read the room, respond with wit.</li>
+          <li><b>Newsjacking (Christina Daves)</b> — clients drove 873M views and 8-figure sales from free press by tying their expertise to what's in the news right now (a skincare chemist pitching DIY sanitizer when shelves emptied).</li>
+        </ul>
+        <span class="src">PRLab · PR for Anyone — public training (YouTube)</span>
+      </div>
+
+      <h2>How PR is <em>measured today</em></h2>
+      <div class="card">
+        <p>If a prospect asks about ROI, here's the modern, honest answer — and saying it correctly is an instant credibility signal:</p>
+        <ul class="dot">
+          <li><b>Quantity & quality of placements</b> — how many, in which outlets (a trade vs. Bloomberg are not equal).</li>
+          <li><b>Share of Voice (SOV)</b> — how much of the conversation in your category is about you vs. competitors.</li>
+          <li><b>Sentiment</b> — is the coverage positive, neutral, negative.</li>
+          <li><b>Branded search lift & referral traffic</b> — are more people Googling you and clicking through.</li>
+          <li><b>Inbound</b> — speaking invites, partnership asks, leads that say "I saw you in…"</li>
+        </ul>
+        <p class="analogy">Red flag to avoid: <b>AVE (Advertising Value Equivalency)</b> — the old "this coverage = $X of ads" math. It's been discredited industry-wide. Never use it. Story Group tracks the real metrics above through <b>Meltwater</b>.</p>
+      </div>
+
+      <h2>How long it <em>actually</em> takes</h2>
+      <div class="card">
+        <p>PR is a compounding asset, not a faucet. Set this expectation <i>upfront</i> and you'll never get the "nothing happened in month 1" complaint:</p>
+        <ul class="dot">
+          <li><b>Weeks 1–2:</b> Research, narrative build, media list, first outreach prep. (Tell them this happens fast — outreach begins within 2 weeks of kickoff.)</li>
+          <li><b>Weeks 4–12:</b> First placements typically land. Momentum starts.</li>
+          <li><b>Months 6–12:</b> Authority compounds — journalists start coming to <i>you</i>.</li>
+        </ul>
+      </div>
+
+      <h2>What PR <em>can and can't</em> do</h2>
+      <div class="grid g2">
+        <div class="card"><h3 style="color:var(--pink)">It CAN</h3><ul class="dot small"><li>Build credibility and authority</li><li>Grow share of voice vs. competitors</li><li>Drive inbound — leads, partners, speaking</li><li>Support fundraising, recruiting, and sales</li><li>Manage and protect reputation</li></ul></div>
+        <div class="card"><h3 style="color:var(--coral)">It CANNOT</h3><ul class="dot x small"><li>Guarantee a specific placement (promising this is a scam tell)</li><li>Deliver overnight results</li><li>Fix a genuinely bad product</li><li>Control exactly what a journalist writes</li></ul></div>
+      </div>
+
+      <h2>Talk like an <em>expert</em></h2>
+      <p class="muted small" style="margin-bottom:14px">Drop these naturally and you'll sound like you've been doing this for a decade. (Full list in the Cheat Sheet.)</p>
+      <div class="phrase">"What's the <b>news hook</b> here? That's what a journalist needs before they'll write anything."<span class="ctx">— signals you think like an editor, not a marketer</span></div>
+      <div class="phrase">"We're not buying you a press release — we're building you <b>share of voice</b> against [competitor]."<span class="ctx">— reframes the spend as strategic positioning</span></div>
+      <div class="phrase">"Earned media is <b>credibility you can't buy with ads</b> — that's the whole point of it."<span class="ctx">— the core PR truth, said simply</span></div>
+    </section>
+
+    <!-- ===================== THE OFFER ===================== -->
+    <section class="section" id="sec-offer">
+      <div class="eyebrow">KNOW IT COLD</div>
+      <h1 class="title">The offer — <em>four levels to know cold.</em></h1>
+      <p class="lede">This is your product knowledge and your <b>Call 2</b> toolkit. Know every deliverable so you never fumble — but remember the Price Rule: on Call 1 you band the budget and present none of this. Tiers, prices, and the spectrum walk all happen on Call 2.</p>
+      <div class="card" style="border-color:var(--pink); margin-bottom:18px">
+        <p class="small" style="margin:0"><b style="color:var(--pink)">The Price Rule:</b> On Call 1, never name a tier or quote a tier price. Band only — "$5–10k, $10–20k, or higher?" Everything below is for Call 2 and for your own command of the product.</p>
+      </div>
+      <div id="tierCards"></div>
+
+      <h2>The real jumps, in <em>plain English</em></h2>
+      <div class="card"><h3>Foundation → Amplify: passive to active</h3><p class="muted small">Foundation is a press release and you wait. Amplify is a plan, a real media list, and someone persistently working storylines every month. <b>Foundation is a press release. Amplify is a media strategy.</b></p></div>
+      <div class="card"><h3>Amplify → Influence: coverage to voice</h3><p class="muted small">This is the jump most prospects debate. At Amplify a journalist writes a story and <i>might</i> include your data point. At Influence, that journalist already knows your CEO's name and calls them for a quote <i>before</i> publishing. Amplify is PUSH (you pitch outward). Influence is PULL (they come to you). Bylines, op-eds, podcasts, and proactive booking create that pull.</p></div>
+      <div class="card"><h3>Influence → Command: voice to armor</h3><p class="muted small">At Influence you're building authority. At Command you're also managing <i>risk</i> — media coaching before every appearance, crisis holding statements ready, board-ready analytics. For people where a bad headline costs millions.</p></div>
+
+      <h2>The 3 things at <em>$15K</em> you don't get at $8.5K</h2>
+      <div class="card">
+        <ul class="dot">
+          <li><b>Higher-impact assets:</b> $8.5K gets pitches and releases. $15K gets bylines, op-eds, and podcast appearances — content that makes your leader a <i>thought leader</i>, not just a news source.</li>
+          <li><b>Proactive booking as a core pillar:</b> $8.5K booking is opportunistic. $15K, you're <i>actively and continuously</i> booked. The difference between hoping a journalist calls and making sure they do.</li>
+          <li><b>Meltwater intelligence:</b> Share-of-voice, sentiment, competitor monitoring. Enterprise tools that cost $12–30K/yr alone — baked in. Lets you prove ROI to a board.</li>
+        </ul>
+      </div>
+
+      <h2>Match the <em>stakes</em> to the tier</h2>
+      <table>
+        <tr><th>What you hear in discovery</th><th>Tier</th><th>Why</th></tr>
+        <tr><td>"We just need to stay visible"</td><td class="t">Foundation $5K</td><td class="muted">Maintenance mode — but probe, they may be underselling.</td></tr>
+        <tr><td>"We want more coverage / a PR strategy"</td><td class="t">Amplify $8.5K</td><td class="muted">They know they need help. Build from here.</td></tr>
+        <tr><td>"We want our CEO to be THE authority / be in top outlets"</td><td class="t">Influence $15K</td><td class="muted">Ambitious about positioning. Where most qualified prospects land.</td></tr>
+        <tr><td>"Reputation under scrutiny / board-level concerns / a crisis could be devastating"</td><td class="t">Command $25K</td><td class="muted">High stakes. Take it to internal approvals.</td></tr>
+        <tr><td>"We don't have much budget / can we start small?"</td><td class="t">Amplify $8.5K <span class="muted">(not Foundation)</span></td><td class="muted">If the story is strong, Foundation is too light. Frame Amplify as the true starting tier.</td></tr>
+      </table>
+
+      <h2>Pricing psychology: <em>reframe, never defend</em></h2>
+      <p class="muted small" style="margin-bottom:8px">When someone says "$15K is a lot," they're comparing it to <i>nothing</i>. Give them a better comparison:</p>
+      <table>
+        <tr><th>Compare to</th><th>The math</th></tr>
+        <tr><td class="t">In-house comms hire</td><td class="muted">A competent comms director is $90–120K/yr loaded. Amplify at $102K/yr is a whole <i>team</i>. Influence at $180K/yr beats a Sr. VP of Comms + Meltwater.</td></tr>
+        <tr><td class="t">Meltwater alone</td><td class="muted">The monitoring suite in Influence runs $12–30K/yr if bought separately. It's baked into the retainer.</td></tr>
+        <tr><td class="t">Cost of inaction</td><td class="muted">Every month without coverage is a month a competitor owns your narrative.</td></tr>
+        <tr><td class="t">One new partner</td><td class="muted">If coverage drives even ONE corporate partner or major donor, the retainer pays for itself in month one.</td></tr>
+      </table>
+      <div class="card" style="margin-top:16px"><h3>The 4-month minimum is your friend</h3><p class="muted small">If they hesitate on commitment: "Let's do 4 months, get placements, and measure. If it's working, we continue. If not, you walk away." Removes the forever-commitment fear.</p></div>
+    </section>
+
+    <!-- ===================== THE CALL ===================== -->
+    <section class="section" id="sec-call">
+      <div class="eyebrow">CALL 1 · DISCOVERY · v6 HYBRID</div>
+      <h1 class="title">The call — <em>discovery, not pitch.</em></h1>
+      <p class="lede">Story Group's real Call 1 script (v6, May 2026) — the first of a two-call close. Call 1 qualifies and extracts; Call 2 pitches and closes. It's <b>problem-first</b>: you open with pain, never with goals. 30 minutes, run with discipline. <i>Italic = say it close to verbatim.</i></p>
+
+      <h2>The 3 <em>non-negotiable</em> rules</h2>
+      <div class="grid g3">
+        <div class="card tight"><h3 style="color:var(--pink)">1 · Cole Gordon</h3><p class="muted small">Tell them up front there's a second call. No surprises, and never pivot discovery into a pitch inside Call 1.</p></div>
+        <div class="card tight"><h3 style="color:var(--pink)">2 · The Price Rule</h3><p class="muted small">Never name a tier or quote a tier price on Call 1. <b>Band</b> the budget: $5–10k / $10–20k / higher. Tiers come on Call 2.</p></div>
+        <div class="card tight"><h3 style="color:var(--pink)">3 · Pure listening</h3><p class="muted small">Through Beat 6: no coaching, no reframes, no teaching. Extraction first. All coaching lives in the close.</p></div>
+      </div>
+
+      <h2>30 minutes <em>at a glance</em></h2>
+      <table>
+        <tr><th>Time</th><th>Phase</th><th>What happens</th></tr>
+        <tr><td class="t">0:00–3:30</td><td class="t">Open</td><td class="muted">Rapport → leadership move → the frame → case study opener</td></tr>
+        <tr><td class="t">3:30–24:00</td><td class="t">Discovery</td><td class="muted">7 beats, problem-first — pure listening</td></tr>
+        <tr><td class="t">24:00–30:00</td><td class="t">Close</td><td class="muted">Tie-down → trial commit → partner → Call 2 preview → Loom</td></tr>
+      </table>
+
+      <h2>The Open <em>(0:00–3:30)</em></h2>
+      <div class="step"><div class="num">1</div><div class="stepbody"><h3>Hello + Rapport <span class="muted" style="font-weight:400">· 0:00–0:30</span></h3><div class="quote">"Hey [Name], great to meet you — [Closer] with [our team]. How are you?"</div><p class="muted small">A 30-second exchange. Match their rhythm but lead with your own grounded energy — don't mirror theirs. Don't linger.</p></div></div>
+      <div class="step"><div class="num">2</div><div class="stepbody"><h3>Leadership Move <span class="muted" style="font-weight:400">· 0:30–1:00</span></h3><div class="quote">"Great. I have a limited amount of time — are we ready to jump in? Do you have something to take notes with?"</div><p class="muted small">Sub-communicates discipline, opens the loop, and forces them to grab a pen.</p></div></div>
+      <div class="step"><div class="num">3</div><div class="stepbody"><h3>The Frame — Cole Gordon Call 2 commit <span class="muted" style="font-weight:400">· 1:00–2:00</span></h3><div class="quote">"Everything we do is customized based on what people need. So we're going to get clarity on what you need, and I'll tell you whether this is something we can help with. If it's a fit, I'll take what we discussed back to our team, we'll build out a customized game plan, and we'll book another call where I'll walk you through exactly how it's going to help you. Does that make sense?"</div><p class="muted small"><b>Wait for an explicit yes.</b> Don't move on until they acknowledge.</p></div></div>
+      <div class="step"><div class="num">4</div><div class="stepbody"><h3>Case Study Opener <span class="muted" style="font-weight:400">· 2:00–3:30</span></h3><div class="quote">"Before we get into your situation — what caught my eye is [STRUCTURAL OBSERVATION]. We just helped [MATCHED CASE STUDY] [TWO REAL METRICS]. Made me think there's a version of that we could run for you. Sound fair?"</div><p class="muted small">A credibility drop before discovery. Slots: a one-sentence observation of what they DID · one anonymized case from your library (see Case Studies) · two real metrics — never fabricate.</p></div></div>
+
+      <h2>The 7 Beats <em>(3:30–24:00)</em></h2>
+      <p class="muted small" style="margin-bottom:14px">The rule for every beat: ask, then <b>shut up</b>. 2–4 seconds of silence — the real answer lives in the pause. Write their punchy phrases verbatim. <b>Pure listening through Beat 6.</b></p>
+
+      <div class="step"><div class="num">1</div><div class="stepbody"><h3>Pain / Background <span class="muted" style="font-weight:400">· 3:30–7:00</span></h3><div class="quote">"Walk me through what brought you to this call. What's going on in [company / practice / campaign] right now that made you want to have this conversation?"</div><p class="muted small">[Silence — count to four.] Then "Got it. Anything else?" — ask up to <b>3×</b>. Stop the moment they settle, repeat themselves, or say "that's really it." Forcing a 3rd ask on someone who's settled reads as inattention.</p><div class="listen"><b>Then deploy your pattern read</b> (see "Read the prospect" below) — but only after they've settled.</div></div></div>
+
+      <div class="step"><div class="num">2</div><div class="stepbody"><h3>Specific Examples <span class="muted" style="font-weight:400">· 7:00–11:00</span></h3><div class="quote">"You said [their #1 pain, verbatim]. Give me a specific example — not a generic one, the most recent time it showed up. Walk me through it." … "And one more. What's another specific time it bit you?"</div><p class="muted small" style="margin-bottom:6px">Chunk down by the type of metric they give:</p><table><tr><th>Metric type</th><th>Chunk-down</th></tr><tr><td class="t">Revenue / deal</td><td class="muted">"Gross or net?" / "What's the other side look like?"</td></tr><tr><td class="t">Leads / pipeline</td><td class="muted">"Monthly or quarterly?" / "How many qualified?"</td></tr><tr><td class="t">Audience / followers</td><td class="muted">"Total reach or unique?"</td></tr><tr><td class="t">Press / placements</td><td class="muted">"Ones you're proud of, or all of them?"</td></tr><tr><td class="t">Donors / meetings</td><td class="muted">"Booked meetings or actual asks?"</td></tr><tr><td class="t">Default</td><td class="muted">"Is that the number you have, or the number you want?"</td></tr></table><div class="listen">If they can't produce a specific example, <b>the pain isn't real yet</b> — loop back to Beat 1.</div></div></div>
+
+      <div class="step"><div class="num">3</div><div class="stepbody"><h3>Money / DM / Banded Budget <span class="muted" style="font-weight:400">· 11:00–14:00</span></h3><div class="quote">"Quick gear-change — two questions. First: besides yourself, who else weighs in on a decision like this — a partner, co-founder, board, CFO? Second: have you set aside a budget for this, or are we still in the figuring-it-out phase?"</div><div class="quote">"Roughly what range are you thinking — is this a $5–10k a month conversation, $10–20k, or are we higher than that?"</div><p class="analogy" style="border-color:var(--pink)"><b style="color:var(--pink)">Price Rule:</b> banded only. Never name our floor, never name a tier, never quote a tier price.</p><p class="muted small"><b>Pushback:</b> "Totally fair — here's why I ask. The work at $5k looks different from the work at $20k. I'm not pinning you to a number, I'm figuring out which conversation we're having." If they say "just tell me what it costs": "Fair — and I will, on the pitch call once I know what to recommend. Today I just need to know if we're in the same ballpark: $5–10, $10–20, or higher?"</p></div></div>
+
+      <div class="step"><div class="num">4</div><div class="stepbody"><h3>How Long / What Tried <span class="muted" style="font-weight:400">· 14:00–17:00</span></h3><div class="quote">"How long has this been a problem? When did you first notice it was something you needed to actually solve, not just live with?" … "And in that time, what have you tried? PR firm, freelancer, in-house, agency? [for each] What happened — why didn't it work?"</div><div class="quote">"What's your <i>own theory</i> of why it didn't work?"</div><div class="listen">The single most valuable line in the call. Their theory of past failure <b>shapes the Call 2 pitch</b> ("no hustle" → lead with hustle; "no strategy" → lead with strategy). Capture verbatim. Also flag: incumbent-vendor risk and the burned signal (every Call 2 claim then needs a proof point).</div></div></div>
+
+      <div class="step"><div class="num">5</div><div class="stepbody"><h3>Why Now + Cost of Inaction <span class="muted" style="font-weight:400">· 17:00–20:00</span></h3><div class="quote">"You've had this for [duration]. Why are we talking now? What changed in the last 30 to 60 days that made you take this call this week?"</div><div class="quote">"If nothing changes — if you do nothing differently for the next 6 to 12 months — what does that cost you? Not just dollars. Reputation, opportunity, the deal you don't get, the seat you don't earn."</div><p class="muted small">[Silence. Sit with it. Don't rescue. Count to six.] Then the double-pump:</p><div class="quote">"Is there any other reason this matters to you?"</div><div class="listen">First answer = rational (revenue, market share). The <b>second answer, after the double-pump, is emotional</b> ("the board is losing confidence," "my wife is tired of me bringing this home"). That second answer closes Call 2.</div></div></div>
+
+      <div class="step"><div class="num">6</div><div class="stepbody"><h3>Goal + NMG <span class="muted" style="font-weight:400">· 20:00–24:00</span></h3><div class="quote">"Flip the coin. Twelve months from now, you look me in the eye and say 'that worked.' What's specifically different in the business?" … "When you say [their answer], what does that cash out as — inbound leads, board confidence, donor meetings, speaking invites, investor interest, votes?"</div><div class="quote">"I'm going to ask you something a little personal — tell me to back off if it's not appropriate. Mind if I ask? … If that outcome happens, what does it mean for <i>YOU</i> personally? Not the company. You."</div><div class="listen">This is the <b>NMG (non-monetary goal)</b> — board credibility, peace of mind, freedom from the founder seat, a clean exit, a spouse who stops worrying. Capture the exact words. It closes Call 2.</div></div></div>
+
+      <h2>Transition + Close <em>(24:00–30:00)</em></h2>
+      <p class="muted small" style="margin-bottom:14px">Extraction is done. <b>Now</b> coaching, reframes, and the close are allowed.</p>
+      <div class="step"><div class="num">7a</div><div class="stepbody"><h3>Optional Thought Drop <span class="muted" style="font-weight:400">· binary trigger</span></h3><p class="muted small">Drop this <b>only</b> if you can name a real client + real industry match + real result in one sentence each. Any doubt → <b>skip it.</b> A weak case study does more damage than none.</p><div class="quote">"About [timeframe] ago we worked with a client almost identical to what you described — [one sentence]. What we did was [one sentence]. The outcome was [one specific result]. Not pitching you on that approach today — just sharing the pattern."</div></div></div>
+      <div class="step"><div class="num">7b</div><div class="stepbody"><h3>Tie-down → Trial Commit → Partner → Call 2 → Loom <span class="muted" style="font-weight:400">· 27:00–30:00</span></h3><p class="muted small"><b>Tie-down:</b></p><div class="quote">"Here's where we are. I've got a clear picture of [pain in their words], the fact that [trigger], and what you're trying to get to — [goal], specifically [NMG]. Did I get that right?"</div><p class="muted small"><b>Trial commit:</b></p><div class="quote">"Before I put time into building a tailored plan — if we bring you a plan that hits [their goal], is this something you're ready to make a real decision on in the next two weeks?"</div><p class="muted small"><b>Partner</b> (if a DM surfaced in Beat 3): "You mentioned [name/role] weighs in. The plan will be specific enough that having them on Call 2 saves a round trip. Any chance we get them on directly?" — DM on the call is best; committed loop-in within 48h is acceptable; "I'll mention it after" is not.</p><p class="muted small"><b>Call 2 preview + named outlet:</b> "Call 2 is 45–60 min — I'll walk you through what we'd do month by month, including which outlets we'd target. Based on what you told me, I personally believe [ONE named outlet] is on the table. Not promising it today, but I'll come with a real point of view." <i>Only name an outlet you genuinely believe is achievable — your credibility is on it.</i></p><p class="muted small"><b>Loom:</b> "Between now and then I'll record a 90-second Loom walking through what stood out. It keeps us on the same page going into Call 2. Sound good?" — get the verbal yes.</p></div></div>
+
+      <h2>Read the prospect <em>before you dial</em></h2>
+      <div class="grid g3">
+        <div class="card tight"><h3>Par-to-Excellence <span class="muted" style="font-weight:400">(most PR buyers)</span></h3><p class="muted small">Doing fine, watching opportunity pass. Pain = the gap to the next level. Use the <b>two-truths</b> move: "What you've built is real — and you're here because you can see the next level and you're not there yet."</p></div>
+        <div class="card tight"><h3>Sub-Par-to-Par <span class="muted" style="font-weight:400">(crisis)</span></h3><p class="muted small">Something is on fire — lawsuit, bad coverage. Posture: calm, fast, clinical. <b>Do NOT</b> use two-truths. "I hear you. Let's figure out what we're actually dealing with."</p></div>
+        <div class="card tight"><h3>Burned / Skeptical</h3><p class="muted small">A prior firm failed them. Receipt language only — every Call 2 claim needs a proof point. "Fair concern. Here's how we work differently, and you can verify it before you sign."</p></div>
+      </div>
+
+      <h2>Disqualify + book <em>(live scripts)</em></h2>
+      <details class="acc"><summary><span class="qtxt">D-10 · They hedge on the trial commit</span><span class="arr">+</span></summary><div class="accbody"><p>"Fair answer — appreciate the honesty. Help me understand what would make you ready? A piece of info you'd need, a person you'd need to talk to, a threshold in the business — what's the actual thing?" [Listen — the real objection surfaces here.] "So if we addressed [their answer] on the next call, you'd be in a position to say yes? Then I'll build the plan with [their answer] specifically addressed — so our next call is either 'yes, let's go' or 'no, here's exactly why not.' Fair?"</p><p class="muted small">Never accept a vague exit. Pin the specific decision criterion or disqualify.</p></div></details>
+      <details class="acc"><summary><span class="qtxt">D-11 · Disqualify kindly (budget fail)</span><span class="arr">+</span></summary><div class="accbody"><p>"I'll be just as straight as you were. The work we do starts at <b>$5k a month on a four-month commitment</b>, so at our level we're not the right partner right now — and I'd rather tell you that than run you through a pitch that isn't aligned. Two things: first, when you're ready — a quarter, a year, whenever — call me directly. Second, a favor, not a pitch: know anyone where a real PR budget makes sense? We pay $500 if a referral signs."</p><p class="analogy"><b style="color:var(--coral)">Floor rule:</b> naming the $5k / 4-month floor is permitted <i>here only</i> — this is a disqualification + referral conversation, not a sale. The floor stays off the table everywhere else on Call 1.</p></div></details>
+      <details class="acc"><summary><span class="qtxt">D-12 · Disqualify kindly (no DM access)</span><span class="arr">+</span></summary><div class="accbody"><p>"Honest take: when the actual decision-maker isn't in the room, nobody wins — you play telephone, they have questions you can't answer, and the deal stalls or dies for the wrong reasons. So let's not book the pitch yet. Go have a 10-minute chat with [DM] this week — if they're open to a 45-minute call, email me and we'll get all three of us on the calendar. If not, we let it go for now and you have an ally here whenever timing changes. Fair?"</p><p class="muted small">Refusing to pitch without the DM is the only path that wins. A gatekeeper-only pitch is the most expensive mistake we make.</p></div></details>
+      <details class="acc"><summary><span class="qtxt">D-13 · Book Call 2 (on the line)</span><span class="arr">+</span></summary><div class="accbody"><p>"Two times that make sense — I want to give you the plan while this is fresh. [Day] at [Time], or [Day] at [Time]?" … "Done — invite going out now. Confirm [partner / DM] is on the invite too?"</p><p class="muted small">Call 2 within <b>4–7 days</b>. Beyond that, emotional openness fades. Add attendees while you're both still on the line.</p></div></details>
+      <details class="acc"><summary><span class="qtxt">D-14 · Confirmation message (post-call)</span><span class="arr">+</span></summary><div class="accbody"><p class="muted small">Loom within 15 minutes. Confirmation email within 60.</p><div class="quote" style="font-style:normal"><b>Subject:</b> Locked in — [Day] at [Time] for the strategy call<br><br>Hey [Name], great conversation. You're booked for the strategy + pitch call on [Day], [Date] at [Time] [TZ] — invite + Zoom in your inbox. I'll send a 90-second Loom within the hour walking through what stood out; watch it before we meet. One favor: come ready with 1–2 pieces of recent coverage (yours or a competitor's) that caught your eye, good or bad. — [Closer], Story Group</div></div></details>
+    </section>
+
+    <!-- ===================== CALL PREP ===================== -->
+    <section class="section" id="sec-prep">
+      <div class="eyebrow">BEFORE YOU DIAL</div>
+      <h1 class="title">Call prep — <em>walk in loaded.</em></h1>
+      <p class="lede">Twenty minutes of prep is the difference between a generic call and one where the prospect feels you already get them. Do this before every Call 1.</p>
+
+      <h2>Research the prospect <em>(run in parallel)</em></h2>
+      <div class="card">
+        <ul class="dot small">
+          <li><b>LinkedIn / background</b> — title, tenure, prior roles, credentials, thought-leadership surface area.</li>
+          <li><b>Company website</b> — what they do, size signals, positioning, any press/news page.</li>
+          <li><b>Google News</b> — 2–4 real articles with outlet + date + URL. If there's no coverage, <i>that's the trigger.</i></li>
+          <li><b>Competitor press</b> — 1–3 direct competitors with specific articles where they got coverage (URLs, dates).</li>
+          <li><b>Funding / revenue signals</b> — Crunchbase, filings, employee count.</li>
+        </ul>
+        <p class="analogy">Every URL must be real and verified. <b>Never fabricate.</b></p>
+      </div>
+
+      <h2>Estimate the revenue <em>(Mode A or B)</em></h2>
+      <div class="grid g2">
+        <div class="card tight"><h3>Mode A · Public economics</h3><p class="muted small">Pricing pages, tickets, fees, published ARR → closed pre-call math. You walk in already knowing the number.</p></div>
+        <div class="card tight"><h3>Mode B · Private economics</h3><p class="muted small">Patients/day, customer count, LTV, conversion → industry benchmark + a live-fill formula you complete during Beat 5.</p></div>
+      </div>
+
+      <h2>Pick the <em>prospect pattern</em></h2>
+      <div class="card"><p class="muted small">Pre-load one of three reads so your Beat 1 response is ready: <b>Par-to-Excellence</b> (most buyers — use two-truths), <b>Sub-Par-to-Par</b> (crisis — calm and clinical, no two-truths), or <b>Burned/Skeptical</b> (receipts only). Full descriptions live in <a href="javascript:void(0)" onclick="go('call')">The Call</a>.</p></div>
+
+      <h2>The <em>note page</em></h2>
+      <p class="muted small" style="margin-bottom:12px">The Call 1 v6 note layout — <b>fillable</b>. Type into each beat during the call; it <b>auto-saves in your browser</b>, so it's still here when you come back. Hit <b>Save this call</b> to keep a copy per prospect, reload any past call from the dropdown, or <b>Print / PDF</b> it for your records. Same 7 beats and zones as the printed sheet.</p>
+      <div id="noteToolbar"></div>
+      <div id="notePreview" class="notepaper"></div>
+      <p class="muted small" style="margin-top:6px"><b>Powerful Language</b> is your most valuable zone — their exact words become your tie-down recap and your Call 2 mirror. <b>Transition Thoughts</b> is where you pre-write the sentences you'll use to flip into the close, so you never improvise the most important moment.</p>
+
+      <h2>The pitch customization <em>framework</em></h2>
+      <p class="muted small" style="margin-bottom:12px">Fill these four slots <b>live</b> during discovery. By the end of Call 1 all four have answers — and they snap into one sentence that opens Call 2.</p>
+      <div class="grid g2">
+        <div class="card tight"><h3>7XA · 7-Figure Avatar</h3><p class="muted small">Who they really are — role + size + stage + operator type. <i>"First-time CEO scaling a 50-person health-tech post-Series-B."</i></p></div>
+        <div class="card tight"><h3>FNB · From / Now / But</h3><p class="muted small">Where they are + what's blocking them, in their words. <i>"Doing PR in-house, but stuck in feast-or-famine pipeline."</i></p></div>
+        <div class="card tight"><h3>PB · Possible Best</h3><p class="muted small">The dream outcome, specific (from Beat 6). <i>"Predictable inbound from Forbes and Modern Healthcare."</i></p></div>
+        <div class="card tight"><h3>E&amp;A · Excuses &amp; Anxieties</h3><p class="muted small">The objections they'll throw on Call 2. <i>"Hired an agency last year, got generic outlets."</i></p></div>
+      </div>
+      <div class="card" style="border-color:var(--pink); margin-top:16px">
+        <p class="small" style="margin:0 0 6px"><b style="color:var(--pink)">The Specialty Line (your Call 2 open):</b></p>
+        <p style="font-family:var(--serif); font-style:italic; color:var(--body); margin:0 0 8px">"My specialty is helping [7XA] go from [FNB] to [PB] — without [E&amp;A]."</p>
+        <p class="muted small" style="margin:0">Filled: <i>"…helping first-time CEOs at Series-B health-tech go from feast-or-famine in-house PR to predictable inbound from Modern Healthcare and Forbes — without the generic-outlet trap that burns most people."</i></p>
+      </div>
+    </section>
+
+    <!-- ===================== OBJECTIONS ===================== -->
+    <section class="section" id="sec-objections">
+      <div class="eyebrow">INSTANT ANSWERS</div>
+      <h1 class="title">Objections — <em>they say, you say.</em></h1>
+      <p class="lede">These come up on almost every call. Read the response, then drill them in Flashcards until they're reflex. Use the search box in the sidebar to find one fast mid-call.</p>
+      <div class="card" style="border-color:var(--pink); margin-bottom:16px">
+        <p class="small" style="margin:0"><b style="color:var(--pink)">The framework (Cole Gordon):</b> every objection is <b>Uncertainty</b>, <b>Finance</b>, or <b>Support</b> — and you solve <i>Uncertainty first</i>. Start each reply with "No problem," isolate the real issue with a question, then reframe. The full method is in <a href="javascript:void(0)" onclick="go('closing')">Closing &amp; Influence</a>.</p>
+      </div>
+      <div id="objList"></div>
+    </section>
+
+    <!-- ===================== BY INDUSTRY ===================== -->
+    <section class="section" id="sec-industry">
+      <div class="eyebrow">SOUND NATIVE IN THEIR WORLD</div>
+      <h1 class="title">By industry — <em>seven verticals.</em></h1>
+      <p class="lede">The fastest way to sound like an expert is to speak the prospect's language. Each vertical has its own stakes, pitch angles, and objections. Learn your top two cold.</p>
+      <div id="industryList"></div>
+    </section>
+
+    <!-- ===================== GLOSSARY ===================== -->
+    <section class="section" id="sec-glossary">
+      <div class="eyebrow">THE LANGUAGE</div>
+      <h1 class="title">Glossary — <em>talk the talk.</em></h1>
+      <p class="lede">Knowing these terms is what separates "I sell PR" from "I understand PR." Filter below or search from the sidebar.</p>
+      <input id="glossFilter" type="text" placeholder="Filter terms…" oninput="renderGlossary(this.value)"
+        style="width:100%; max-width:420px; background:var(--card); border:1px solid var(--border); color:var(--body); padding:11px 14px; border-radius:8px; font-family:var(--sans); font-size:14px; outline:none; margin-bottom:8px">
+      <div id="glossList"></div>
+    </section>
+
+    <!-- ===================== FLASHCARDS ===================== -->
+    <section class="section" id="sec-flash">
+      <div class="eyebrow">ACTIVE RECALL</div>
+      <h1 class="title">Flashcards — <em>drill until it's reflex.</em></h1>
+      <p class="lede">Reading is not learning. Pick a deck, guess the answer before you flip, and shuffle when it gets easy. If you can pass these, you can run the call.</p>
+      <div class="deckbar" id="deckBar"></div>
+      <div class="flashstage">
+        <div class="flashcard" id="flashcard" onclick="flipCard()">
+          <div class="flashinner">
+            <div class="flashface flashfront"><div class="tag" id="ffTag">FRONT</div><div class="ftxt" id="ffFront"></div></div>
+            <div class="flashface flashback"><div class="tag">ANSWER</div><div class="btxt" id="ffBack"></div></div>
+          </div>
+        </div>
+        <div class="flashctrl">
+          <button class="fbtn" onclick="prevCard(event)">‹</button>
+          <div class="fcount" id="fCount">1 / 1</div>
+          <button class="fbtn" onclick="nextCard(event)">›</button>
+        </div>
+        <button class="shufflebtn" onclick="shuffleDeck()">⤮ Shuffle deck</button>
+        <div class="fliphint">click card to flip</div>
+      </div>
+    </section>
+
+    <!-- ===================== CHEAT SHEET ===================== -->
+    <section class="section" id="sec-cheat">
+      <div class="eyebrow">CALL MODE</div>
+      <h1 class="title">Cheat sheet — <em>one screen, live.</em></h1>
+      <p class="lede">Everything you need glanceable during a call. Print it and keep it next to your monitor.</p>
+      <button class="printbtn" onclick="window.print()">🖨 Print this page</button>
+      <div class="cheatgrid">
+        <div class="cheatbox">
+          <h3>The 4 Tiers</h3>
+          <div class="tierline"><b>Foundation</b><span>$5K/mo · 4mo</span></div>
+          <div class="tierline"><b>Amplify</b><span>$8.5K/mo · 4mo</span></div>
+          <div class="tierline"><b>Influence ★ default</b><span>$15K/mo · 4mo</span></div>
+          <div class="tierline"><b>Command</b><span>$25K/mo · 12mo · approval</span></div>
+          <p class="muted small" style="margin-top:10px">Stay present → Show up consistently → Become the voice → Managed as an asset.<br><b style="color:var(--coral)">Call 2 only — never quote on Call 1.</b></p>
+        </div>
+        <div class="cheatbox">
+          <h3>Call 1 · The 7 Beats</h3>
+          <ul>
+            <li><b>1</b> Pain / background ("anything else?" ×3)</li>
+            <li><b>2</b> Specific examples (chunk down)</li>
+            <li><b>3</b> Money / DM / <b>banded</b> budget</li>
+            <li><b>4</b> How long / tried / <b>their theory of failure</b></li>
+            <li><b>5</b> Why now + cost of inaction (<b>double-pump</b>)</li>
+            <li><b>6</b> Goal + <b>NMG</b> (personal)</li>
+            <li><b>7</b> Transition + close</li>
+          </ul>
+        </div>
+        <div class="cheatbox">
+          <h3>Top Objections → One-liners</h3>
+          <ul>
+            <li><b>"Too expensive"</b> → "What's it worth if your CEO is quoted in [outlet]? It's less than one part-time hire."</li>
+            <li><b>"Start with Foundation?"</b> → "Foundation is maintenance, not momentum. Amplify is where results start — still 3-mo, low risk."</li>
+            <li><b>"Guarantees?"</b> → "No ethical firm guarantees placements. We guarantee the right journalists know your name."</li>
+            <li><b>"We do it in-house"</b> → "Great — how's it going? Getting the coverage you want?"</li>
+            <li><b>"Take it to the board"</b> → "I'll send a one-page summary with the tier + 90-day outcomes. Same day."</li>
+          </ul>
+        </div>
+        <div class="cheatbox">
+          <h3>Call 1 Close</h3>
+          <ul>
+            <li><b>Tie-down</b> — recap pain + trigger + goal + NMG in their words</li>
+            <li><b>Trial commit</b> — "If the plan hits [goal], ready to decide in 2 weeks?"</li>
+            <li><b>Partner</b> — get the DM onto Call 2</li>
+            <li><b>Call 2 preview</b> — name ONE outlet you believe is real</li>
+            <li><b>Loom</b> in 15 min · email in 60 · book Call 2 in 4–7 days</li>
+          </ul>
+        </div>
+        <div class="cheatbox">
+          <h3>Power Phrases</h3>
+          <ul>
+            <li>"What's the <b>news hook</b> here?"</li>
+            <li>"We're building <b>share of voice</b> against [competitor]."</li>
+            <li>"Earned media is <b>credibility you can't buy with ads</b>."</li>
+            <li>"Amplify is push; <b>Influence is pull</b> — they come to you."</li>
+            <li>"You're buying senior judgment, not press releases."</li>
+            <li>"When buyers ask <b>ChatGPT</b> who's best, that answer is built from press — are you in it?"</li>
+          </ul>
+        </div>
+        <div class="cheatbox">
+          <h3>Capture Verbatim</h3>
+          <ul>
+            <li><b>Their words</b> — punchy phrases (Call 2 mirror)</li>
+            <li><b>Beat 4</b> — their theory of why past attempts failed</li>
+            <li><b>Beat 5</b> — the emotional cost (the 2nd answer)</li>
+            <li><b>Beat 6</b> — the NMG (personal goal)</li>
+            <li><b>DM + banded budget</b></li>
+          </ul>
+          <p class="muted small" style="margin-top:10px">Never name a tier or price on Call 1.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== PR IN THE AI ERA ===================== -->
+    <section class="section" id="sec-ai">
+      <div class="eyebrow">THE 2026 EDGE</div>
+      <h1 class="title">PR in the AI era — <em>where buyers search now.</em></h1>
+      <p class="lede">Your prospects' customers increasingly ask ChatGPT, Perplexity, and Google's AI — not just the blue links. And the #1 thing that decides whether a brand shows up in those answers is <b>earned media</b>. Almost no other PR seller can explain this. After this page, you can — and it might be your single sharpest pitch.</p>
+
+      <h2>The stat that <em>closes the deal</em></h2>
+      <div class="card">
+        <div class="grid g2">
+          <div><div class="price" style="font-size:42px">84%</div><p class="muted small">of what AI tools cite comes from <b>earned media</b> — not brand websites or blogs. (Muck Rack, 2026 analysis of 25M+ AI citations.)</p></div>
+          <div><div class="price" style="font-size:42px">~48%</div><p class="muted small">of Google searches now surface an AI Overview — up from ~30% a year earlier. AI answers are the new front page. (BrightEdge, Feb 2026.)</p></div>
+        </div>
+        <hr style="border:none; border-top:1px solid var(--border); margin:18px 0">
+        <p><b>Why it matters:</b> When a buyer asks AI "who are the best [their category] companies?", the answer is assembled from press coverage. <b>No coverage = invisible to AI.</b> You cannot buy your way in with ads — only earned credibility gets cited.</p>
+        <p class="muted small">Scale check: ChatGPT serves ~900M weekly users and 2.5B+ prompts a day (2026) — and brands with consistent earned media get cited several times more often than those leaning on their own blog. This isn't a fringe channel.</p>
+      </div>
+
+      <h2>How each AI engine <em>picks its sources</em></h2>
+      <div class="grid g3">
+        <div class="card tight"><h3>ChatGPT</h3><p class="muted small">Leans heavily on Wikipedia, Reddit, Forbes, and Business Insider. Mainstream authority wins.</p></div>
+        <div class="card tight"><h3>Perplexity</h3><p class="muted small">Rewards primary sources, research, and named B2B authorities. Substance over buzz.</p></div>
+        <div class="card tight"><h3>Google AI Overviews</h3><p class="muted small">Pulls from high-authority news and well-structured content. SEO + PR combined.</p></div>
+      </div>
+      <p class="analogy">The top 15 domains capture ~68% of <i>all</i> AI citations — concentration far beyond old Google rankings. A handful of big placements (a Forbes feature, a trade byline) can disproportionately decide whether AI knows you exist.</p>
+
+      <h2>The vocabulary <em>that signals you get it</em></h2>
+      <div class="card">
+        <ul class="dot small">
+          <li><b>GEO — Generative Engine Optimization:</b> optimizing to be cited by AI answer engines. The new SEO.</li>
+          <li><b>AEO — Answer Engine Optimization:</b> structuring content so AI can lift a clean answer from it.</li>
+          <li><b>LLMO / AI visibility:</b> how often and how favorably the AI models mention you.</li>
+          <li><b>Share of Model:</b> your slice of AI mentions in your category vs. competitors (the AI-era cousin of share of voice).</li>
+        </ul>
+      </div>
+
+      <h2>How to <em>sell it</em></h2>
+      <div class="phrase">"When your buyer asks ChatGPT who the top players are, that answer is built from press coverage. Right now — are you in it, or is your competitor?"<span class="ctx">— makes the threat concrete and personal</span></div>
+      <div class="phrase">"SEO got you found on Google. Earned media is how you get found <i>inside</i> ChatGPT. In 2026 that's not a nice-to-have — it's the new front page."<span class="ctx">— reframes PR as the modern discovery channel</span></div>
+      <div class="phrase">"You can't buy your way into an AI answer with ads. Only earned credibility gets cited — and earning that credibility is exactly what we do."<span class="ctx">— ties the trend straight back to your offer</span></div>
+      <p class="muted small" style="margin-top:6px">Tie-in: at <b>Influence</b>, Meltwater intelligence lets you track share of voice and AI visibility over time — so you can show a board that coverage is moving the needle where buyers now actually look.</p>
+
+      <h2>Tools that <em>measure AI visibility</em></h2>
+      <div class="card">
+        <p class="muted small">"Share of model" is now trackable — name one of these and you sound years ahead:</p>
+        <ul class="dot small">
+          <li><b>Profound</b> — share-of-voice + citations across ChatGPT, Perplexity, Google AI Overviews, Copilot.</li>
+          <li><b>Otterly.ai</b> — monitors your brand's AI mentions vs. competitors across the major engines.</li>
+          <li><b>Muck Rack Generative Pulse</b> — an AI visibility score + sentiment, tied back to the journalists and outlets driving it.</li>
+        </ul>
+        <span class="src"><a href="https://www.tryprofound.com/" target="_blank" rel="noopener">Profound</a> &middot; <a href="https://otterly.ai/" target="_blank" rel="noopener">Otterly.ai</a> &middot; <a href="https://muckrack.com/blog/2025/07/30/introducing-generative-pulse/" target="_blank" rel="noopener">Muck Rack Generative Pulse</a></span>
+      </div>
+    </section>
+
+    <!-- ===================== THE CRAFT ===================== -->
+    <section class="section" id="sec-craft">
+      <div class="eyebrow">UNDERSTAND WHAT'S PRODUCED</div>
+      <h1 class="title">The craft — <em>what good looks like.</em></h1>
+      <p class="lede">You'll never have to write these yourself — but understanding them is what lets you talk shop with a CEO and explain, concretely, what their retainer actually buys.</p>
+
+      <h2>Anatomy of a <em>pitch</em></h2>
+      <div class="card">
+        <p class="muted small">The pitch is the core unit of PR — a personal email to one journalist. The reality of their inbox is brutal, which is exactly why skill matters:</p>
+        <ul class="dot small">
+          <li><b>86%</b> of journalists immediately reject pitches that aren't on their beat. Top delete reasons: irrelevant (86%), too promotional (71%), mass-email feel (50%), too long (43%).</li>
+          <li><b>69%</b> want pitches under 200 words · <b>62%</b> prefer a 1:1 email · <b>78%</b> want them before noon · one follow-up after 3–7 days is fine.</li>
+          <li><b>84%</b> of journalists say at least some of their stories start from a PR pitch — but only the on-beat ones land. Write to ONE reporter, ONE beat, ONE hook.</li>
+          <li>Subject line: <b>6–10 words</b>, specific, curiosity + relevance. Never start with "Press Release," "Breaking," "Urgent," or "[Company] announces."</li>
+        </ul>
+        <span class="src"><a href="https://muckrack.com/research/state-of-journalism" target="_blank" rel="noopener">Muck Rack, State of Journalism 2025</a> &middot; <a href="https://www.cision.com/resources/guides-and-reports/2025-state-of-the-media-report/" target="_blank" rel="noopener">Cision, State of the Media 2025</a></span>
+        <div class="quote" style="font-style:normal"><b>Subject:</b> New data: 60% of clinics still fax patient records<br><br><b>Hi Sarah —</b> Saw your piece on healthcare's tech lag. We just pulled data from 400 clinics showing most still rely on fax. Three findings I think your readers would want:<br>• 60% fax records weekly<br>• It adds 2.3 days to referrals<br>• The fix costs less than one staffer<br>Our CEO (ex-Epic) can walk you through it this week. Worth a look?</div>
+        <p class="muted small">Notice: their story first, real data, a clear human ask — not "we're excited to announce."</p>
+      </div>
+
+      <h2>Anatomy of a <em>press release</em></h2>
+      <div class="card">
+        <ul class="dot small">
+          <li><b>Headline</b> — the news in one line. <b>Subhead</b> — the so-what.</li>
+          <li><b>Dateline</b> — CITY, State, Date — then the <b>lede</b>: who/what/when/where/why in 1–2 sentences.</li>
+          <li><b>Body</b> — context, a quote from leadership, supporting data.</li>
+          <li><b>Boilerplate</b> — the standard "About [Company]" paragraph.</li>
+          <li><b>Media contact</b> — name, email, phone.</li>
+        </ul>
+        <p class="analogy">A release is for the record, the wire, and SEO. It rarely <i>lands</i> a story by itself — the personalized pitch does that. Knowing the difference is a pro tell.</p>
+      </div>
+
+      <h2>Anatomy of a <em>byline / op-ed</em></h2>
+      <div class="card">
+        <p class="muted small">Ghostwritten under your exec's name. This is how authority is manufactured — legitimately.</p>
+        <ul class="dot small">
+          <li>A real <b>point of view</b> tied to a current trend — not a product ad.</li>
+          <li>3 supporting arguments, each with evidence or a story.</li>
+          <li>A forward-looking close that positions the author as a thinker.</li>
+          <li>Homes: Forbes / Fast Company / Entrepreneur councils, Harvard Business Review, and industry trades.</li>
+        </ul>
+      </div>
+
+      <h2>How quotes <em>actually happen</em> (sourcing tools)</h2>
+      <div class="card">
+        <p class="muted small">When you hear "our CEO got quoted in Forbes overnight," this is often how — journalists post requests, experts respond fast:</p>
+        <ul class="dot small">
+          <li><b>Qwoted</b> — verified journalists + experts; 70% of requests come from DR 80+ publications (Forbes, Reuters, CNBC, WSJ). The serious one.</li>
+          <li><b>Featured (the relaunched HARO)</b> — free daily digests of reporter queries. (The original HARO/Connectively shut down; Featured.com revived it in 2025.)</li>
+          <li><b>Source of Sources (SOS)</b> — free, honor-system queries from HARO's original creator.</li>
+        </ul>
+      </div>
+
+      <h2>Stay on message — <em>media training</em></h2>
+      <div class="card">
+        <p class="muted small">When you place an exec, this is what keeps the journalist from steering them somewhere they don't want to go. Three techniques (PRLab):</p>
+        <ul class="dot small">
+          <li><b>Soundbite</b> — a 10–20 second quotable (~45 words), one vivid idea. Use a metaphor (Mourinho: "better eggs make better omelets").</li>
+          <li><b>Bridging</b> — don't dodge a hostile question; acknowledge it, then transition: "I understand — and what's important here is…"</li>
+          <li><b>Flagging</b> — signal the line you want quoted: "The one thing I'd really highlight is…"</li>
+        </ul>
+        <span class="src">PRLab — Media Training: Control the Narrative</span>
+      </div>
+
+      <h2>PR myths to <em>kill on a call</em></h2>
+      <div class="grid g2">
+        <div class="card tight"><h3 style="color:var(--coral)">"PR is just press releases"</h3><p class="muted small">No — it's strategy, relationships, and finding the right story. The release is the smallest part.</p></div>
+        <div class="card tight"><h3 style="color:var(--coral)">"Any publicity is good publicity"</h3><p class="muted small">No — the wrong outlet or wrong message can actively hurt. Targeting is everything.</p></div>
+        <div class="card tight"><h3 style="color:var(--coral)">"PR is free because it's earned"</h3><p class="muted small">Earned ≠ free. It takes senior time, judgment, and relationships you can't fake.</p></div>
+        <div class="card tight"><h3 style="color:var(--coral)">"We'll just go viral"</h3><p class="muted small">Virality is luck, not a strategy. Consistent authority is what compounds.</p></div>
+        <div class="card tight"><h3 style="color:var(--coral)">"AVE proves the ROI"</h3><p class="muted small">AVE is discredited industry-wide (Barcelona Principles). Measure outcomes, not ad-equivalents.</p></div>
+        <div class="card tight"><h3 style="color:var(--coral)">"PR works overnight"</h3><p class="muted small">It compounds over 3–12 months. Set that expectation and you'll never get the month-1 complaint.</p></div>
+      </div>
+
+      <h2>How the pros <em>measure</em> (Barcelona Principles)</h2>
+      <div class="card">
+        <p class="muted small">The global standard for PR measurement. Drop the name and you sound seasoned. The gist:</p>
+        <ul class="dot small">
+          <li>Set <b>SMART goals</b> before the work — measurement is part of planning, not an afterthought.</li>
+          <li>Measure <b>outputs</b> (placements), <b>outcomes</b> (behavior change), and <b>impact</b> (business result).</li>
+          <li>Use <b>both</b> quantitative and qualitative data.</li>
+          <li><b>AVE is not the value of communication.</b> Full stop.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ===================== EXPERT Q&A ===================== -->
+    <section class="section" id="sec-qa">
+      <div class="eyebrow">SOUND LIKE YOU'VE DONE THIS FOR YEARS</div>
+      <h1 class="title">Expert Q&amp;A — <em>answers on demand.</em></h1>
+      <p class="lede">These aren't sales objections — they're the knowledge questions a sharp prospect uses to test whether you actually understand PR. Know these cold and you'll never get caught flat. Search from the sidebar to find one fast.</p>
+      <div id="qaList"></div>
+    </section>
+
+    <!-- ===================== THE MEDIA MAP ===================== -->
+    <section class="section" id="sec-media">
+      <div class="eyebrow">NAME REAL TARGETS</div>
+      <h1 class="title">The media map — <em>know where to aim.</em></h1>
+      <p class="lede">Saying "top outlets" sounds junior. Naming the right publication for <i>their</i> world sounds like an expert. Here's the real landscape — always framed as "outlets we'd pursue," never guaranteed placements.</p>
+
+      <h2>The <em>national</em> tier (everyone wants these)</h2>
+      <div class="card">
+        <h3>Business &amp; general</h3>
+        <p class="muted small">Wall Street Journal · New York Times · Bloomberg · Forbes · Fortune · Inc. · Fast Company · CNBC · Business Insider · Axios · The Economist · Associated Press · Reuters</p>
+        <h3 style="margin-top:14px">Broadcast</h3>
+        <p class="muted small">CNBC · Bloomberg TV · Fox Business · Good Morning America · Today · local network affiliates</p>
+        <h3 style="margin-top:14px">The wires (distribution, not coverage)</h3>
+        <p class="muted small">PR Newswire · Business Wire — these <i>publish</i> your release widely; they don't equal earned coverage. Know the difference.</p>
+      </div>
+
+      <h2>Trade outlets <em>by vertical</em></h2>
+      <p class="muted small" style="margin-bottom:8px">The targeted, high-trust publications your prospect's buyers actually read. Match the vertical, name 2–3, and you instantly sound native.</p>
+      <div id="mediaVerticals"></div>
+
+      <h2>Podcasts that <em>build authority</em></h2>
+      <div class="card">
+        <p class="muted small">A single strong appearance keeps delivering inbound for years. The heavy hitters:</p>
+        <p class="muted small"><b>Founder / business:</b> The Diary of a CEO · How I Built This · Masters of Scale · My First Million · The Prof G Pod · The Knowledge Project · HBR IdeaCast</p>
+        <p class="muted small"><b>Tech / SaaS:</b> Lenny's Podcast · SaaStr · 20VC (The Twenty Minute VC)</p>
+        <p class="muted small"><b>Leadership / growth:</b> The School of Greatness · The Ed Mylett Show</p>
+      </div>
+
+      <div class="card" style="border-color:var(--pink)">
+        <p class="small" style="margin:0"><b style="color:var(--pink)">Say this on every call:</b> "These are the publications we'd pursue first based on your audience — never guaranteed placements. No ethical firm promises a specific outlet."</p>
+      </div>
+    </section>
+
+    <!-- ===================== CASE STUDIES ===================== -->
+    <section class="section" id="sec-cases">
+      <div class="eyebrow">PROOF ON DEMAND</div>
+      <h1 class="title">Case studies — <em>40 wins to point to.</em></h1>
+      <p class="lede">The fastest way to handle "have you done this before?" is to name a case in their world and quote a number. Filter to your prospect's industry, then drop the title and a metric on the call.</p>
+      <div class="card" style="border-color:var(--pink); margin-bottom:18px">
+        <p class="small" style="margin:0"><b style="color:var(--pink)">How to use these:</b> They're real Story Group outcomes, kept anonymous by design. Frame as <i>"we did this for a firm like yours"</i> — cite the result, but never promise identical numbers.</p>
+      </div>
+      <input id="caseFilter" type="text" placeholder="Filter 40 cases — try 'real estate', 'crisis', 'SaaS', 'founder'…" oninput="renderCases(this.value)"
+        style="width:100%; background:var(--card); border:1px solid var(--border); color:var(--body); padding:12px 14px; border-radius:8px; font-family:var(--sans); font-size:14px; outline:none; margin-bottom:6px">
+      <p class="muted small" id="caseCount" style="margin-bottom:14px"></p>
+      <div class="grid g2" id="casesList"></div>
+    </section>
+
+    <script type="application/json" id="casesData">[{"industry":"CONSTRUCTION & TRADES","title":"Building a Regional Contractor into an Industry Authority","challenge":"The firm had a strong track record but zero media presence. Competitors with inferior work were winning bids through superior branding and relationship visibility. A recent workplace safety incident also threatened the firm's OSHA record and bonding capacity, with local media beginning to investigate.","metrics":[["Qualified bid invitations","+185% in 12 months"],["Safety incident media coverage","Contained to 3 stories, all neutral tone"],["Employee applications","+220% year-over-year"],["LinkedIn follower growth","+8,500 in 6 months"],["Project pipeline growth","$42M in new qualified opportunities"]],"sec":"Crisis & Reputation"},{"industry":"HEALTHCARE & PHARMACEUTICALS","title":"Restoring Trust After a Drug Safety Controversy","challenge":"Mainstream media ran sensationalized coverage of patient complaints, and a class-action lawsuit filing generated viral social media backlash. The company's stock dropped 15% in one week and physician prescribing sentiment was declining rapidly.","metrics":[["Media sentiment shift","Net negative to net neutral in 45 days"],["National broadcast placements","18 segments"],["Physician confidence score","Recovered to 82% (from 54%)"],["Stock price recovery","Full recovery within 90 days"],["Patient inquiry volume","+65% through company portal"]],"sec":"Crisis & Reputation"},{"industry":"FINANCIAL SERVICES & BANKING","title":"Navigating a Regulatory Investigation with Reputation Intact","challenge":"News of the investigation leaked to financial media, triggering customer concern and a noticeable uptick in deposit withdrawals. Competitors began running ads highlighting their own compliance records, and local elected officials were calling for hearings.","metrics":[["Customer retention during investigation","97.2% (vs. 89% industry avg)"],["Earned media placements","22 strategic appearances"],["Deposit stabilization","Outflows reversed within 30 days"],["Employee confidence survey","88% positive sentiment"],["Regulatory outcome","Favorable resolution, no penalties"]],"sec":"Crisis & Reputation"},{"industry":"TECHNOLOGY & SAAS","title":"Launching a B2B SaaS Platform from Stealth to Market Leader","challenge":"The company needed to establish credibility in a crowded market dominated by legacy players. With no existing media relationships, thought leadership presence, or brand recognition, they risked being lost in the noise during their critical launch window.","metrics":[["Launch media impressions","22 million in first 30 days"],["Inbound demo requests","+480% vs. pre-launch baseline"],["Podcast downloads attributed","320,000 in launch quarter"],["LinkedIn follower growth","+12,000 in 60 days"],["Sales pipeline generated","$18M in qualified pipeline"]],"sec":"Crisis & Reputation"},{"industry":"ENERGY & UTILITIES","title":"Rebuilding Community Trust After an Environmental Incident","challenge":"Environmental activists and local media framed the incident as corporate negligence, organizing protests and generating national attention. State regulators opened an investigation, and municipal governments threatened to revoke operating permits.","metrics":[["Community approval rating","Recovered from 28% to 71% in 6 months"],["Media narrative shift","65% positive coverage by month 4"],["Operating permits","All permits renewed without challenge"],["Town hall attendance","1,200+ community members"],["Remediation video views","890,000 across platforms"]],"sec":"Crisis & Reputation"},{"industry":"REAL ESTATE & DEVELOPMENT","title":"Positioning a Developer as the Market Authority During a","challenge":"Project cancellations across the sector were making headlines, investor confidence was low, and the company's pipeline of mixed-use developments was stalling due to financing concerns and community opposition at zoning hearings.","metrics":[["Investor inquiries","+210% during campaign period"],["Zoning approvals","3 of 3 contested projects approved"],["Media placements","25 earned media hits"],["Podcast audience reached","1.4 million listeners"],["Project financing secured","$120M in new commitments"]],"sec":"Crisis & Reputation"},{"industry":"LEGAL & LAW FIRMS","title":"Elevating a Litigation Firm to National Prominence","challenge":"Despite a strong win record, the firm had virtually no media presence, no thought leadership platform, and was losing competitive pitches to firms with better brand recognition and larger marketing budgets.","metrics":[["National case inquiries","+380% year-over-year"],["Media appearances","30+ broadcast segments"],["Website traffic from owned video","+145%"],["Average case value from media leads","2.4x higher than referral leads"],["Podcast-driven consultations","42 qualified leads in 6 months"]],"sec":"Crisis & Reputation"},{"industry":"NONPROFIT & ADVOCACY","title":"Scaling a Veterans Nonprofit into a National Brand","challenge":"Despite meaningful on-the-ground impact, the organization had limited national visibility. Donor acquisition costs were rising, corporate sponsors were difficult to attract without brand credibility, and competing nonprofits with larger marketing budgets were dominating media attention and grant opportunities.","metrics":[["Earned media impressions","45 million"],["New donor acquisitions","18,000+ during campaign period"],["Fundraising during campaign","+85% vs. prior quarter"],["Social video shares","2.3 million"],["Corporate sponsorships secured","12 new partnerships ($2.4M value)"]],"sec":"Crisis & Reputation"},{"industry":"HOSPITALITY & TOURISM","title":"Recovering a Luxury Brand After a Viral Guest Complaint","challenge":"The video was shared across TikTok, X, and news aggregators, accumulating 8 million views in 48 hours. Booking cancellations spiked 40%, and travel media outlets ran stories questioning the brand's service culture. Franchise partners were demanding a corporate response.","metrics":[["Booking recovery","Full recovery in 60 days"],["Negative review volume","Decreased 72% within 30 days"],["Brand sentiment score","Returned to pre-crisis levels in 45 days"],["CEO video views","1.6 million"],["Staff retention post-crisis","94% (vs. 78% industry avg)"]],"sec":"Crisis & Reputation"},{"industry":"AGRICULTURE & FOOD PRODUCTION","title":"Defending a Food Brand During a Product Recall Crisis","challenge":"The recall generated immediate national news coverage, and competitor brands capitalized with aggressive marketing. Consumer trust plummeted, retail partners threatened to delist the product, and a social media boycott campaign gained 50,000 signatures in one week.","metrics":[["Retail re-listing rate","98% of partners re-listed within 90 days"],["Consumer trust index","Exceeded pre-recall levels by month 6"],["Media tone at relaunch","89% positive or neutral"],["Relaunch video campaign reach","12 million impressions"],["Sales recovery","105% of pre-recall revenue by Q2"]],"sec":"Crisis & Reputation"},{"industry":"EDUCATION & HIGHER LEARNING","title":"Repositioning a University After an Admissions Scandal","challenge":"National media coverage and social media outrage threatened enrollment numbers, donor commitments, and faculty recruitment. Current students were organizing protests, and the university's accreditation board issued a formal inquiry.","metrics":[["Enrollment applications","Only -3% (vs. projected -20%)"],["Donor retention rate","91% of major donors retained"],["Accreditation outcome","Full accreditation maintained"],["Presidential address video views","420,000"],["Faculty recruitment","All open positions filled on schedule"]],"sec":"Crisis & Reputation"},{"industry":"DEFENSE & GOVERNMENT CONTRACTING","title":"Winning a Major Contract Through Strategic Thought Leadership","challenge":"Despite superior technology, the company lacked name recognition with key decision-makers at the Department of Defense and Congressional appropriators. Their competitors had decades of relationships and established media presence in defense trade circles.","metrics":[["Contract awards","Won $240M prime contract"],["Briefings secured","12 offices briefed"],["Defense media impressions","8.5 million"],["Trade show lead generation","+320% vs. prior year"],["Competitive win rate","Increased from 15% to 42%"]],"sec":"Crisis & Reputation"},{"industry":"RETAIL & E-COMMERCE","title":"Saving a DTC Brand from a Social Media Firestorm","challenge":"A viral social media thread triggered a boycott hashtag that trended nationally for 48 hours. Daily revenue dropped 35%, influencer partners began distancing, and mainstream media picked up the story.","metrics":[["Revenue recovery","Full recovery within 21 days"],["Customer retention rate","92% of subscription customers retained"],["New customer acquisition","+15% in 60 days (counter-boycott effect)"],["Social sentiment ratio","Shifted from 30/70 to 65/35 positive"],["Influencer partnerships","90% of partners re-engaged within 45 days"]],"sec":"Crisis & Reputation"},{"industry":"MANUFACTURING & INDUSTRIAL","title":"Repositioning a Legacy Manufacturer for a Modern Market","challenge":"The company was perceived as outdated by both customers and potential employees. Industry trade coverage was minimal, the brand had no digital presence to speak of, and regional talent was choosing competitors with more visible employer brands.","metrics":[["Inbound customer inquiries","+175% in 6 months"],["Job applications","+250% year-over-year"],["Trade media coverage","20 feature stories"],["Brand perception survey","\"Innovative\" rating improved from 22% to 61%"],["Revenue growth","+18% annual growth following campaign"]],"sec":"Crisis & Reputation"},{"industry":"SPORTS & ENTERTAINMENT","title":"Managing an Athlete's Brand Through a Contract Dispute","challenge":"Leaked negotiation details painted the athlete as greedy, and fan sentiment turned sharply negative. Endorsement partners expressed concern, and the team's PR operation was actively shaping the narrative against the athlete's interests.","metrics":[["Contract outcome","Signed at 115% of initial team offer"],["Fan sentiment recovery","Returned to 78% positive (from 41%)"],["Endorsement deals retained","100% of existing partners"],["Social media following growth","+280,000 during negotiation period"],["Documentary series views","4.2 million"]],"sec":"Crisis & Reputation"},{"industry":"INSURANCE","title":"Building a Regional Insurer's Brand After Catastrophic Claims","challenge":"Policyholders took to social media and local news to share stories of delayed or denied claims. State regulators opened a market conduct examination, competitors ran aggressive acquisition campaigns, and the company's agent network was losing confidence.","metrics":[["Policy renewal rate","Stabilized at 87% (from 71% during crisis)"],["Regulatory examination outcome","Closed with no enforcement action"],["Agent retention","95% of contracted agents retained"],["Net Promoter Score","Improved from -12 to +28 in 9 months"],["New policy growth","+22% in following enrollment period"]],"sec":"Crisis & Reputation"},{"industry":"AUTOMOTIVE","title":"Launching a Regional Dealer Group as a Trusted Industry Voice","challenge":"Consumer trust in auto dealers consistently ranks among the lowest of any industry. The dealer group had no media presence, no community authority positioning, and was competing for attention against national brands with massive advertising budgets.","metrics":[["Market share growth","+8% in primary DMA"],["Google review average","Improved from 3.6 to 4.7 stars"],["Media placements","22 earned media hits"],["Website traffic from content","+190%"],["Customer referral rate","+45% year-over-year"]],"sec":"Crisis & Reputation"},{"industry":"FAITH-BASED & RELIGIOUS ORGANIZATIONS","title":"Expanding a Church Network's National Reach and Influence","challenge":"Despite a loyal regional congregation, the church had minimal media presence outside its metro area. Competing voices in the faith space were dominating national conversations, and the church's digital content strategy was underperforming relative to its message quality.","metrics":[["Podcast subscribers","+15,000 in 6 months"],["National media impressions","18 million"],["Weekly online service viewership","+340% growth"],["Church visitor inquiries","+200% from outside metro area"],["Social media reach","8.2 million monthly impressions"]],"sec":"Crisis & Reputation"},{"industry":"CANNABIS & EMERGING INDUSTRIES","title":"Establishing Legitimacy for a Multi-State Cannabis Operator","challenge":"Despite legal status, mainstream media hesitance, banking restrictions, and public perception challenges made traditional PR and media strategies ineffective. The company needed to build trust with regulators, communities, and investors simultaneously while competitors operated in regulatory gray areas.","metrics":[["New state license approvals","4 of 4 applications approved"],["Institutional investor meetings","+300% increase in qualified meetings"],["Community opposition at zoning hearings","Reduced from 60% to 15%"],["Mainstream media placements","20 non-cannabis-specific outlets"],["Revenue growth","+65% year-over-year following campaign"]],"sec":"Crisis & Reputation"},{"industry":"TRANSPORTATION & LOGISTICS","title":"Turning a Supply Chain Crisis into a Brand-Building Opportunity","challenge":"Retail clients publicly blamed the logistics company in earnings calls, generating a wave of negative business media coverage. The company's B2B reputation was severely damaged, contract renewal negotiations stalled, and competitor sales teams were using the failures in competitive pitches.","metrics":[["Client retention rate","94% of enterprise clients renewed"],["New client acquisition","+40% in 6 months post-campaign"],["Industry analyst sentiment","Upgraded from \"concerning\" to \"improving\""],["Employee retention during crisis","96% (vs. 82% industry avg)"],["Peak season performance","Zero major disruptions following year"]],"sec":"Crisis & Reputation"},{"industry":"PRIVATE EQUITY & VENTURE CAPITAL","title":"Transforming a Managing Partner into a Dealflow Magnet","challenge":"The firm was consistently being outmaneuvered in competitive processes by PE shops whose partners were regularly quoted in financial media. Founders and intermediaries were bypassing the firm because they had never heard of them, despite a strong track record.","metrics":[["Proprietary deal flow","+68% year-over-year"],["Media placements","32 in tier-one financial outlets"],["LinkedIn engagement rate","4.8% (vs. 1.2% industry avg)"],["Conference keynote invitations","8 in first year"],["Fund III close","Oversubscribed by $180M"]],"sec":"Executive Brand & PR"},{"industry":"WEALTH MANAGEMENT & FINANCIAL ADVISORY","title":"Establishing a Financial Advisor as the Go-To Expert in Her Market","challenge":"The advisor relied entirely on referrals from existing clients and COIs, which was inconsistent and slow. Competitors in the market were gaining visibility through podcasts, local media, and social media thought leadership, making the advisor increasingly invisible to affluent prospects.","metrics":[["Inbound prospect inquiries","+240% in 12 months"],["Assets under management growth","+$120M in new AUM"],["LinkedIn connections in target demo","+4,200"],["Media appearances","20 in first year"],["Referral source expansion","35 new COI relationships"]],"sec":"Executive Brand & PR"},{"industry":"COMMERCIAL REAL ESTATE BROKERAGE","title":"Making a CRE Broker the Voice of Her Metro Market","challenge":"Despite closing $180M in transactions annually, the broker had zero public profile. Competitors were winning listings through visibility and perceived market authority, while she relied exclusively on relationship-driven prospecting that was not scalable.","metrics":[["Inbound listing inquiries","+310% year-over-year"],["Transaction volume","Grew from $180M to $290M"],["Media placements","26 across trade and regional business"],["LinkedIn impressions","1.2M monthly average"],["Speaking invitations","6 industry conference panels"]],"sec":"Executive Brand & PR"},{"industry":"CYBERSECURITY & IT SERVICES","title":"Positioning a CISO-Turned-CEO as an Industry Authority","challenge":"Enterprise buyers consistently chose competitors with recognized leadership over the client's technically superior offering. The CEO had no media relationships, no published thought leadership, and no conference presence, making it impossible to generate the trust required for six- and seven-figure security contracts.","metrics":[["Enterprise contract pipeline","+$14M in qualified opportunities"],["Media placements","28 across cybersecurity and business outlets"],["Conference keynotes","5 tier-one events in first year"],["LinkedIn follower growth","+18,000 (from 2,400 to 20,400)"],["Average deal size from inbound","3.2x larger than outbound deals"]],"sec":"Executive Brand & PR"},{"industry":"HEALTHCARE LEADERSHIP","title":"Building a Hospital CEO into a Regional Healthcare Voice","challenge":"Larger health systems in the region were acquiring physician practices and dominating media coverage, positioning themselves as the future of healthcare delivery. The CEO needed to establish a compelling counter-narrative about independent community hospitals without appearing defensive or desperate.","metrics":[["Physician recruitment","14 new physicians recruited (vs. 6 prior year)"],["Media placements","22 across healthcare and regional outlets"],["Community favorability rating","Increased from 62% to 84%"],["LinkedIn engagement","3.6% rate (vs. 0.9% healthcare avg)"],["Acquisition defense","Independence preserved; board unanimous"]],"sec":"Executive Brand & PR"},{"industry":"PROFESSIONAL SERVICES & CONSULTING","title":"Launching a Consulting Firm's Founder into the National","challenge":"The firm was winning projects primarily through competitive RFPs, which were expensive to pursue and had low win rates. The founder had deep expertise and a compelling story but no public presence, resulting in the firm being unknown to 90% of its addressable market.","metrics":[["Inbound revenue","Grew from 15% to 55% of total revenue"],["Media placements","24 in tier-one business outlets"],["Keynote speaking engagements","10 paid events ($185K in fees)"],["Book deal","Secured with major business publisher"],["RFP win rate","Improved from 18% to 34% (brand halo effect)"]],"sec":"Executive Brand & PR"},{"industry":"ARCHITECTURE & DESIGN","title":"Elevating an Architecture Firm Principal to Design Thought","challenge":"The firm was competing on price against larger firms with nationally recognized principals. Despite award-winning work, the founding principal was unknown outside the regional market, and the firm was losing shortlist selections to competitors whose leaders had stronger media profiles.","metrics":[["Shortlist selection rate","Improved from 30% to 65%"],["Average project fee","+42% increase in first year"],["National media features","18 (from zero prior)"],["Conference speaking invitations","12 in first 18 months"],["Firm revenue growth","+28% year-over-year"]],"sec":"Executive Brand & PR"},{"industry":"FRANCHISE & MULTI-UNIT OPERATIONS","title":"Making a Franchise CEO the Face of Small Business Growth","challenge":"Franchise development was driven almost entirely by franchise brokers and paid lead generation, both expensive and inconsistent. The CEO had a compelling founder story and strong unit economics but no public profile to leverage, while competitors with weaker systems had higher brand recognition.","metrics":[["Franchise development inquiries","+280% year-over-year"],["Franchise agreements signed","42 new units (vs. 18 prior year)"],["Broker dependency","Reduced from 80% to 35% of deals"],["Media placements","30 across franchise and business outlets"],["Discovery day attendance","+150% from inbound leads"]],"sec":"Executive Brand & PR"},{"industry":"HOME SERVICES & TRADES","title":"Building a Home Services CEO into a Trusted Local Authority","challenge":"The home services industry suffers from chronic trust deficits with consumers. The owner had built a successful operation but was invisible in the market, competing against national franchises with massive ad budgets and local operators who undercut on price. Technician recruitment was also a critical bottleneck.","metrics":[["Inbound service calls","+165% in 12 months"],["Technician applications","+200% year-over-year"],["Average ticket size","+22% (trust premium)"],["Google review volume","+340% with 4.9 average rating"],["Market expansion","Successfully launched in 2 adjacent markets"]],"sec":"Executive Brand & PR"},{"industry":"BIOTECH & LIFE SCIENCES","title":"Positioning a Biotech CEO for IPO-Stage Visibility","challenge":"The company had a promising drug pipeline but the CEO was unknown to the investment community. Competing biotech IPOs from companies with higher-profile leadership were absorbing institutional investor attention. Without a visible, credible CEO, the IPO roadshow risked falling flat.","metrics":[["IPO outcome","Priced above range, raised $220M"],["Day-one stock performance","+18% above IPO price"],["Analyst coverage initiated","8 firms within 30 days"],["Media placements pre-IPO","20 in target financial/biotech outlets"],["Institutional investor meetings","85 completed during roadshow"]],"sec":"Executive Brand & PR"},{"industry":"ACCOUNTING & PROFESSIONAL FIRMS","title":"Transforming a Managing Partner into a Rainmaker Brand","challenge":"The firm was losing competitive pitches for mid-market audit and advisory engagements to Big Four and national firms that had stronger brand recognition. The managing partner was highly respected within the profession but invisible to the business community and C-suite decision-makers who select accounting firms.","metrics":[["Competitive pitch win rate","Improved from 22% to 48%"],["Revenue from new clients","+$8.2M in first year"],["Media placements","22 across trade and business outlets"],["Speaking engagements","14 CEO peer group events"],["Firm brand awareness in metro","Increased from 18% to 52%"]],"sec":"Executive Brand & PR"},{"industry":"DENTAL & MEDICAL PRACTICES","title":"Making a Dental Group Practice Owner a Recognized Expert","challenge":"DSO-backed competitors were entering the market with aggressive pricing and marketing, threatening the practice group's patient volume and associate recruitment. The owner had 25 years of clinical excellence but no media presence or public brand to differentiate his practices from corporate-backed competitors.","metrics":[["New patient volume","+135% across all locations"],["Associate dentist applications","+180% year-over-year"],["New location launch success","2 locations profitable in 6 months"],["Media appearances","16 in first year"],["Patient retention rate","94% (vs. 72% DSO competitor avg)"]],"sec":"Executive Brand & PR"},{"industry":"E-COMMERCE & CONSUMER PRODUCTS","title":"Building a DTC Founder into a Lifestyle Brand Authority","challenge":"Rising digital ad costs were squeezing margins, and the brand had no organic awareness engine. Competitors with founder-led brands were generating significant free media coverage and social proof, while the client's founder was unknown despite building a superior product.","metrics":[["Customer acquisition cost","Reduced 38% through organic channels"],["Revenue growth","+52% year-over-year"],["Retail partnerships secured","4 major retailers (Target, Whole Foods)"],["Media placements","22 across wellness and business outlets"],["Email list growth from PR","+28,000 subscribers"]],"sec":"Executive Brand & PR"},{"industry":"STAFFING & RECRUITING","title":"Positioning a Staffing CEO as the Voice of the Workforce Crisis","challenge":"The staffing industry is commoditized, with most firms competing on price and speed. The CEO had proprietary insights on labor market trends from the firm's placement data but no platform to share them. Enterprise buyers defaulted to brand-name staffing firms despite inferior service quality.","metrics":[["Enterprise client wins","8 new Fortune 500 accounts"],["Revenue from inbound","Grew from $12M to $48M"],["Media placements","26 across business and HR outlets"],["LinkedIn followers","+22,000 in 12 months"],["Conference keynotes","9 events ($125K in speaking fees)"]],"sec":"Executive Brand & PR"},{"industry":"SENIOR LIVING & LONG-TERM CARE","title":"Building a Senior Living CEO's Brand During an Industry","challenge":"Public trust in senior living had plummeted industry-wide. The operator's communities had strong care outcomes, but negative industry sentiment was depressing occupancy rates, making family decision-makers hesitant, and creating recruiting challenges for nurses and caregivers.","metrics":[["Occupancy rate","Improved from 78% to 92%"],["Caregiver applications","+160% year-over-year"],["Family inquiry volume","+210% in key markets"],["Media placements","20 across healthcare and senior living"],["Industry recognition","Named to top-10 \"CEOs to Watch\" list"]],"sec":"Executive Brand & PR"},{"industry":"SAAS & B2B TECHNOLOGY","title":"Turning a B2B SaaS Founder into a Category Creator","challenge":"The company's product sat in a gray area between existing software categories, making it difficult for buyers to understand and budget for. Without a recognized authority evangelizing the category, the sales team spent most of every conversation educating rather than selling.","metrics":[["Sales cycle reduction","Shortened from 120 to 68 days"],["Category search volume","+420% for coined category term"],["Inbound demo requests","+280% year-over-year"],["Media placements","24 across SaaS and technology outlets"],["ARR growth","$30M to $52M in 18 months"]],"sec":"Executive Brand & PR"},{"industry":"LOGISTICS & SUPPLY CHAIN","title":"Making a 3PL CEO the Trusted Voice in Supply Chain Strategy","challenge":"Enterprise buyers viewed the company as a commoditized freight broker despite significant technology investments and strategic capabilities. The CEO had deep supply chain expertise but no public profile, and the company was consistently being excluded from strategic RFPs in favor of firms with recognized thought leaders.","metrics":[["Strategic RFP invitations","+240% year-over-year"],["Average contract value","Grew from $1.2M to $3.8M"],["Media placements","20 across supply chain and business outlets"],["Webinar attendees","2,400 enterprise contacts in database"],["Revenue from strategic accounts","+$65M in new annualized revenue"]],"sec":"Executive Brand & PR"},{"industry":"FITNESS & WELLNESS BRANDS","title":"Positioning a Fitness Brand Founder as a Wellness Authority","challenge":"The boutique fitness market was saturated with franchise concepts, and the founder was losing development deals to brands with higher-profile leadership. Media opportunities in the wellness space were going to influencers and competitors with established public platforms.","metrics":[["Franchise inquiries","+320% in 12 months"],["New franchise agreements","18 units (vs. 7 prior year)"],["Instagram followers","+85,000 in first year"],["Media placements","20 across wellness, business, and franchise"],["Brand partnership deals","3 national brand collaborations"]],"sec":"Executive Brand & PR"},{"industry":"AEROSPACE & AVIATION","title":"Building an Aerospace CEO's Profile for Defense and Commercial","challenge":"The company had best-in-class manufacturing capabilities but was overshadowed by larger competitors with dedicated government affairs and PR teams. The CEO attended industry events but had no speaking roles, media relationships, or thought leadership presence.","metrics":[["Defense contract wins","+$85M in new awards"],["Commercial OEM partnerships","2 new Tier-1 supplier agreements"],["Media placements","18 across aerospace and defense outlets"],["Conference speaking invitations","6 major industry events"],["Revenue growth","+34% year-over-year"]],"sec":"Executive Brand & PR"},{"industry":"VETERINARY & ANIMAL HEALTH","title":"Making a Veterinary Group Owner the Voice of Independent","challenge":"Corporate veterinary consolidators were acquiring independent practices at record rates, creating recruitment challenges and pricing pressure. The owner wanted to grow but needed to differentiate his group from corporate-backed competitors and build a brand that would attract both clients and veterinary talent.","metrics":[["Associate veterinarian hires","6 new DVMs (vs. 2 prior year)"],["New client registrations","+140% across all locations"],["Media appearances","16 in first year"],["Social media followers","+24,000 across platforms"],["Revenue growth","+38% year-over-year (organic, no acquisitions)"]],"sec":"Executive Brand & PR"}]</script>
+
+    <!-- ===================== FRAMEWORKS & PROOF ===================== -->
+    <section class="section" id="sec-frameworks">
+      <div class="eyebrow">THE EVIDENCE BASE</div>
+      <h1 class="title">Frameworks &amp; proof — <em>the credentials.</em></h1>
+      <p class="lede">This is the outside authority behind everything else in this tool: the named frameworks real PR pros cite, and hard numbers from the industry's own benchmark reports. Quote these and you're not "a rep who sells PR" — you're someone who knows the field. Every claim here links to its source.</p>
+
+      <h2>The frameworks <em>you should name</em></h2>
+      <div class="grid g2">
+        <div class="card tight"><h3>PESO Model</h3><p class="muted small">Paid · Earned · Shared · Owned — the four media types run as one integrated system. The industry's operating model. <i>Gini Dietrich, "Spin Sucks," 2014.</i></p><span class="src"><a href="https://spinsucks.com/peso-model/" target="_blank" rel="noopener">Spin Sucks · PESO</a></span></div>
+        <div class="card tight"><h3>Planning models: RACE · ROPE · ROSTIR</h3><p class="muted small"><b>RACE</b> = Research, Action, Communication, Evaluation (Marston, 1963). <b>ROPE</b> = Research, Objectives, Programming, Evaluation (Hendrix). <b>ROSTIR</b> = Research, Objectives, Strategy, Tactics, Implementation, Reporting (Luttrell &amp; Capizzo, 2019).</p><span class="src"><a href="https://ginaluttrellphd.com/rostir-model/" target="_blank" rel="noopener">ROSTIR model</a></span></div>
+        <div class="card tight"><h3>Barcelona Principles</h3><p class="muted small">AMEC's global measurement standard (3.0 in 2020, 4.0 in 2025). The headline: <b>AVE is NOT the value of communication.</b> Set measurable goals; measure outcomes &amp; impact; use qual + quant; all channels; with integrity.</p><span class="src"><a href="https://amecorg.com/resources/barcelona-principles-4-0/" target="_blank" rel="noopener">AMEC · Barcelona Principles 4.0</a></span></div>
+        <div class="card tight"><h3>AMEC Integrated Evaluation Framework</h3><p class="muted small">The standard chain that ties PR to business results, not clip counts: <b>Objectives → Inputs → Activities → Outputs → Outtakes → Outcomes → Impact.</b></p><span class="src"><a href="https://amecorg.com/amecframework/" target="_blank" rel="noopener">AMEC Framework</a></span></div>
+        <div class="card tight"><h3>PRSA Code of Ethics</h3><p class="muted small">Six core values every credible PR pro works by: <b>Advocacy, Honesty, Expertise, Independence, Loyalty, Fairness</b> — plus disclosure and safeguarding confidences. This is why we don't guarantee placements or buy coverage.</p><span class="src"><a href="https://www.prsa.org/about/ethics" target="_blank" rel="noopener">PRSA · Code of Ethics</a></span></div>
+        <div class="card tight"><h3>The credibility trade</h3><p class="muted small">The academic core of PR: you exchange <b>control</b> of the message for third-party <b>credibility</b>. Everything above is built to manage that trade well.</p></div>
+      </div>
+
+      <h2>Crisis <em>frameworks</em> <span class="muted" style="font-size:13px; font-weight:400">(you can now point to 20 crisis cases)</span></h2>
+      <div class="grid g2">
+        <div class="card tight"><h3>SCCT — match response to blame</h3><p class="muted small">Situational Crisis Communication Theory: pick your posture by how much the public blames you. <b>Deny</b> (low blame) → <b>Diminish</b> (excuse/justify) → <b>Rebuild</b> (apologize, compensate), with <b>Bolstering</b> as support. <i>W. Timothy Coombs.</i></p><span class="src"><a href="https://link.springer.com/article/10.1057/palgrave.crr.1550049" target="_blank" rel="noopener">Coombs · SCCT (Springer)</a></span></div>
+        <div class="card tight"><h3>Image Repair Theory</h3><p class="muted small">Five ways to restore reputation: <b>denial, evade responsibility, reduce offensiveness, corrective action, mortification</b> (apology). <i>William Benoit.</i></p><span class="src"><a href="https://www.ou.edu/deptcomm/dodjcc/groups/98A1/Benoit.htm" target="_blank" rel="noopener">Benoit · Image Repair</a></span></div>
+        <div class="card tight"><h3>Stealing thunder</h3><p class="muted small">Self-disclose your own bad news <i>before</i> the press breaks it — experimentally shown to lower perceived severity and protect credibility vs. being exposed. <i>Arpan &amp; Roskos-Ewoldsen, 2005.</i></p><span class="src"><a href="https://www.sciencedirect.com/science/article/abs/pii/S0363811105000809" target="_blank" rel="noopener">Public Relations Review (2005)</a></span></div>
+        <div class="card tight"><h3>The playbook + the gold standard</h3><p class="muted small">Holding statement out fast · ONE trained spokesperson · pre-built "dark site" · monitoring · employees first. The model case: <b>J&amp;J Tylenol (1982)</b> — recalled 31M bottles, total transparency, relaunched tamper-proof. Safety over legal caution.</p><span class="src"><a href="https://time.com/3423136/tylenol-deaths-1982/" target="_blank" rel="noopener">TIME · Tylenol 1982</a></span></div>
+      </div>
+
+      <h2>PR <em>by the numbers</em> <span class="muted" style="font-size:13px; font-weight:400">(cite these on calls)</span></h2>
+      <div class="card">
+        <h3>The media reality</h3>
+        <ul class="dot small">
+          <li><span class="stat">86%</span> of journalists immediately reject pitches that aren't on their beat.</li>
+          <li><span class="stat">69%</span> want pitches under 200 words · <span class="stat">78%</span> want them before noon · <span class="stat">84%</span> say at least some of their stories start from a PR pitch.</li>
+          <li>PR pros outnumber working journalists more than <span class="stat">6 to 1</span> (~316k vs ~49k, US) — and US newsroom jobs fell <span class="stat">26%</span> from 2008–2020.</li>
+        </ul>
+        <span class="src"><a href="https://muckrack.com/research/state-of-journalism" target="_blank" rel="noopener">Muck Rack State of Journalism 2025</a></span><span class="src"><a href="https://www.cision.com/resources/guides-and-reports/2025-state-of-the-media-report/" target="_blank" rel="noopener">Cision State of the Media 2025</a></span><span class="src"><a href="https://www.bls.gov/ooh/media-and-communication/public-relations-specialists.htm" target="_blank" rel="noopener">U.S. BLS (2024) · Pew Research</a></span>
+      </div>
+      <div class="card">
+        <h3>Trust &amp; credibility</h3>
+        <ul class="dot small">
+          <li><span class="stat">84%</span> of consumers trust word-of-mouth and earned media above all advertising; editorial content (news articles) trusted by <span class="stat">67%</span> — both beat paid formats. <span class="muted">(2013; word-of-mouth trust rose to ~88% in later editions.)</span></li>
+          <li>Business is now the <span class="stat">most trusted</span> institution (64%) — above government and media — and <span class="stat">73%</span> expect the CEO to lead on building trust.</li>
+        </ul>
+        <span class="src"><a href="https://www.nielsen.com/insights/2013/under-the-influence-consumer-trust-in-advertising/" target="_blank" rel="noopener">Nielsen · Trust in Advertising (2013)</a></span><span class="src"><a href="https://www.edelman.com/trust/2026/trust-barometer" target="_blank" rel="noopener">Edelman Trust Barometer 2026</a></span>
+      </div>
+      <div class="card">
+        <h3>Thought leadership = revenue</h3>
+        <ul class="dot small">
+          <li><span class="stat">86%</span> of B2B decision-makers are more likely to invite you to an RFP after consistent, high-quality thought leadership.</li>
+          <li><span class="stat">60%</span> will pay a <b>premium</b> to work with an org that delivers strong thought leadership.</li>
+          <li><span class="stat">75%</span> said a piece of thought leadership led them to research a product they weren't even considering.</li>
+        </ul>
+        <span class="src"><a href="https://www.edelman.com/sites/g/files/aatuss191/files/2025-07/2025%20Edelman-LinkedIn%20B2B%20Thought%20Leadership%20Impact%20Report_FINAL.pdf" target="_blank" rel="noopener">Edelman–LinkedIn B2B Thought Leadership Impact Report</a></span>
+        <p class="analogy" style="margin-top:14px">This is your single best "why PR is worth it" stat on a call: thought leadership doesn't just build a brand — it gets you <i>into the deal</i> and lets you charge more once you're there.</p>
+      </div>
+
+      <h2>The <em>library</em> <span class="muted" style="font-size:13px; font-weight:400">(where to go deeper)</span></h2>
+      <div class="grid g2">
+        <div class="card tight"><h3>Benchmark reports (read yearly)</h3><ul class="dot small">
+          <li><a href="https://muckrack.com/research/state-of-journalism" target="_blank" rel="noopener">Muck Rack — State of Journalism</a> — what journalists want.</li>
+          <li><a href="https://www.cision.com/resources/guides-and-reports/2025-state-of-the-media-report/" target="_blank" rel="noopener">Cision — State of the Media</a> — global media relations.</li>
+          <li><a href="https://www.edelman.com/trust/2026/trust-barometer" target="_blank" rel="noopener">Edelman — Trust Barometer</a> — who the public trusts.</li>
+          <li><a href="https://reutersinstitute.politics.ox.ac.uk/digital-news-report/2025" target="_blank" rel="noopener">Reuters Institute — Digital News Report</a> — how people consume news.</li>
+        </ul></div>
+        <div class="card tight"><h3>The bookshelf</h3><ul class="dot small">
+          <li><a href="https://www.davidmeermanscott.com/books/the-new-rules-of-marketing-and-pr" target="_blank" rel="noopener">The New Rules of Marketing &amp; PR</a> — David Meerman Scott.</li>
+          <li><a href="https://spinsucks.com/peso-model/" target="_blank" rel="noopener">Spin Sucks</a> — Gini Dietrich (the PESO model).</li>
+          <li><a href="https://www.amazon.com/Influence-Psychology-Persuasion-Robert-Cialdini/dp/006124189X" target="_blank" rel="noopener">Influence</a> — Cialdini (persuasion, for PR + selling).</li>
+          <li><a href="https://en.wikipedia.org/wiki/Trust_Me,_I%27m_Lying" target="_blank" rel="noopener">Trust Me, I'm Lying</a> — Ryan Holiday (how media really moves).</li>
+        </ul></div>
+        <div class="card tight"><h3>The bodies that set the standards</h3><p class="muted small"><a href="https://www.prsa.org/" target="_blank" rel="noopener">PRSA</a> (US) · <a href="https://amecorg.com/" target="_blank" rel="noopener">AMEC</a> (measurement) · <a href="https://www.iabc.com/" target="_blank" rel="noopener">IABC</a> · <a href="https://www.cipr.co.uk/" target="_blank" rel="noopener">CIPR</a> (UK) · <a href="https://prcouncil.net/" target="_blank" rel="noopener">PR Council</a> (agencies)</p></div>
+        <div class="card tight"><h3>AI-visibility tools (the new frontier)</h3><p class="muted small"><a href="https://www.tryprofound.com/" target="_blank" rel="noopener">Profound</a> · <a href="https://otterly.ai/" target="_blank" rel="noopener">Otterly.ai</a> · <a href="https://muckrack.com/blog/2025/07/30/introducing-generative-pulse/" target="_blank" rel="noopener">Muck Rack Generative Pulse</a> — track your "share of model" across ChatGPT, Perplexity &amp; Google AI.</p></div>
+        <div class="card tight"><h3>Practitioner training (the corpus)</h3><p class="muted small">The YouTube training this tool draws on: <b>Cole Gordon</b> (the sales framework behind v6), <b>Alex Hormozi</b> (offers &amp; value), <b>PRLab</b> and <b>PR for Anyone</b> (PR fundamentals &amp; media training). 21 transcripts, ~150k words, in your <i>PR Learning Corpus</i> folder.</p></div>
+      </div>
+    </section>
+
+    <!-- ===================== SCORECARD ===================== -->
+    <section class="section" id="sec-score">
+      <div class="eyebrow">GRADE YOUR CALL</div>
+      <h1 class="title">Scorecard — <em>score every Call 1.</em></h1>
+      <p class="lede">Run this right after each Call 1, or while reviewing a recording. Check what you actually did — the score updates live. It's built to the v6 methodology, so the weighting tells you what matters most: budget discipline, the theory-of-failure, the double-pump, and the NMG carry the heaviest points. <b>85+ = ready to book Call 2.</b></p>
+      <div class="sc-summary">
+        <div style="display:flex; justify-content:space-between; align-items:baseline; gap:12px">
+          <div><span class="sc-scorebig" id="scoreNum">0</span><span class="muted"> / 100</span></div>
+          <button onclick="resetScore()" class="shufflebtn" style="margin-top:0">↻ Reset</button>
+        </div>
+        <div class="sc-track"><div id="scoreBar"></div></div>
+        <div class="sc-verdicttext" id="scoreVerdict"></div>
+      </div>
+      <div id="scoreFail">⚠ Auto-fail triggered — fix this regardless of the number. A high score doesn't save a call that broke a core rule.</div>
+      <div id="scoreItems"></div>
+      <h2>Auto-fail <em>flags</em></h2>
+      <p class="muted small" style="margin-bottom:10px">Any one of these tanks the call no matter the score:</p>
+      <div id="scoreFails"></div>
+    </section>
+
+    <!-- ===================== CLOSING & INFLUENCE ===================== -->
+    <section class="section" id="sec-closing">
+      <div class="eyebrow">THE PSYCHOLOGY · COLE GORDON × HORMOZI</div>
+      <h1 class="title">Closing &amp; influence — <em>why the method works.</em></h1>
+      <p class="lede">Your v6 Call 1 is built on Cole Gordon's framework. This is the psychology underneath it — plus Alex Hormozi's value math — so you're not just running beats, you understand the levers you're pulling. (Distilled from their public training; see the Library.)</p>
+
+      <h2>The 7 beliefs <em>every buyer must hold</em></h2>
+      <div class="card">
+        <p class="muted small">Cole Gordon: a prospect buys only when all seven are true. Your job in discovery is to make <b>them</b> say each one out loud — Cialdini's <i>consistency bias</i> means they close themselves. And here's the thing: <b>your v6 beats are the 7 beliefs, in order.</b> That's not a coincidence.</p>
+        <div class="grid g3" style="margin-top:12px">
+          <div class="card tight"><h3>1 · Pain</h3><p class="muted small">There's a real problem/gap. → Beats 1–2</p></div>
+          <div class="card tight"><h3>2 · Money</h3><p class="muted small">Resources + willingness exist. → Beat 3</p></div>
+          <div class="card tight"><h3>3 · Support</h3><p class="muted small">The stakeholders are on board. → Beat 3 / partner</p></div>
+          <div class="card tight"><h3>4 · Doubt</h3><p class="muted small">They can't fix it alone. → Beat 4</p></div>
+          <div class="card tight"><h3>5 · Cost</h3><p class="muted small">Inaction costs more than the fee. → Beat 5</p></div>
+          <div class="card tight"><h3>6 · Desire</h3><p class="muted small">The payoff is compelling &amp; personal. → Beat 6 (NMG)</p></div>
+        </div>
+        <p class="muted small" style="margin-top:12px"><b>7 · Trust</b> — in the <i>method</i> (not you personally). This is the one belief you install on <b>Call 2</b>, when you pitch the plan. It's why the close is a separate call.</p>
+      </div>
+
+      <h2>The objection <em>framework</em></h2>
+      <div class="card">
+        <p class="muted small">Cole Gordon: every objection is one of three things — <b>Uncertainty, Finance, or Support.</b> The iron rule: <b>solve Uncertainty first.</b> You can never fix money or a spouse if they're not 100% sure it's the right thing and the right time.</p>
+        <h3 style="margin-top:14px">The sequence after you state the price</h3>
+        <ul class="dot small">
+          <li>State the price on a <b>downward</b> tone, then go <b>silent.</b> Price only — no discount, no payment plan yet.</li>
+          <li>First words after any objection: <b>"No problem."</b> (kills the pressure / lizard-brain).</li>
+          <li>Isolate with a <b>binary</b> (the lizard brain can't do open-ended): <i>"Are you more in a should-I-do-this place, or a how-can-I-do-this place?"</i></li>
+          <li>Double tie-down: <i>"So — money aside — you're 100% in?"</i> A soft "yeah, I think so" = hidden uncertainty.</li>
+          <li>Root it out: <i>"Tell me more about what's going on."</i> Only then reframe the one real objection.</li>
+        </ul>
+        <p class="muted small" style="margin-top:8px"><b>Prevention beats rebuttal:</b> answer questions with "Is there a specific reason you're asking?", keep answers to 1–2 sentences, then "Does that make sense? What else?" — and temp-check on a <b>1–10</b> ("investment aside, where are you on the process?"). Anything under 9 isn't ready.</p>
+      </div>
+
+      <h2>The "1 question" that <em>2×'s closes</em></h2>
+      <div class="card">
+        <p class="muted small">It's not a question — it's a <b>format: Permission + a Reason-Why (or Context) + the Question.</b> It makes the prospect justify their own desire <i>to you</i>, so consistency bias does the closing. You already use it twice in v6:</p>
+        <div class="phrase">"Can I ask you something personal? What matters to me isn't just your business but the life you want — so what's the <b>non-monetary goal</b> here?"<span class="ctx">Permission + reason-why → this IS your Beat 6 NMG move</span></div>
+        <div class="phrase">"After 10 years doing it the old way… what <b>changed</b>? What happened?"<span class="ctx">Permission + context → hunts the moment of decision (your Beat 5 "why now")</span></div>
+        <div class="phrase">"Is there any <b>other</b> reason this matters?"<span class="ctx">surfaces the real reason vs. the one that sounds good → your Beat 5 double-pump</span></div>
+      </div>
+
+      <h2>Tonality — <em>the sale is won at hello</em></h2>
+      <div class="card"><ul class="dot small">
+        <li>Say <b>"feel,"</b> not "think" — keep them emotional, not logical.</li>
+        <li>End questions on a <b>downward, concerned</b> tone so they think deeper.</li>
+        <li>Slow right down before the price — then <b>go silent.</b> No rescuing.</li>
+        <li><b>Lean out</b> to make them lean in. Playful first to disarm; direct once the guard is down.</li>
+        <li>Trust isn't built by small talk — it's built by understanding their problem better than they can.</li>
+      </ul><span class="src">Cole Gordon — public sales training (YouTube)</span></div>
+
+      <h2>Hormozi's <em>value equation</em></h2>
+      <div class="card">
+        <p style="font-family:var(--serif); color:var(--body); font-size:17px; margin-bottom:6px">Value = <span style="color:var(--pink)">(Dream Outcome × Perceived Likelihood)</span> ÷ <span style="color:var(--coral)">(Time Delay × Effort)</span></p>
+        <p class="muted small">Raise the top, shrink the bottom. For a PR retainer:</p>
+        <ul class="dot small">
+          <li><b>Dream outcome ↑</b> — the Forbes feature, the inbound, the authority (sell that, not "pitches").</li>
+          <li><b>Likelihood ↑</b> — your 40 case studies, named outlets, the Edelman data. Proof raises belief.</li>
+          <li><b>Time delay ↓</b> — "outreach starts within 2 weeks; first placements 4–12 weeks."</li>
+          <li><b>Effort ↓</b> — "we do the heavy lifting; ~2 hours a month from you."</li>
+        </ul>
+        <p class="analogy">"The most expensive part of an offer isn't the price — it's the hidden costs" (their time and effort). Kill those and the same retainer is worth 10× more.</p>
+      </div>
+
+      <h2>Three Hormozi lines to <em>sell PR by</em></h2>
+      <div class="phrase">"Sell the <b>vacation</b>, not the plane flight."<span class="ctx">Sell the outcome — authority, inbound, the deal you win — not bylines and media lists.</span></div>
+      <div class="phrase">"<b>Proof</b> does more selling than any promise."<span class="ctx">Lead with the 40 case studies and real numbers, not adjectives.</span></div>
+      <div class="phrase">"Rich people pay for <b>time</b> above all."<span class="ctx">Premium price is the signal, not the barrier. Five $5K clients beat fifty $500 ones — and the cheap client nitpicks most.</span></div>
+      <span class="src">Alex Hormozi — public business training (YouTube)</span>
+    </section>
+
+    <!-- ===================== SEARCH RESULTS ===================== -->
+    <section class="section" id="sec-search">
+      <div class="eyebrow">SEARCH RESULTS</div>
+      <h1 class="title">Results for "<em id="searchTerm"></em>"</h1>
+      <div id="searchResults"></div>
+    </section>
+
+    <div class="footer">STORY GROUP · PR SALES MASTERY · CONFIDENTIAL · YOUR STORY UNLEASHED</div>
+  </main>
+</div>
+
+<script>
+/* ---------------- DATA ---------------- */
+const CASES = JSON.parse(document.getElementById('casesData').textContent);
+const NAV = [
+  {id:'start', ico:'◆', label:'Start Here'},
+  {group:'LEARN · BE THE EXPERT'},
+  {id:'pr101', ico:'📚', label:'PR 101'},
+  {id:'ai', ico:'✦', label:'PR in the AI Era'},
+  {id:'craft', ico:'✎', label:'The Craft'},
+  {id:'frameworks', ico:'🎓', label:'Frameworks & Proof'},
+  {id:'glossary', ico:'≡', label:'Glossary'},
+  {group:'SELL · CLOSE THE DEAL'},
+  {id:'offer', ico:'◈', label:'The Offer'},
+  {id:'prep', ico:'✓', label:'Call Prep'},
+  {id:'call',  ico:'☎', label:'The Call (v6)'},
+  {id:'objections', ico:'🛡', label:'Objections'},
+  {id:'closing', ico:'🤝', label:'Closing & Influence'},
+  {id:'qa', ico:'❔', label:'Expert Q&A'},
+  {id:'industry', ico:'◷', label:'By Industry'},
+  {id:'media', ico:'◉', label:'The Media Map'},
+  {id:'cases', ico:'★', label:'Case Studies'},
+  {group:'DRILL · MAKE IT STICK'},
+  {id:'flash', ico:'⚃', label:'Flashcards'},
+  {id:'score', ico:'◎', label:'Scorecard'},
+  {id:'cheat', ico:'⚡', label:'Cheat Sheet'},
+];
+
+const TIERS = [
+  {name:'Foundation', price:'$5,000', min:'4-month minimum', one:'Stay present, credible, and monitored — so you never disappear or get blindsided.',
+   inc:['One strategic PR priority per month','Polished messaging one-pager for internal alignment','One press release OR pitch to 30 targeted outlets','Personalized journalist follow-up sprint (human, not blasts)','Brand mention monitoring + coverage snapshot'],
+   exc:['No proactive media booking','No bylines / executive positioning','No quarterly strategy','No intelligence beyond basic monitoring'],
+   best:'Someone who literally cannot afford to go dark. Small budget, needs a professional baseline. Keeping the lights on.',
+   analogy:'A gym membership you use once a week. Technically a member. Not getting fit.'},
+  {name:'Amplify', price:'$8,500', min:'4-month minimum', one:'Show up consistently in the right places — so your brand is seen and remembered.',
+   inc:['Strategic PR plan around 1–2 narratives, refreshed quarterly','One press release OR feature pitch monthly','Curated media list of 50–75 outlets (hand-picked)','Persistent outreach on 1–2 active storylines','Executive visibility: one byline, quote, or talking points','Monthly performance summary with reach metrics'],
+   exc:['No ghostwritten op-eds','No podcast placement','No rapid response','No competitive intelligence / sentiment','No weekly strategist engagement'],
+   best:'Someone ready to go from "nobody covers us" to "we have a defined strategy and show up regularly."',
+   analogy:'A personal trainer 2x a week. Real progress. Not winning competitions yet.'},
+  {name:'Influence', price:'$15,000', min:'4-month minimum · DEFAULT', one:'Stop being mentioned — start being quoted. Become a recognized authority.',
+   inc:['Everything in Amplify, PLUS:','Quarterly PR roadmap tied to strategic priorities','Up to TWO press releases / feature pitches monthly','Proactive outreach across 2–3 storylines + national outlets','One ghostwritten byline or op-ed monthly','Podcast placement (actively booking your leader)','Rapid response for breaking-news positioning','Full Meltwater intelligence suite (brand, exec, competitor, sentiment)'],
+   exc:['Reserved escalations (crisis, coaching, board analytics) live at Command'],
+   best:'Someone done being "one of many" who wants to be THE name. Leader ready to be visible. Media as a growth engine.',
+   analogy:'A full coaching team — nutrition, recovery, analytics. Training to win.'},
+  {name:'Command', price:'$25,000', min:'12-month minimum · APPROVAL ONLY', one:'Visibility and reputation actively managed as a strategic asset at the highest stakes.',
+   inc:['Everything in Influence, PLUS:','Comprehensive executive comms strategy, refreshed quarterly','3–4 premium media assets monthly (exclusives, features)','Dedicated top-tier national outlet outreach','Monthly executive media coaching (on-camera, message discipline)','Custom briefing docs for every appearance','Crisis preparedness: holding statements + rapid-response Q&A','Board-ready analytics with SOV + sentiment trends'],
+   exc:['Approval-only — mention it exists, do NOT sell it. Its exclusivity lifts every other tier.'],
+   best:'People where a bad headline costs millions or destroys trust. High stakes, high discretion.',
+   analogy:'A 24/7 security detail. Every move planned, every risk anticipated.'},
+];
+
+
+const OBJ = [
+  {q:`"I need to think about it"`, a:`"No problem — and just so I'm organized, with the investment aside, what's the one thing keeping you from being 100% certain this is right?" (Cole Gordon: "think it over" almost always hides an uncertainty — surface it, don't argue speed. In your 2-call flow this is the D-10 trial-commit moment: pin the real criterion or disqualify.)`},
+  {q:`"I need to talk to my spouse / partner"`, a:`First, find out what it really is: "Is this asking their permission, or just letting them know?" If letting-know, you can move now. If permission, coach the framing: "When you bring it to them, are you presenting the wishy-washy version or the committed version? Which lands better?" In v6 this is the partner-alignment move — best case, get them onto Call 2 directly.`},
+  {q:`"Let me get a few other quotes first"`, a:`"Totally fair — can I share how I'd think about it? The right question isn't who's cheapest; it's who can actually get you [their outcome]. I'd rather you choose us because the plan is right than because we were the lowest number." Then make Call 2 the plan that's hard to compare — specific outlets, specific 90-day outcomes — so you're not in a price bake-off.`},
+  {q:'"That\'s more than we budgeted"', a:'Don\'t drop to a lower tier immediately. Instead: "I understand. Let me ask — what would it be worth if your CEO was quoted in [relevant outlet] on [their issue]? That\'s what this creates. And at $8.5–15K/mo it\'s less than the loaded cost of one part-time hire who wouldn\'t have our media relationships."'},
+  {q:'"Can we try Foundation first and upgrade later?"', a:'"You could, but I\'d be doing you a disservice not to tell you — Foundation is built for maintenance, not momentum. If your goal is to actually build visibility, you\'ll spend 4 months there and feel like nothing happened. Amplify is where real results start — and it\'s still a 4-month commitment, low risk."'},
+  {q:'"We need to take this to our board / CEO / leadership"', a:'"Absolutely. Would it help if I put together a one-page summary with the recommended tier and the specific outcomes we\'d target in the first 90 days?" — then send it FAST. Same day.'},
+  {q:'"What results can you guarantee?"', a:'"I won\'t guarantee specific placements — that would be dishonest, and no ethical PR firm can. What I can tell you: clients at this level typically see multiple meaningful placements per quarter, increases in branded search and inbound speaking invites within 90 days, and measurable share-of-voice gains over 6–12 months. We track all of it in Meltwater."'},
+  {q:'"We already have someone doing PR / we do it in-house"', a:'"That\'s great — how\'s it going? Are you getting the coverage you want in the outlets that matter?" Then listen. If they were happy, they wouldn\'t be on this call. Let them tell you the gap.'},
+  {q:'"We\'re a nonprofit, we can\'t afford premium PR"', a:'"I hear you. But you\'re a [$X]M operation spending zero on communications infrastructure. Even at Amplify, $8.5K/mo is less than a part-time hire — and you get a senior team with relationships you\'d never build internally. If coverage drives one corporate partner or major donor, it pays for itself immediately."'},
+  {q:'"We\'re too early for PR"', a:'"If you\'re raising or about to raise, you\'re not too early. The narrative window opens before the round, not after. Foundation exists for exactly this stage — so when the round closes, journalists already know you."'},
+  {q:'"We\'ll just hire someone in-house"', a:'"Great — when you do, they\'ll need a strategy to execute against. Many clients use us to build the playbook, then bring it in-house later. Others keep us because a senior strategist with journalist relationships is worth more than a junior hire."'},
+  {q:'"Can\'t you just guarantee placements?"', a:'"No one can guarantee a journalist writes a story. What we guarantee is that the right journalists know who you are, understand your narrative, and think of you when the story breaks. That\'s how coverage actually happens."'},
+  {q:'"Do you really know our specific industry?"', a:'"We bring senior strategic judgment and media relationships that cross sectors, paired with deep briefing on your space. The best PR isn\'t about knowing every regulation — it\'s about telling a credible, compelling story journalists want. The reporters covering you are business reporters, not specialists — they need it in human terms. That\'s exactly what we do."'},
+  {q:'"How long until we see results?"', a:'"First weeks are research, narrative, and list-building — outreach starts within 2 weeks of kickoff. First placements typically land between weeks 4 and 12, and authority compounds over 6–12 months. PR is an asset that builds, not a switch you flip. I\'d rather set that expectation honestly upfront."'},
+  {q:'"Why is PR so expensive? What am I actually paying for?"', a:'"You\'re not paying for hours or press releases. You\'re paying for senior judgment, journalist relationships, and access — the things that actually make coverage happen. The deliverables support the outcome; they\'re not the product. That\'s why the relationship is the value."'},
+  {q:'"We get coverage on our own when we have news"', a:'"News-driven coverage is a spike, not a strategy. What happens between announcements? We build a year-round narrative so you\'re visible consistently — not just when you have something to launch."'},
+  {q:'"Our clients come from referrals, not press"', a:'"Referrals are your best channel — PR amplifies them. When someone refers you and the prospect Googles your name, what do they find? If they see your partner quoted in Bloomberg or a byline in HBR, that referral converts faster and at a higher fee."'},
+  {q:'"We do PR on a project basis when we need it"', a:'"Project-based PR means starting from zero every time — no journalist relationships, no established narrative, no goodwill. When you need coverage for a launch or to manage a crisis, you want to already be known. That\'s what a retainer builds."'},
+];
+
+const GLOSS = [
+  ['Earned media','Coverage a third party (journalist, podcast) gives you because the story is worth telling. The heart of PR — you can\'t buy it directly.'],
+  ['Owned media','Channels you control: your website, blog, newsletter. Bylines sit at the edge of earned + owned.'],
+  ['Paid media','Advertising — you pay and control the message, but the audience knows it\'s an ad.'],
+  ['PESO model','The four media types: Paid, Earned, Shared, Owned. The map of where any media lives.'],
+  ['News hook','The timely reason a journalist would care now — the angle that makes a story newsworthy.'],
+  ['Pitch','A short, personalized email to one journalist proposing a story. The core unit of outreach.'],
+  ['Press release','An official announcement (funding, launch, hire) written for and distributed to outlets.'],
+  ['Byline','An article published under your executive\'s name. Pure thought leadership.'],
+  ['Op-ed','An opinion piece arguing a position, run in a news outlet.'],
+  ['Placement / Hit / Clip','A successful piece of earned coverage — your exec quoted or featured.'],
+  ['Media list','The curated set of specific journalists and outlets who cover your beat.'],
+  ['Beat','The topic area a journalist covers (e.g. "the fintech beat").'],
+  ['Embargo','An agreement that a journalist won\'t publish before a set time — lets them prep coverage in advance.'],
+  ['Exclusive','Offering a story to one outlet first, in exchange for bigger, dedicated coverage.'],
+  ['Tier-1 / National','Top outlets: WSJ, NYT, Bloomberg, Forbes, major broadcast. Hardest to land, highest value.'],
+  ['Trade media','Industry-specific publications (e.g. QSR, Commercial Observer). Smaller audience, highly targeted.'],
+  ['Share of Voice (SOV)','How much of the media conversation in your category is about you vs. competitors.'],
+  ['Sentiment','Whether coverage is positive, neutral, or negative — tracked over time.'],
+  ['Impressions','The number of times content was potentially seen. A reach/scale metric.'],
+  ['Reach','The size of the unique audience exposed to coverage.'],
+  ['AVE','Advertising Value Equivalency — old "coverage = $X of ads" math. Discredited. Never use it.'],
+  ['Thought leadership','Positioning a leader as a recognized expert via bylines, op-eds, podcasts, and speaking.'],
+  ['Newsjacking / Rapid response','Inserting your expert into a breaking news story while it\'s hot.'],
+  ['Holding statement','A pre-written, approved statement ready to deploy the moment a crisis hits.'],
+  ['Media training','Coaching an executive to stay on-message and perform in interviews and on camera.'],
+  ['Key message','The core point you want to land in every appearance, regardless of the question.'],
+  ['Media kit / Press kit','A ready package for journalists: bio, boilerplate, headshots, fact sheet, past coverage.'],
+  ['Boilerplate','The standard "about the company" paragraph at the end of every press release.'],
+  ['HARO / Qwoted / Connectively','Services where journalists post requests for sources — a fast path to quotes.'],
+  ['Meltwater / Muck Rack / Cision','Media intelligence platforms for monitoring, media lists, and SOV. Story Group uses Meltwater.'],
+  ['Domain Authority (DA)','A score predicting how well a site ranks; a high-DA placement also helps SEO.'],
+  ['Backlink','A link from a coverage piece back to your site — valuable for SEO and referral traffic.'],
+  ['Podcast tour','Booking an executive across a series of relevant podcasts to build authority at scale.'],
+  ['Narrative','The throughline story you want the market to understand about the company.'],
+  ['Lede','The opening line of a story — the hook that makes someone keep reading.'],
+  ['Spokesperson','The designated person who speaks to media on the company\'s behalf.'],
+  ['Inbound','Opportunities that come to you because of your visibility — speaking invites, partners, leads.'],
+  ['Crisis comms','Managing communications during a reputation-threatening event.'],
+  ['Retainer','A recurring monthly fee for ongoing strategic work — how PR is almost always sold.'],
+  ['GEO','Generative Engine Optimization — getting your brand cited inside AI answers (ChatGPT, Perplexity, AI Overviews). The new SEO.'],
+  ['AEO','Answer Engine Optimization — structuring content so AI engines can lift a clean, quotable answer from it.'],
+  ['AI Overviews','Google\'s AI-generated answer box at the top of results. Now appears on roughly half of all searches.'],
+  ['Share of Model','Your share of AI mentions in your category vs. competitors — the AI-era cousin of share of voice.'],
+  ['Barcelona Principles','The global standard for PR measurement. Sets SMART goals; measures outputs, outcomes & impact; and explicitly rejects AVE.'],
+  ['Qwoted','A verified platform connecting journalists with expert sources — 70% of requests come from high-authority (DR 80+) publications.'],
+  ['Featured (HARO)','The relaunched Help A Reporter Out — free daily digests of journalist queries you can respond to for quotes.'],
+  ['Source of Sources (SOS)','A free, honor-system journalist query service from HARO\'s original creator.'],
+  ['Wire service','PR Newswire / Business Wire — paid distribution that publishes your release widely. Distribution, not earned coverage.'],
+  ['Dateline','The CITY, State, Date that opens a press release before the first sentence.'],
+  ['Editorial calendar','An outlet\'s planned schedule of themes and features — pitching to it gets you ahead of their coverage.'],
+  ['Contributor / Council','A membership program (e.g. Forbes Councils) where execs publish bylines under their name. Not the same as an earned feature.'],
+  ['SCCT','Situational Crisis Communication Theory (W. Timothy Coombs) — match your crisis response (deny / diminish / rebuild) to how much the public blames you.'],
+  ['Image Repair Theory','William Benoit\'s five ways to restore reputation: denial, evading responsibility, reducing offensiveness, corrective action, and mortification (apology).'],
+  ['Stealing thunder','Self-disclosing your own bad news before the press breaks it — research shows it lowers perceived severity and protects credibility.'],
+  ['AMEC framework','The AMEC Integrated Evaluation Framework — the standard chain for proving PR value: objectives to inputs, activities, outputs, outtakes, outcomes, impact.'],
+  ['RACE / ROSTIR','Classic PR planning models. RACE = Research, Action, Communication, Evaluation (Marston, 1963). ROSTIR = Research, Objectives, Strategy, Tactics, Implementation, Reporting (Luttrell & Capizzo).'],
+  ['PRSA Code of Ethics','The US PR profession\'s ethics standard — six values: advocacy, honesty, expertise, independence, loyalty, fairness. Why ethical firms never guarantee or buy coverage.'],
+  ['Soundbite','A 10–20 second quotable line (~45 words) built around one vivid idea — the unit of a great media interview.'],
+  ['Bridging','A media-training move: acknowledge a hostile question, then transition to your message — "I understand, and what matters here is…"'],
+  ['Flagging','Signaling the exact line you want a journalist to quote — "The one thing I\'d really highlight is…"'],
+  ['Value Equation','Hormozi\'s model: Value = (Dream Outcome × Perceived Likelihood) ÷ (Time Delay × Effort). Raise the top, shrink the bottom.'],
+  ['Consistency bias','Cialdini\'s principle that people act in line with what they\'ve already said — why getting a prospect to state their own pain and goals makes them close themselves.'],
+];
+
+const QA = [
+  {q:'What\'s the difference between PR and marketing?', a:'Marketing is what <b>you</b> say about yourself to sell something (ads, campaigns, your website). PR is what <b>others</b> say about you — earned credibility through journalists, podcasts, and stages. Marketing pushes a message you control; PR builds trust you can\'t buy. The best companies run both: marketing captures demand, PR creates the credibility that makes demand possible.'},
+  {q:'What\'s the difference between PR and advertising?', a:'Advertising you pay for and fully control — and everyone knows it\'s an ad. PR you earn, and you give up control of the exact wording — which is precisely why it\'s more credible. A journalist calling you a leader is worth far more than you calling yourself one. You trade control for credibility.'},
+  {q:'Do press releases even work anymore?', a:'A release alone rarely lands a story — it\'s for the record, the wire, and SEO. What actually wins coverage is a <b>personalized pitch</b> to the right journalist with a real news hook. Think of the release as documentation and the pitch as the salesperson. Anyone who says "we\'ll blast a press release" is doing 2005 PR.'},
+  {q:'What actually makes a story "newsworthy"?', a:'A journalist needs at least one of: <b>timeliness</b> (it ties to something happening now), <b>data or exclusivity</b> (new numbers, a first), <b>a trend</b> they\'re already covering (you\'re the example/expert), or <b>a real human story</b> (conflict, transformation). "We\'re excited to announce…" is none of these — which is why finding the hook is the skill they\'re paying for.'},
+  {q:'How do you actually get someone on a podcast?', a:'You build a tight target list of shows their buyers listen to, craft a guest angle (a specific, valuable topic the host\'s audience wants — not "my company is great"), pitch the host or producer with proof the exec is a great guest, and handle the booking and prep. The pitch sells the <i>episode</i>, not the person. One great appearance delivers inbound for years.'},
+  {q:'Why can\'t you guarantee placements?', a:'Because no one controls what an independent journalist writes — and any firm that "guarantees" a placement is either lying or paying for it (which makes it an ad, not earned media). What we guarantee is the process: the right journalists know your name, understand your narrative, and think of you when the story breaks. That\'s how real coverage happens.'},
+  {q:'How long until we see results?', a:'Weeks 1–2 are research, narrative, and list-building, with outreach starting within two weeks. First placements typically land between weeks 4 and 12. Real authority — where journalists come to <i>you</i> — compounds over 6–12 months. PR is an asset that builds, not a switch you flip.'},
+  {q:'What\'s a realistic number of placements per month?', a:'It depends on tier and outlet difficulty — a handful of meaningful placements per quarter at lower tiers, scaling up with output and proactive booking at higher tiers. But quantity is the wrong scoreboard: one Bloomberg feature can outweigh ten no-name blogs. Judge by <b>quality and share of voice</b>, not raw count.'},
+  {q:'What\'s the difference between earned, owned, and paid media?', a:'<b>Earned</b> = coverage a third party gives you (the heart of PR). <b>Owned</b> = channels you control (your site, blog, newsletter). <b>Paid</b> = ads. Add <b>Shared</b> (social) and you have the PESO model. The bucket you can\'t buy directly — and the one that builds the most trust — is earned.'},
+  {q:'Tier-1 national vs. trade press — which is better?', a:'Neither is universally "better." Tier-1 (WSJ, Bloomberg, Forbes) gives prestige and reach. Trade press (the niche pubs their buyers actually read) often drives more <i>qualified</i> attention and deals. The right mix depends on the goal: fundraising and brand → national; pipeline and credibility with buyers → trade. A pro recommends both, weighted to the objective.'},
+  {q:'How do you get into Forbes?', a:'Three different doors, and conflating them is a rookie tell: (1) <b>earned</b> — a staff journalist quotes or features you because the story\'s strong; (2) a <b>contributor/council byline</b> — a paid membership program where execs publish under their name; (3) <b>Qwoted/Featured</b> source requests where Forbes writers seek experts. We pursue the earned route and use councils strategically — never pretend a council post is the same as an earned feature.'},
+  {q:'How is PR measured if not AVE?', a:'By outcomes, per the <b>Barcelona Principles</b> (the global standard, which explicitly rejects AVE). We track quantity and quality of placements, share of voice vs. competitors, sentiment, branded-search lift, referral traffic, and inbound (speaking invites, leads, partnerships). At higher tiers, Meltwater gives board-ready share-of-voice and sentiment trends.'},
+  {q:'What is GEO and why does AI matter to PR now?', a:'GEO is Generative Engine Optimization — getting cited inside AI answers (ChatGPT, Perplexity, Google AI Overviews). It matters because around 84% of what those tools cite comes from <b>earned media</b>, not company websites. When your buyer asks AI "who\'s best in this category," the answer is built from press coverage. PR is now the primary lever for AI visibility — you can\'t buy your way in with ads.'},
+  {q:'What do you actually need from us to do your job?', a:'Less than people fear: a couple hours a month of the leader\'s time for interviews and quote approvals, access to real data or customer stories worth telling, and fast turnaround on approvals so we can hit news windows. We do the heavy lifting — strategy, writing, list-building, pitching, follow-up. Your job is to be available and authentic.'},
+  {q:'Isn\'t our product/news not interesting enough for press?', a:'Almost every company thinks that — and almost every company is sitting on a story they can\'t see from the inside. It\'s rarely the product itself; it\'s the trend you\'re part of, the data you have, the problem you solve, or the founder\'s journey. Finding and framing that angle is exactly the strategist\'s job.'},
+];
+
+const MEDIA_VERT = [
+  ['VC-Backed Startups','TechCrunch · The Information · Axios Pro Rata · Crunchbase News · Fortune Term Sheet · Sifted · Business Insider'],
+  ['Healthtech & Biotech','STAT News · Fierce Healthcare · MedCity News · Endpoints News · Modern Healthcare · Healthcare Dive · MobiHealthNews'],
+  ['Fintech & Financial','American Banker · PYMNTS · Finextra · Tearsheet · The Financial Brand · Banking Dive · Barron\'s'],
+  ['Professional Services','Law360 · Above the Law · Bloomberg Law · Accounting Today · Journal of Accountancy · Consulting Magazine'],
+  ['Real Estate & CRE','Commercial Observer · The Real Deal · GlobeSt · Bisnow · Connect CRE · Inman (residential)'],
+  ['Franchise & Multi-Location','Entrepreneur · Franchise Times · QSR Magazine · Nation\'s Restaurant News · FranchiseWire · 1851 Franchise'],
+  ['AI & SaaS','TechCrunch · VentureBeat · The Verge · SaaStr · MIT Technology Review · Ars Technica · The Information'],
+];
+
+const INDUSTRY = [
+  {name:'VC-Backed Startups', tag:'The single biggest opportunity for 2026.',
+   why:['Coverage directly impacts fundraising — investors read TechCrunch & Bloomberg before meetings','Talent chooses companies they\'ve heard of','Earned media lowers customer acquisition cost','Boards now expect a comms strategy post-funding'],
+   stake:['Competitors with better media presence win deals and talent','Follow-on funding stalls with no public momentum','Key hires choose better-known rivals'],
+   buyer:'CEO/Founder, VP Marketing, Head of Comms · 20–500 employees · just raised or about to · $50–200K/yr comms budgets',
+   map:[['Foundation','Pre-revenue / early Series A building presence while finding PMF'],['Amplify','Post-Series A, consistent cadence around launches'],['Influence','Series B/C positioning CEO as a category voice'],['Command','Pre-IPO, activist pressure, or crisis']],
+   angles:['"Your investors gave you $30M to build something great. If nobody knows you exist, you\'re building in the dark — and competitors are getting the coverage that shapes the next round."','"When your CEO is quoted in Forbes about where the category is headed, that\'s not marketing — it\'s a fundraising asset your deck can\'t replicate."','"A senior in-house comms hire is $180–250K+ loaded. At Influence you get a senior strategist with relationships for a fraction of that."'],
+   objs:[['We\'re too early for PR.','If you\'re raising or about to, you\'re not too early. The narrative window opens before the round.'],['We\'ll hire in-house.','Then they\'ll need a playbook to execute. We build it — many keep us because the strategist relationship beats a junior hire.']]},
+  {name:'Healthtech & Biotech', tag:'High-stakes, high-sensitivity — perfect for premium positioning.',
+   why:['Trust is the currency — patients, providers, investors must believe first','Every public statement carries compliance implications','Investor relations hinge on narrative around clinical milestones','"Revolutionize healthcare" is everywhere — differentiation is hard'],
+   stake:['Clinical milestones get no coverage; investors stay unaware','Weaker products with stronger narratives win the partnerships','A crisis hits with no established media goodwill to draw on'],
+   buyer:'CEO/Founder, CMO, Head of Corp Comms · 30–500 employees · FDA submission, data readout, raise, or recent negative press · $100–300K/yr',
+   map:[['Foundation','Early-stage presence during product development'],['Amplify','Active products, trade coverage + investor narrative'],['Influence','CEO/CMO as digital-health thought leaders; healthcare bylines'],['Command','FDA decisions, trial outcomes, data-privacy incidents']],
+   angles:['"In healthcare, silence isn\'t neutral — it\'s suspicious. If a journalist can\'t find your CEO\'s perspective, they\'ll find someone else\'s."','"When your FDA approval comes through, do you want to scramble for coverage or have journalists already waiting? That\'s reactive vs. strategic."','"Your clinical team is world-class. But investors fund narratives, not just data."'],
+   objs:[['Healthcare PR needs to be specialized — do you know our space?','We bring senior judgment + media relationships, paired with deep briefing on your regulatory environment. The best healthtech PR is a credible story that earns trust.'],['We need to be careful what we say publicly.','Exactly why you need a senior strategist, not a junior coordinator. Caution isn\'t a reason to be silent — it\'s a reason to be strategic.']]},
+  {name:'Fintech & Financial Services', tag:'Compliance-heavy, reputation-driven — where senior judgment justifies the price.',
+   why:['Reputation is shaped by how issues are communicated','One misquoted statement can trigger scrutiny','Consumer trust is the bottleneck for anything with money','Investors expect polished comms as a maturity signal'],
+   stake:['A breach or regulatory action becomes a defining crisis with no relationships in place','Rivals with better presence win enterprise clients','Fundraising stalls when investors find no independent validation'],
+   buyer:'CEO/Founder, CMO, VP Comms, CCO · 50–1,000 employees · launch, approval, raise, or incident · $150–400K/yr',
+   map:[['Foundation','Early-stage baseline presence + monitoring'],['Amplify','Growth-stage, trust/innovation narratives in financial media'],['Influence','CEO as financial-innovation voice; WSJ/Bloomberg/FT bylines'],['Command','Regulatory actions, breaches, activist investors, pre-IPO']],
+   angles:['"In fintech, trust is your product. If consumers don\'t trust you with their money, the technology doesn\'t matter."','"When Bloomberg writes about your category, are you the company they call? At Influence, we make sure you are — that\'s a moat."','"The cost of a reputation crisis in financial services is measured in millions. Command isn\'t an expense — it\'s insurance."'],
+   objs:[['We need a financial-services specialist.','Our approach is strategist-led — senior judgment plus deep briefing on your regulatory reality.'],['Compliance reviews everything — it\'ll slow things down.','Good — we build review into the workflow from day one. Precision matters more than speed in your space.']]},
+  {name:'Professional Services Firms', tag:'Law, accounting, consulting — the retainer-native niche.',
+   why:['Business development is reputation-driven — media accelerates it','Top associates choose firms with strong market profiles','PE owners demand growth beyond referral networks','Visible experts command higher rates'],
+   stake:['Losing RFPs to bigger-name firms despite better capabilities','Top talent choosing better-known competitors','PE investors questioning the growth plan with no public presence'],
+   buyer:'Managing Partner, CMO, Practice Lead · $10–500M revenue · PE investment, growth mandate, or AI disruption pressure',
+   map:[['Foundation','Baseline presence in trade media + monitoring'],['Amplify','Consistent thought leadership in practice-area press'],['Influence','Partners as recognized authorities; HBR/Bloomberg bylines + speaking'],['Command','Leadership transitions, sensitive matters, M&A']],
+   angles:['"Your partners are brilliant — but brilliance without visibility means you\'re the best-kept secret in your market."','"You already sell on retainer. You understand strategic relationships don\'t work project-by-project. PR is the same — it compounds."','"The firms winning the most business in 2026 aren\'t just the most capable — they\'re the most visible."'],
+   objs:[['Our clients come from referrals, not press.','Referrals are your best channel — PR amplifies them. When the prospect Googles you and sees a Bloomberg quote, that referral converts faster and at a higher fee.'],['Our partners are too busy for media.','Exactly why you need a strategist, not a publicist. We do the heavy lifting — partners invest 2–3 hours a month, we turn it into year-round visibility.']]},
+  {name:'Real Estate Development & CRE', tag:'Deals worth millions, reputations that take years to build.',
+   why:['Every project faces community scrutiny — shape the narrative first','Investor and lender confidence depends on public reputation','Leasing/sales velocity tracks with media perception','Executive positioning attracts JV partners and institutional capital'],
+   stake:['Community opposition organizes with a media strategy — will you have one?','Rivals with better presence attract partners and tenants','One zoning fight can define a firm\'s reputation for years'],
+   buyer:'CEO/Principal, VP Marketing · residential/commercial/mixed-use developers · active projects, contentious approvals, or capital raises',
+   map:[['Foundation','Baseline presence + monitoring between projects'],['Amplify','2–3 active projects, consistent trade + business-press outreach'],['Influence','Leadership as market authorities; CRE-trend bylines + investor narrative'],['Command','Contentious developments, community opposition, environmental disputes']],
+   angles:['"Your projects speak for themselves — but zoning, investor confidence, and tenant interest all depend on perception. Being invisible is expensive."','"When community opposition organizes against your next development, they\'ll have a media strategy. Will you?"','"When your CEO is in GlobeSt or Commercial Observer on where the market\'s headed — that\'s not marketing, that\'s deal flow."'],
+   objs:[['We do PR on a project basis when we need it.','Project-based PR starts from zero every time — no relationships, no narrative, no goodwill. When you need coverage or crisis help, you want to already be known.'],['Our business is relationship-driven, not media-driven.','And when those relationships evaluate your next deal, they Google you. Media reinforces every relationship you have.']]},
+  {name:'Franchise & Multi-Location Brands', tag:'Built for growth — they already think in retainers and systems.',
+   why:['Franchisee recruitment depends on brand credibility','National coverage creates a halo that benefits every location','Founder stories are inherently media-friendly','Local + national PR must work together — that\'s strategic complexity'],
+   stake:['Recruitment pipeline dries up when awareness stalls','Rivals attract better candidates in better territories','A single location incident can damage the whole brand with no plan'],
+   buyer:'CEO/Founder, VP Franchise Dev, CMO · 50–500+ locations · expansion, recruitment push, milestone, or rebrand · marketing funds in royalties',
+   map:[['Foundation','Emerging franchises (<100 units) in trade media + monitoring'],['Amplify','Growth-stage recruiting owners; trade + local business coverage'],['Influence','Founder as industry voice; Entrepreneur/QSR bylines + speaking'],['Command','Multi-location crises, ownership transitions, PE exits']],
+   angles:['"Every franchisee who invests $500K+ Googled you first. At Amplify, we make sure they find a brand that\'s growing, credible, and led by someone they want to partner with."','"Your founder story — one location to hundreds — is exactly the narrative journalists love. We turn it into coverage that drives franchisee interest."','"The brands in Entrepreneur\'s Franchise 500 aren\'t just the biggest — they\'re the ones with the best stories."'],
+   objs:[['We handle PR internally / franchise marketing covers it.','Those focus on consumer-facing work. We do executive positioning and earned media that drive recruitment and national credibility — complementary, not redundant.'],['We need local PR, not national.','National coverage creates the halo that makes local PR work. We build the national foundation; your local teams activate it.']]},
+  {name:'AI & SaaS Companies', tag:'Saturated with noise — which is exactly your advantage.',
+   why:['Everyone claims to be "AI-powered" — narrative control is survival','Thought leadership now drives coverage more than announcements','AI trust/safety/ethics must be addressed proactively','Generic pitching is dead — journalists want insight and a point of view'],
+   stake:['You become noise instead of signal','A competitor\'s CEO becomes the category voice journalists call','Enterprise buyers don\'t trust a brand with no visible perspective'],
+   buyer:'CEO/Founder, CMO, Head of Comms · enterprise/SMB/vertical SaaS · launch, raise, or category-defining moment',
+   map:[['Foundation','Early-stage presence while building'],['Amplify','Year-round narrative to be the signal in the noise'],['Influence','CEO as category voice; TechCrunch/trade bylines + podcasts'],['Command','AI-safety/ethics positioning, sensitive situations']],
+   angles:['"There are 10,000 companies claiming to be AI-powered. The winners aren\'t the ones with the best models — they\'re the ones telling the best stories."','"When TechCrunch writes about your category, are they calling your CEO or your competitor\'s? At Influence, we make sure it\'s you."','"AI trust is the defining issue of 2026. The companies that address safety and ethics proactively earn enterprise trust and media goodwill."'],
+   objs:[['We get coverage on our own when we have news.','News-driven coverage is a spike, not a strategy. What happens between announcements? We build a year-round narrative.'],['We need someone who really understands AI.','The journalists covering your space are business and tech reporters, not AI researchers. They need it in human terms — that\'s exactly what we do.']]},
+];
+
+/* ---------------- RENDER ---------------- */
+function el(tag, cls, html){const e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e;}
+
+// nav
+const navEl = document.getElementById('nav');
+NAV.forEach(n=>{
+  if(n.group){navEl.appendChild(el('div','navhint',n.group)); return;}
+  const b=el('button','navbtn'+(n.id==='start'?' active':''));
+  b.innerHTML='<span class="ico">'+n.ico+'</span>'+n.label;
+  b.onclick=()=>go(n.id);
+  b.dataset.id=n.id;
+  navEl.appendChild(b);
+});
+
+// tiers
+const tc=document.getElementById('tierCards');
+TIERS.forEach(t=>{
+  const c=el('div','card');
+  c.innerHTML='<span class="pill">'+t.min+'</span>'+
+    '<div style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:8px">'+
+    '<div><div style="font-family:var(--serif); font-size:26px; color:var(--body); font-weight:600">'+t.name+'</div></div>'+
+    '<div style="text-align:right"><span class="price">'+t.price+'</span><span class="priceunit">/mo</span></div></div>'+
+    '<p style="font-family:var(--serif); font-style:italic; color:var(--pink); font-size:16px; margin:10px 0 14px">'+t.one+'</p>'+
+    '<div class="grid g2"><div><h3>What\'s included</h3><ul class="dot small">'+t.inc.map(i=>'<li>'+i+'</li>').join('')+'</ul></div>'+
+    '<div><h3 style="color:var(--muted)">Not included</h3><ul class="dot x small">'+t.exc.map(i=>'<li>'+i+'</li>').join('')+'</ul>'+
+    '<h3 style="margin-top:14px">Best for</h3><p class="muted small">'+t.best+'</p></div></div>'+
+    '<div class="analogy">'+t.analogy+'</div>';
+  tc.appendChild(c);
+});
+
+// objections
+function renderObj(list){
+  const o=document.getElementById('objList'); o.innerHTML='';
+  if(!list.length){o.innerHTML='<p class="nores">No matches.</p>'; return;}
+  list.forEach(x=>{
+    const d=el('details','acc');
+    d.innerHTML='<summary><span class="qtxt">'+x.q+'</span><span class="arr">+</span></summary>'+
+      '<div class="accbody"><span class="saytag you">You say</span>'+x.a+'</div>';
+    o.appendChild(d);
+  });
+}
+renderObj(OBJ);
+
+// industries
+const il=document.getElementById('industryList');
+INDUSTRY.forEach(v=>{
+  const d=el('details','acc');
+  const map=v.map.map(m=>'<tr><td class="t">'+m[0]+'</td><td class="muted">'+m[1]+'</td></tr>').join('');
+  const ang=v.angles.map(a=>'<div class="phrase">'+a+'</div>').join('');
+  const obj=v.objs.map(o=>'<div style="margin-bottom:10px"><span class="saytag">They say</span><i class="muted">'+o[0]+'</i><span class="saytag you">You say</span>'+o[1]+'</div>').join('');
+  d.innerHTML='<summary><span class="qtxt">'+v.name+'<span class="muted" style="font-weight:400; font-size:12px; display:block; margin-top:3px; font-style:italic">'+v.tag+'</span></span><span class="arr">+</span></summary>'+
+    '<div class="accbody">'+
+    '<h3 style="margin-top:6px">Why they need PR</h3><ul class="dot small">'+v.why.map(w=>'<li>'+w+'</li>').join('')+'</ul>'+
+    '<h3 style="margin-top:14px; color:var(--coral)">What\'s at stake if invisible</h3><ul class="dot x small">'+v.stake.map(w=>'<li>'+w+'</li>').join('')+'</ul>'+
+    '<h3 style="margin-top:14px">Ideal buyer</h3><p class="muted small">'+v.buyer+'</p>'+
+    '<h3 style="margin-top:14px">Tier mapping</h3><table>'+map+'</table>'+
+    '<h3 style="margin-top:16px">Pitch angles</h3>'+ang+
+    '<h3 style="margin-top:14px">Objections</h3>'+obj+'</div>';
+  il.appendChild(d);
+});
+
+// glossary
+function renderGlossary(filter){
+  const g=document.getElementById('glossList'); g.innerHTML='';
+  const f=(filter||'').toLowerCase();
+  const list=GLOSS.filter(x=>!f||x[0].toLowerCase().includes(f)||x[1].toLowerCase().includes(f));
+  if(!list.length){g.innerHTML='<p class="nores">No terms match.</p>'; return;}
+  list.sort((a,b)=>a[0].localeCompare(b[0]));
+  list.forEach(x=>{
+    const d=el('div','glossitem');
+    d.innerHTML='<h3>'+x[0]+'</h3><p>'+x[1]+'</p>';
+    g.appendChild(d);
+  });
+}
+renderGlossary('');
+
+// expert Q&A
+function renderQA(list){
+  const o=document.getElementById('qaList'); o.innerHTML='';
+  if(!list.length){o.innerHTML='<p class="nores">No matches.</p>'; return;}
+  list.forEach(x=>{
+    const d=el('details','acc');
+    d.innerHTML='<summary><span class="qtxt">'+x.q+'</span><span class="arr">+</span></summary>'+
+      '<div class="accbody">'+x.a+'</div>';
+    o.appendChild(d);
+  });
+}
+renderQA(QA);
+
+// media verticals
+const mv=document.getElementById('mediaVerticals');
+MEDIA_VERT.forEach(m=>{
+  const c=el('div','card tight');
+  c.innerHTML='<h3 style="color:var(--pink); font-family:var(--serif); font-style:italic; font-size:18px; font-weight:600">'+m[0]+'</h3><p class="muted small" style="margin:4px 0 0">'+m[1]+'</p>';
+  mv.appendChild(c);
+});
+
+// case studies
+function caseCard(c){
+  const metrics=c.metrics.map(m=>'<div style="display:flex; justify-content:space-between; gap:12px; font-size:12.5px; padding:5px 0; border-top:1px solid var(--border)"><span class="muted">'+m[0]+'</span><span style="color:var(--pink); font-weight:600; text-align:right; flex:0 0 auto; max-width:55%">'+m[1]+'</span></div>').join('');
+  return '<div class="card"><div style="display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:6px"><div class="eyebrow" style="margin:0">'+c.industry+'</div><span class="muted" style="font-size:9px; letter-spacing:1px; text-transform:uppercase; flex:0 0 auto">'+c.sec+'</span></div>'+
+    '<h3 style="font-family:var(--serif); font-weight:600; font-size:19px; color:var(--body); line-height:1.25; margin-bottom:8px">'+c.title+'</h3>'+
+    '<p class="muted small" style="margin-bottom:8px">'+c.challenge+'</p>'+metrics+'</div>';
+}
+function renderCases(filter){
+  const wrap=document.getElementById('casesList'); const f=(filter||'').toLowerCase().trim();
+  const list=CASES.filter(c=>!f||(c.industry+' '+c.title+' '+c.challenge+' '+c.sec).toLowerCase().includes(f));
+  document.getElementById('caseCount').textContent='Showing '+list.length+' of '+CASES.length+' case studies';
+  wrap.innerHTML = list.length ? list.map(caseCard).join('') : '<p class="nores">No cases match. Try a broader word like \'crisis\', \'founder\', or an industry.</p>';
+}
+renderCases('');
+
+// ---- note page (Call 1 v6 — fillable + autosave) ----
+const NF_BEATS=[
+  ['b1','1','PAIN / BACKGROUND',`"Walk me through what brought you here. What's going on right now?"`],
+  ['b2','2','SPECIFIC EXAMPLES',`"Give me a specific example. The most recent time."`],
+  ['b3','3','MONEY / DM / BUDGET',`"Who else weighs in?"  ·  Band: $5–10 / $10–20 / higher`],
+  ['b4','4','HOW LONG / WHAT TRIED',`"What's your own theory of why it didn't work?"`],
+  ['b5','5','WHY NOW / COST OF INACTION',`"What if nothing changes?"  ·  double-pump: "Any other reason?"`],
+  ['b6','6','GOAL + NMG',`"12 mo from now — what's different? What does it unlock for YOU?"`],
+  ['b7','7','TRANSITION',`Tie-down → Trial Commit → Partner → Named outlet → Loom`],
+];
+const NF_IDX='prnotes:index', NF_CUR='prnotes:current', NF_NOTE=n=>'prnotes:note:'+n;
+function nfGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function nfSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+
+function noteSheetInner(){
+  const ta=(k)=>'<textarea class="ns-field" data-k="'+k+'" rows="2" oninput="noteAutosave()"></textarea>';
+  const beats=NF_BEATS.map(b=>'<div class="ns-beat"><div class="lbl"><span class="n">'+b[1]+'</span>'+b[2]+'</div><span class="pr">'+b[3]+'</span>'+ta(b[0])+'</div>').join('');
+  return '<div class="ns-head"><b>CALL 1 v6 · NOTE PAGE</b><span>Auto-saves as you type</span></div>'+
+    '<div class="ns-grid"><div class="ns-left"><div class="ns-sec">Sales Process</div>'+beats+'</div>'+
+    '<div class="ns-right">'+
+      '<div class="ns-box"><span class="bx">Name</span>'+ta('name')+'</div>'+
+      '<div class="ns-box"><span class="bx">Background / Notes<span class="chk"><label><input type="checkbox" data-k="priorYes" onchange="noteAutosave()"> Has prior PR</label> &nbsp; <label><input type="checkbox" data-k="priorNo" onchange="noteAutosave()"> None yet</label></span></span>'+ta('background')+'</div>'+
+      '<div class="ns-box"><span class="bx">Pitch Customization</span>'+
+        '<div class="ns-pc"><b>1 · 7XA</b> who they are</div>'+ta('pc1')+
+        '<div class="ns-pc"><b>2 · FNB</b> from / now / but</div>'+ta('pc2')+
+        '<div class="ns-pc"><b>3 · PB</b> possible best</div>'+ta('pc3')+
+        '<div class="ns-pc"><b>4 · E&A</b> excuses & anxieties</div>'+ta('pc4')+
+      '</div>'+
+    '</div></div>'+
+    '<div class="ns-bottom">'+
+      '<div class="ns-box"><span class="bx">Powerful Language <span class="hint">their exact words</span></span>'+ta('powerful')+'</div>'+
+      '<div class="ns-box"><span class="bx">Transition Thoughts <span class="hint">what you\'ll say to flip into the close</span></span>'+ta('transition')+'</div>'+
+    '</div>';
+}
+function noteToolbar(){
+  return '<input id="nfProspect" placeholder="Prospect / company…" oninput="noteAutosave()" style="min-width:190px">'+
+    '<button class="note-btn" onclick="noteSaveAs()">＋ Save this call</button>'+
+    '<select id="nfSaved" onchange="noteLoadSelected()"><option value="">Saved calls…</option></select>'+
+    '<button class="note-btn ghost" onclick="noteNew()">New blank</button>'+
+    '<button class="note-btn ghost" onclick="notePrintFilled()">🖨 Print / PDF</button>'+
+    '<span class="note-status" id="nfStatus"></span>';
+}
+function noteGather(){
+  const o={};
+  document.querySelectorAll('#notePreview .ns-field').forEach(el=>o[el.dataset.k]=el.value);
+  const py=document.querySelector('#notePreview [data-k="priorYes"]'), pn=document.querySelector('#notePreview [data-k="priorNo"]');
+  o.priorYes=!!(py&&py.checked); o.priorNo=!!(pn&&pn.checked);
+  const p=document.getElementById('nfProspect'); o.prospect=p?p.value:'';
+  return o;
+}
+function noteApply(o){
+  o=o||{};
+  document.querySelectorAll('#notePreview .ns-field').forEach(el=>el.value=o[el.dataset.k]||'');
+  const py=document.querySelector('#notePreview [data-k="priorYes"]'); if(py)py.checked=!!o.priorYes;
+  const pn=document.querySelector('#notePreview [data-k="priorNo"]'); if(pn)pn.checked=!!o.priorNo;
+  const p=document.getElementById('nfProspect'); if(p)p.value=o.prospect||'';
+}
+let nfTimer=null;
+function noteAutosave(){
+  clearTimeout(nfTimer);
+  nfTimer=setTimeout(function(){ nfSet(NF_CUR, JSON.stringify(noteGather())); const s=document.getElementById('nfStatus'); if(s){s.textContent='Saved ✓'; setTimeout(function(){ if(s.textContent==='Saved ✓') s.textContent=''; },1500);} },350);
+}
+function noteRefreshSaved(){
+  let idx=[]; try{idx=JSON.parse(nfGet(NF_IDX)||'[]')}catch(e){}
+  const sel=document.getElementById('nfSaved'); if(!sel)return;
+  sel.innerHTML='<option value="">Saved calls…</option>'+idx.map(n=>'<option>'+n.replace(/</g,'&lt;')+'</option>').join('');
+}
+function noteSaveAs(){
+  const o=noteGather(); let name=(o.prospect||'').trim();
+  if(!name){ name=(prompt('Name this call (prospect / company):')||'').trim(); if(!name)return; const p=document.getElementById('nfProspect'); if(p)p.value=name; o.prospect=name; }
+  nfSet(NF_NOTE(name), JSON.stringify(o));
+  let idx=[]; try{idx=JSON.parse(nfGet(NF_IDX)||'[]')}catch(e){}
+  if(idx.indexOf(name)<0){ idx.push(name); nfSet(NF_IDX, JSON.stringify(idx)); }
+  nfSet(NF_CUR, JSON.stringify(o));
+  noteRefreshSaved(); const sel=document.getElementById('nfSaved'); if(sel)sel.value=name;
+  const s=document.getElementById('nfStatus'); if(s){ s.textContent='Saved “'+name+'”'; setTimeout(function(){ s.textContent=''; },2000); }
+}
+function noteLoadSelected(){
+  const sel=document.getElementById('nfSaved'); const name=sel?sel.value:''; if(!name)return;
+  let o={}; try{o=JSON.parse(nfGet(NF_NOTE(name))||'{}')}catch(e){}
+  noteApply(o); nfSet(NF_CUR, JSON.stringify(o));
+}
+function noteNew(){
+  if(!confirm('Clear the note page for a new call? (Your saved calls are kept.)'))return;
+  noteApply({}); nfSet(NF_CUR, JSON.stringify({})); const sel=document.getElementById('nfSaved'); if(sel)sel.value='';
+}
+function notePrintFilled(){
+  const o=noteGather();
+  const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  const css=`@page{size:landscape;margin:0.4in} *{box-sizing:border-box;margin:0;padding:0} body{font-family:-apple-system,Helvetica,Arial,sans-serif;color:#10233f}
+  .h{display:flex;justify-content:space-between;border-bottom:2.5px solid #FF2257;padding-bottom:6px;margin-bottom:10px}.h b{font-family:Georgia,serif;font-size:16px}.h span{font-size:11px;color:#666}
+  .g{display:grid;grid-template-columns:1.7fr 1fr;gap:16px}.sec{font-size:9px;letter-spacing:2px;color:#FF2257;font-weight:700;text-transform:uppercase;margin-bottom:6px}
+  .bt{margin-bottom:9px}.bt .l{font-size:11px;font-weight:700}.bt .l .n{background:#FF2257;color:#fff;border-radius:50%;display:inline-block;width:15px;height:15px;text-align:center;line-height:15px;font-size:9px;margin-right:6px}
+  .bt .p{font-size:9.5px;color:#666;font-style:italic;margin:1px 0 2px 21px}.v{margin-left:21px;font-size:11.5px;min-height:16px;border-bottom:1px solid #e3e8ef;padding-bottom:3px;white-space:pre-wrap}
+  .bx{border:1px solid #c9d2dd;border-radius:6px;padding:7px 9px;margin-bottom:9px}.bx .t{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:3px}.bx .v2{font-size:11.5px;min-height:14px;white-space:pre-wrap}
+  .bot{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:4px}`;
+  const beat=b=>'<div class="bt"><div class="l"><span class="n">'+b[1]+'</span>'+b[2]+'</div><div class="p">'+esc(b[3])+'</div><div class="v">'+esc(o[b[0]])+'</div></div>';
+  const prior=(o.priorYes?'☑':'☐')+' Has prior PR &nbsp; '+(o.priorNo?'☑':'☐')+' None yet';
+  const body='<div class="h"><b>CALL 1 v6 · '+(esc(o.prospect)||'NOTE PAGE')+'</b><span>Story Group</span></div>'+
+    '<div class="g"><div><div class="sec">Sales Process</div>'+NF_BEATS.map(beat).join('')+'</div>'+
+    '<div>'+
+      '<div class="bx"><span class="t">Name</span><div class="v2">'+esc(o.name)+'</div></div>'+
+      '<div class="bx"><span class="t">Background / Notes &nbsp; '+prior+'</span><div class="v2">'+esc(o.background)+'</div></div>'+
+      '<div class="bx"><span class="t">Pitch Customization</span><div class="v2"><b>7XA:</b> '+esc(o.pc1)+'<br><b>FNB:</b> '+esc(o.pc2)+'<br><b>PB:</b> '+esc(o.pc3)+'<br><b>E&amp;A:</b> '+esc(o.pc4)+'</div></div>'+
+    '</div></div>'+
+    '<div class="bot"><div class="bx"><span class="t">Powerful Language</span><div class="v2">'+esc(o.powerful)+'</div></div>'+
+    '<div class="bx"><span class="t">Transition Thoughts</span><div class="v2">'+esc(o.transition)+'</div></div></div>';
+  const w=window.open('','_blank'); if(!w){alert('Allow pop-ups to print the note.');return;}
+  w.document.write('<!doctype html><html><head><title>Call 1 Note — '+(esc(o.prospect)||'Untitled')+'</title><style>'+css+'</style></head><body>'+body+'</body></html>');
+  w.document.close(); w.focus(); setTimeout(function(){ w.print(); },350);
+}
+(function(){
+  const tb=document.getElementById('noteToolbar'); if(tb)tb.innerHTML=noteToolbar();
+  const np=document.getElementById('notePreview'); if(np)np.innerHTML=noteSheetInner();
+  noteRefreshSaved();
+  let cur={}; try{cur=JSON.parse(nfGet(NF_CUR)||'{}')}catch(e){}
+  noteApply(cur);
+})();
+
+/* ---------------- SCORECARD ---------------- */
+const SCORE=[
+  {cat:'Open (15)', items:[
+    ['Led with your own grounded energy; kept rapport short',3],
+    ['Leadership move — got them to commit attention / grab a pen',3],
+    ['Delivered the Frame and got an explicit Cole Gordon \u201cyes\u201d to a Call 2',5],
+    ['Case study opener with a real matched case + 2 real metrics',4],
+  ]},
+  {cat:'Discovery discipline (10)', items:[
+    ['Stayed problem-first \u2014 did NOT open with goals',4],
+    ['Pure listening \u2014 no coaching/reframing/teaching before the close',3],
+    ['Used silence (2\u20134s) after questions',3],
+  ]},
+  {cat:'The 7 beats (40)', items:[
+    ['Beat 1 \u2014 ran \u201canything else?\u201d until they settled + read the prospect pattern right',6],
+    ['Beat 2 \u2014 got \u22652 specific examples and chunked down by metric',6],
+    ['Beat 3 \u2014 surfaced the DM AND banded the budget without naming a tier or price',8],
+    ['Beat 4 \u2014 captured their own theory of why past attempts failed (verbatim)',6],
+    ['Beat 5 \u2014 ran the double-pump and captured the emotional cost',8],
+    ['Beat 6 \u2014 got the goal + the personal NMG (verbatim)',6],
+  ]},
+  {cat:'Close (25)', items:[
+    ['Tie-down recap in their own words; they confirmed',4],
+    ['Trial commit \u2014 asked the 2-week decision question',5],
+    ['Partner \u2014 pinned the DM onto Call 2 (or ran D-12)',5],
+    ['Call 2 preview + named ONE outlet you genuinely believe is achievable',5],
+    ['Loom committed + Call 2 booked within 4\u20137 days',6],
+  ]},
+  {cat:'Post-call (10)', items:[
+    ['Loom sent within 15 minutes',3],
+    ['Confirmation email within 60 minutes',3],
+    ['All 4 pitch-customization slots filled (7XA / FNB / PB / E&A)',4],
+  ]},
+];
+const SCORE_FAILS=[
+  'Named a tier or quoted a tier price on Call 1 (Price Rule violation)',
+  'Agreed to pitch on Call 2 without decision-maker access',
+  'Skipped the Cole Gordon Call-2 frame',
+  'Pivoted discovery into a pitch during Call 1',
+];
+(function(){
+  const wrap=document.getElementById('scoreItems');
+  wrap.innerHTML=SCORE.map(c=>'<div class="sc-cat"><h3>'+c.cat+'</h3>'+c.items.map(it=>
+    '<label class="sc-item"><input type="checkbox" class="sc-chk" data-pts="'+it[1]+'" onchange="updateScore()"><span class="sc-lbl">'+it[0]+'</span><span class="sc-pts">'+it[1]+' pt'+(it[1]>1?'s':'')+'</span></label>').join('')+'</div>').join('');
+  document.getElementById('scoreFails').innerHTML=SCORE_FAILS.map(x=>
+    '<label class="sc-item fail"><input type="checkbox" class="sc-flag-chk" onchange="updateScore()"><span class="sc-lbl">'+x+'</span></label>').join('');
+  updateScore();
+})();
+function updateScore(){
+  let s=0; document.querySelectorAll('.sc-chk:checked').forEach(c=>s+=+c.dataset.pts);
+  const anyFail=document.querySelectorAll('.sc-flag-chk:checked').length>0;
+  document.getElementById('scoreNum').textContent=s;
+  const bar=document.getElementById('scoreBar'); bar.style.width=s+'%';
+  let band,color;
+  if(s>=85){band='Closer-ready \u2014 book Call 2 with confidence.';color='var(--pink)';}
+  else if(s>=70){band='Solid \u2014 coach the unchecked items before next time.';color='var(--coral)';}
+  else if(s>=50){band='Shaky \u2014 re-drill the beats and the rules.';color='var(--coral)';}
+  else{band='Re-run the methodology from the top.';color='var(--muted)';}
+  bar.style.background=color;
+  const v=document.getElementById('scoreVerdict'); v.textContent=band; v.style.color=color;
+  document.getElementById('scoreFail').style.display=anyFail?'block':'none';
+}
+function resetScore(){document.querySelectorAll('#sec-score input[type=checkbox]').forEach(c=>c.checked=false); updateScore();}
+
+/* ---------------- NAV / SEARCH ---------------- */
+function go(id){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.add('active');
+  document.querySelectorAll('.navbtn').forEach(b=>b.classList.toggle('active', b.dataset.id===id));
+  document.getElementById('main').scrollTo(0,0); window.scrollTo(0,0);
+  if(window.innerWidth<=900){document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('show');}
+}
+function toggleNav(){document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('show');}
+
+function doSearch(q){
+  q=q.trim();
+  if(q.length<2){return;}
+  const ql=q.toLowerCase();
+  const gloss=GLOSS.filter(x=>x[0].toLowerCase().includes(ql)||x[1].toLowerCase().includes(ql));
+  const objs=OBJ.filter(x=>x.q.toLowerCase().includes(ql)||x.a.toLowerCase().includes(ql));
+  const qas=QA.filter(x=>x.q.toLowerCase().includes(ql)||x.a.toLowerCase().includes(ql));
+  const inds=INDUSTRY.filter(x=>x.name.toLowerCase().includes(ql)||JSON.stringify(x).toLowerCase().includes(ql));
+  const cases=CASES.filter(x=>(x.industry+' '+x.title+' '+x.challenge).toLowerCase().includes(ql));
+  document.getElementById('searchTerm').textContent=q;
+  let h='';
+  if(gloss.length){h+='<h2>Terms</h2>'+gloss.map(x=>'<div class="glossitem"><h3>'+x[0]+'</h3><p>'+x[1]+'</p></div>').join('');}
+  if(qas.length){h+='<h2>Expert Q&amp;A</h2>'+qas.map(x=>'<div class="acc" style="padding:18px 22px"><div class="qtxt" style="font-weight:600; margin-bottom:6px">'+x.q+'</div>'+x.a+'</div>').join('');}
+  if(objs.length){h+='<h2>Objections</h2>'+objs.map(x=>'<div class="acc" style="padding:18px 22px"><div class="qtxt" style="font-weight:600; margin-bottom:6px">'+x.q+'</div><span class="saytag you">You say</span>'+x.a+'</div>').join('');}
+  if(inds.length){h+='<h2>Industries</h2>'+inds.map(x=>'<div class="card tight"><h3>'+x.name+'</h3><p class="muted small">'+x.tag+' — open By Industry for the full breakdown.</p></div>').join('');}
+  if(cases.length){h+='<h2>Case Studies</h2>'+cases.slice(0,8).map(caseCard).join('')+(cases.length>8?'<p class="muted small">+'+(cases.length-8)+' more — open Case Studies and filter.</p>':'');}
+  if(!h){h='<p class="nores">Nothing found for "'+q+'". Try a shorter word.</p>';}
+  document.getElementById('searchResults').innerHTML=h;
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('sec-search').classList.add('active');
+  document.querySelectorAll('.navbtn').forEach(b=>b.classList.remove('active'));
+}
+
+// keyboard: arrows for flashcards when on that section
+document.addEventListener('keydown',e=>{
+  if(!document.getElementById('sec-flash').classList.contains('active'))return;
+  if(e.key==='ArrowRight')nextCard(e);
+  if(e.key==='ArrowLeft')prevCard(e);
+  if(e.key===' '){e.preventDefault(); flipCard();}
+});
+</script>
+</body>
+</html>
