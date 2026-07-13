@@ -21,7 +21,7 @@ function loadCaseStudies() {
     if (!m) return '';
     const cases = JSON.parse(m[1]);
     return cases.map(c =>
-      `- [${c.industry}] "${c.title}" — ${(c.metrics || []).map(x => typeof x === 'object' ? `${x.value || x.v || ''} ${x.label || x.l || ''}`.trim() : x).join(', ')}`
+      `- [${c.industry}] "${c.title}" — ${(c.metrics || []).map(x => Array.isArray(x) ? `${x[0]}: ${x[1]}` : String(x)).join('; ')}`
     ).join('\n');
   } catch (e) {
     console.warn('[precall-brief] Case study load failed:', e.message);
