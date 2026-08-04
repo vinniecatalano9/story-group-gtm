@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Story Group · Texting Buyers — Prospect List</title>
+<style>
+  :root{--navy:#00193B;--card:#0D1F3C;--border:#2A3F5F;--body:#E8ECF1;--muted:#8A99B0;--pink:#FF2257;--coral:#FF743F;--green:#7CE3B0;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--navy);color:var(--body);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;font-size:14px;line-height:1.45;}
+  .topbar{height:6px;background:var(--pink);width:100%;}
+  .wrap{max-width:1320px;margin:0 auto;padding:28px 24px 64px;}
+  .logo{font-family:Georgia,serif;font-size:15px;}
+  .logo b{color:var(--pink);font-style:italic;font-weight:700;}
+  .logo span{color:var(--muted);}
+  .accent{width:50px;height:2px;background:var(--pink);margin:8px 0 0;}
+  header h1{font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:30px;margin:14px 0 4px;}
+  header h1 em{color:var(--pink);font-style:italic;}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 16px;}
+  a.back{color:#6FD0FF;text-decoration:none;font-size:12.5px;}
+  a.back:hover{text-decoration:underline;}
+
+  .banner{background:rgba(124,227,176,.10);border:1px solid var(--green);border-radius:6px;padding:10px 14px;font-size:12.5px;color:#CFEEDE;margin:14px 0 6px;}
+  .banner b{color:var(--green);}
+  .legal{background:rgba(255,116,63,.10);border:1px solid var(--coral);border-radius:6px;padding:8px 14px;font-size:11.5px;color:#FFD9C8;margin:0 0 20px;}
+  .legal b{color:var(--coral);}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:0 0 20px;}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:14px 16px;}
+  .kpi .n{font-family:Georgia,serif;color:var(--pink);font-size:26px;line-height:1;}
+  .kpi .l{color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;margin-top:6px;}
+
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 14px;}
+  select,input[type=search]{background:var(--card);border:1px solid var(--border);color:var(--body);padding:9px 11px;border-radius:6px;font-size:13px;outline:none;}
+  input[type=search]{min-width:240px;flex:1;}
+  select:focus,input:focus{border-color:var(--pink);}
+  .btn{background:transparent;border:1px solid var(--border);color:var(--body);padding:9px 14px;border-radius:6px;font-size:13px;cursor:pointer;}
+  .btn:hover{border-color:var(--pink);color:#fff;}
+  .spacer{flex:1;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{position:sticky;top:0;background:#08213f;color:var(--body);text-align:left;padding:10px 12px;border-bottom:2px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap;font-size:11px;text-transform:uppercase;letter-spacing:.05em;}
+  thead th:hover{color:var(--pink);}
+  thead th .arrow{color:var(--pink);font-size:10px;margin-left:4px;}
+  th.num,td.num{text-align:right;}
+  tbody td{padding:9px 12px;border-bottom:1px solid rgba(42,63,95,.5);vertical-align:top;}
+  tbody tr:hover{background:rgba(42,63,95,.28);}
+  td.spend{font-family:Georgia,serif;color:#fff;}
+  td.committee{color:#fff;font-weight:500;}
+  .state-chip{display:inline-block;background:#08213f;border:1px solid var(--border);border-radius:4px;padding:1px 7px;font-size:11px;color:var(--muted);letter-spacing:.04em;}
+  .muted{color:var(--muted);}
+  .empty{padding:40px;text-align:center;color:var(--muted);}
+  footer{margin-top:30px;color:var(--muted);font-size:11px;border-top:.5px solid var(--pink);padding-top:10px;}
+  @media(max-width:880px){.kpis{grid-template-columns:repeat(2,1fr);}}
+  .mainnav{display:flex;flex-wrap:wrap;gap:2px;margin:18px 0 2px;border-bottom:1px solid var(--border);}
+  .mainnav a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:600;padding:9px 16px;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;}
+  .mainnav a:hover{color:var(--body);}
+  .mainnav a.active{color:var(--pink);border-bottom-color:var(--pink);}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="wrap">
+  <div class="logo"><b>story</b><span>group</span></div>
+  <div class="accent"></div>
+  <nav class="mainnav" id="mainnav">
+    <a href="index.html">Expenditure Explorer</a>
+    <a href="vendors-master.html">Vendor List</a>
+    <a href="outreach-ready.html">Outreach-Ready</a>
+    <a href="texting.html">Texting Buyers</a>
+    <a href="video.html">Could Use Video</a>
+    <a href="subvendors.html">Sub-Vendors</a>
+  </nav>
+  <script>(function(){var p=(location.pathname.split('/').pop()||'index.html');document.querySelectorAll('#mainnav a').forEach(function(a){if(a.getAttribute('href')===p)a.classList.add('active');});})();</script>
+  <header>
+    <h1>Texting Buyers — <em>Prospect List</em></h1>
+    <p class="sub">Campaigns already paying SMS / peer-to-peer texting vendors — sophisticated digital buyers, outreach-ready.</p>
+  </header>
+
+  <div class="banner" id="dataBanner"><b>Loading…</b></div>
+  <div class="legal"><b>Before you text:</b> selling your services by SMS is commercial outreach → TCPA + carrier 10DLC rules. Send via a registered/compliant platform, to business contacts, with opt-out in message 1. Not legal advice.</div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="controls">
+    <select id="stateSel"></select>
+    <select id="bandSel">
+      <option value="0">Any spend</option>
+      <option value="5000">≥ $5k</option>
+      <option value="25000">≥ $25k</option>
+      <option value="100000">≥ $100k</option>
+    </select>
+    <input type="search" id="search" placeholder="Search committee or vendor…">
+    <div class="spacer"></div>
+    <button class="btn" id="exportBtn">Export view → CSV</button>
+  </div>
+
+  <div style="overflow:auto;border:1px solid var(--border);border-radius:8px;">
+    <table>
+      <thead><tr id="headRow"></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <footer>STORY GROUP · INTERNAL GTM TOOL · TEXTING-BUYERS SEGMENT — runs in your browser, no upload, no backend.</footer>
+</div>
+
+<script>
+const COLS=[
+  {key:"committee",label:"Committee (Prospect)"},
+  {key:"state",label:"State"},
+  {key:"texting_spend",label:"Texting $",cls:"num"},
+  {key:"texting_items",label:"# Texts",cls:"num"},
+  {key:"top_vendor",label:"Current Texting Vendor"},
+  {key:"total_budget",label:"Total Budget",cls:"num"},
+  {key:"last_date",label:"Last Text"}
+];
+let DATA=[], sortKey="texting_spend", sortDir=-1;
+const fmt=n=>"$"+Math.round(n).toLocaleString();
+const esc=s=>String(s==null?"":s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+function buildFilters(){
+  const states=[...new Set(DATA.map(d=>d.state))].sort();
+  document.getElementById("stateSel").innerHTML='<option value="">All states</option>'+states.map(s=>`<option>${s}</option>`).join("");
+}
+function current(){
+  const st=document.getElementById("stateSel").value;
+  const band=+document.getElementById("bandSel").value;
+  const q=document.getElementById("search").value.trim().toLowerCase();
+  let rows=DATA.filter(d=>(!st||d.state===st)&&d.texting_spend>=band&&(!q||(d.committee+" "+d.vendors).toLowerCase().includes(q)));
+  rows.sort((a,b)=>{let x=a[sortKey],y=b[sortKey];
+    if(typeof x==="number")return (x-y)*sortDir;
+    if(sortKey==="last_date")return (Date.parse(x||0)-Date.parse(y||0))*sortDir;
+    return String(x).localeCompare(String(y))*sortDir;});
+  return rows;
+}
+function render(){
+  const rows=current();
+  const total=rows.reduce((s,d)=>s+d.texting_spend,0);
+  const vendors=new Set(rows.map(d=>d.top_vendor).filter(Boolean));
+  const avg=rows.length?total/rows.length:0;
+  document.getElementById("kpis").innerHTML=[
+    [rows.length.toLocaleString(),"Prospect committees"],
+    [fmt(total),"Total texting spend"],
+    [fmt(avg),"Avg per committee"],
+    [vendors.size,"Texting vendors"]
+  ].map(k=>`<div class="kpi"><div class="n">${k[0]}</div><div class="l">${k[1]}</div></div>`).join("");
+
+  document.getElementById("headRow").innerHTML=COLS.map(c=>`<th class="${c.cls||""}" data-k="${c.key}">${c.label}${sortKey===c.key?`<span class="arrow">${sortDir<0?"▼":"▲"}</span>`:""}</th>`).join("");
+  document.querySelectorAll("th[data-k]").forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=(k==="committee"||k==="state"||k==="top_vendor")?1:-1;}render();});
+
+  const tb=document.getElementById("rows");
+  if(!rows.length){tb.innerHTML='<tr><td colspan="7" class="empty">No matching prospects.</td></tr>';return;}
+  const CAP=400, shown=rows.slice(0,CAP);
+  let html=shown.map(d=>`<tr>
+    <td class="committee">${esc(d.committee)}</td>
+    <td><span class="state-chip">${d.state}</span></td>
+    <td class="num spend">${fmt(d.texting_spend)}</td>
+    <td class="num muted">${d.texting_items}</td>
+    <td>${esc(d.top_vendor)}</td>
+    <td class="num muted">${fmt(d.total_budget)}</td>
+    <td class="muted">${d.last_date||""}</td>
+  </tr>`).join("");
+  if(rows.length>CAP)html+=`<tr><td colspan="7" class="empty">Showing top ${CAP} of ${rows.length.toLocaleString()} — narrow by state / spend / search, or export for the full set.</td></tr>`;
+  tb.innerHTML=html;
+}
+document.getElementById("stateSel").onchange=render;
+document.getElementById("bandSel").onchange=render;
+document.getElementById("search").oninput=render;
+document.getElementById("exportBtn").onclick=()=>{
+  const rows=current();
+  const head=["Committee","State","TextingSpend","NumTexts","CurrentVendor","AllVendors","TotalBudget","LastText"];
+  const csv=[head.join(",")].concat(rows.map(d=>[d.committee,d.state,d.texting_spend,d.texting_items,d.top_vendor,d.vendors,d.total_budget,d.last_date].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(","))).join("\n");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="texting_buyers.csv";a.click();
+};
+(async function(){
+  try{
+    const r=await fetch("data/texting_buyers.json",{cache:"no-store"});
+    DATA=await r.json();
+    const total=DATA.reduce((s,d)=>s+d.texting_spend,0);
+    const states=new Set(DATA.map(d=>d.state)).size;
+    document.getElementById("dataBanner").innerHTML=`<b>${DATA.length.toLocaleString()} campaigns</b> already buying texting · ${fmt(total)} in SMS/P2P spend · ${states} states. Sort, filter, and export for outreach.`;
+    buildFilters();render();
+  }catch(e){
+    document.getElementById("dataBanner").innerHTML='<b>No data.</b> Run <code>node build-texting-buyers.js</code> in expenditure-engine first.';
+  }
+})();
+</script>
+</body>
+</html>

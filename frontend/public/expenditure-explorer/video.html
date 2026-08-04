@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Story Group · Could Use Video</title>
+<style>
+  :root{--navy:#00193B;--card:#0D1F3C;--border:#2A3F5F;--body:#E8ECF1;--muted:#8A99B0;--pink:#FF2257;--coral:#FF743F;--teal:#34E0C4;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--navy);color:var(--body);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;font-size:14px;line-height:1.45;}
+  .topbar{height:6px;background:var(--pink);width:100%;}
+  .wrap{max-width:1400px;margin:0 auto;padding:28px 24px 64px;}
+  .logo{font-family:Georgia,serif;font-size:15px;}
+  .logo b{color:var(--pink);font-style:italic;font-weight:700;}
+  .logo span{color:var(--muted);}
+  .accent{width:50px;height:2px;background:var(--pink);margin:8px 0 0;}
+  header h1{font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:30px;margin:14px 0 4px;}
+  header h1 em{color:var(--pink);font-style:italic;}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 16px;}
+  a.back{color:#6FD0FF;text-decoration:none;font-size:12.5px;}
+  a.back:hover{text-decoration:underline;}
+  .banner{background:rgba(124,227,176,.10);border:1px solid #7CE3B0;border-radius:6px;padding:10px 14px;font-size:12.5px;color:#CFEEDE;margin:14px 0 20px;}
+  .banner b{color:#7CE3B0;}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:0 0 20px;}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:14px 16px;}
+  .kpi .n{font-family:Georgia,serif;color:var(--pink);font-size:26px;line-height:1;}
+  .kpi .l{color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;margin-top:6px;}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 14px;}
+  select,input[type=search]{background:var(--card);border:1px solid var(--border);color:var(--body);padding:9px 11px;border-radius:6px;font-size:13px;outline:none;}
+  input[type=search]{min-width:260px;flex:1;}
+  select:focus,input:focus{border-color:var(--pink);}
+  .btn{background:transparent;border:1px solid var(--border);color:var(--body);padding:9px 14px;border-radius:6px;font-size:13px;cursor:pointer;}
+  .btn:hover{border-color:var(--pink);color:#fff;}
+  .btn.pink{background:var(--pink);border-color:var(--pink);color:#fff;font-weight:600;}
+  .spacer{flex:1;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{position:sticky;top:0;background:#08213f;color:var(--body);text-align:left;padding:10px 12px;border-bottom:2px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap;font-size:11px;text-transform:uppercase;letter-spacing:.05em;}
+  thead th:hover{color:var(--pink);}
+  thead th .arrow{color:var(--pink);font-size:10px;margin-left:4px;}
+  th.num,td.num{text-align:right;}
+  tbody td{padding:9px 12px;border-bottom:1px solid rgba(42,63,95,.5);vertical-align:top;}
+  tbody tr:hover{background:rgba(42,63,95,.28);}
+  td.total{font-family:Georgia,serif;color:#fff;}
+  td.vendor{color:#fff;font-weight:500;}
+  td.clients-list{color:var(--muted);font-size:12px;max-width:300px;}
+  .state-chip{display:inline-block;background:#08213f;border:1px solid var(--border);border-radius:4px;padding:1px 7px;font-size:11px;color:var(--muted);}
+  .svc{display:inline-block;font-size:11px;color:var(--teal);}
+  .lean{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;border:1px solid;font-weight:600;}
+  .lean-R{color:#FF6E92;border-color:#FF6E92;}
+  .lean-D{color:#6FD0FF;border-color:#6FD0FF;}
+  .lean-Mixed{color:#C9A0FF;border-color:#C9A0FF;}
+  .lean-Unknown{color:var(--muted);border-color:var(--border);}
+  .muted{color:var(--muted);}
+  .empty{padding:40px;text-align:center;color:var(--muted);}
+  footer{margin-top:30px;color:var(--muted);font-size:11px;border-top:.5px solid var(--pink);padding-top:10px;}
+  @media(max-width:880px){.kpis{grid-template-columns:repeat(2,1fr);}}
+  .mainnav{display:flex;flex-wrap:wrap;gap:2px;margin:18px 0 2px;border-bottom:1px solid var(--border);}
+  .mainnav a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:600;padding:9px 16px;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;}
+  .mainnav a:hover{color:var(--body);}
+  .mainnav a.active{color:var(--pink);border-bottom-color:var(--pink);}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="wrap">
+  <div class="logo"><b>story</b><span>group</span></div>
+  <div class="accent"></div>
+  <nav class="mainnav" id="mainnav">
+    <a href="index.html">Expenditure Explorer</a>
+    <a href="vendors-master.html">Vendor List</a>
+    <a href="outreach-ready.html">Outreach-Ready</a>
+    <a href="texting.html">Texting Buyers</a>
+    <a href="video.html">Could Use Video</a>
+    <a href="subvendors.html">Sub-Vendors</a>
+  </nav>
+  <script>(function(){var p=(location.pathname.split('/').pop()||'index.html');document.querySelectorAll('#mainnav a').forEach(function(a){if(a.getAttribute('href')===p)a.classList.add('active');});})();</script>
+  <header>
+    <h1>Could Use <em>Video</em></h1>
+    <p class="sub">Firms that run <b>paid media</b> — the ones that need video creative (TV / CTV / digital spots), so they're your potential video clients. Pre-filtered to media firms; same verified-email tools as the Vendor List.</p>
+  </header>
+
+  <div class="banner" id="dataBanner"><b>Loading…</b></div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="controls">
+    <select id="leanSel">
+      <option value="">All leans</option>
+      <option value="R">R-leaning</option>
+      <option value="D">D-leaning</option>
+      <option value="Mixed">Mixed</option>
+      <option value="Unknown">Unknown</option>
+    </select>
+    <select id="svcSel"><option value="">All services</option></select>
+    <select id="sizeSel" title="Campaign volume tier"><option value="">All sizes</option><option value="2-4">Boutique (2-4)</option><option value="5-9">Mid-market (5-9)</option><option value="10-19">Large (10-19)</option><option value="20-99999">Mega (20+)</option></select>
+    <input type="search" id="search" placeholder="Search firm or their clients…">
+    <label style="display:flex;align-items:center;gap:6px;color:var(--body);font-size:13px;cursor:pointer;white-space:nowrap;"><input type="checkbox" id="validOnly" style="accent-color:var(--pink);width:15px;height:15px;"> Named verified emails only <span style="color:var(--muted);">(no info@)</span></label>
+    <div class="spacer"></div>
+    <button class="btn" id="exportBtn">Export all video firms → CSV</button>
+    <button class="btn pink" id="exportValid">Named emails → CSV</button>
+  </div>
+
+  <div style="overflow:auto;border:1px solid var(--border);border-radius:8px;">
+    <table>
+      <thead><tr id="headRow"></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <footer>STORY GROUP · INTERNAL GTM TOOL · MASTER VENDOR LIST — export feeds Apollo/Apify enrichment (contact + email + confirmed affiliation). No backend.</footer>
+</div>
+
+<script>
+const COLS=[
+  {key:"vendor",label:"Vendor / Firm"},
+  {key:"lean",label:"Lean"},
+  {key:"services",label:"Services Sold"},
+  {key:"total",label:"Total Billed",cls:"num"},
+  {key:"clients",label:"# Clients",cls:"num"},
+  {key:"top_clients",label:"Top Clients (who pays them)"},
+  {key:"most_recent",label:"Most Recent"}
+];
+let DATA=[], sortKey="total", sortDir=-1;
+const fmt=n=>"$"+Math.round(n).toLocaleString();
+const esc=s=>String(s==null?"":s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+// role inboxes (info@/contact@…) — deliverable but you don't cold-email them; keep them out of the send list
+const ROLE=/^(info|contact|hello|hi|admin|office|press|media|sales|support|team|inquir|general|connect|orders|careers|holler|partner|hr|biz|win|mail|business|hey|reach|outreach|new\.?business|marketing|pr@|comms)/i;
+const isRole=e=>!!e&&ROLE.test((e.split("@")[0]||""));
+const isPersonalValid=d=>d.email_status==="valid"&&d.email&&!isRole(d.email);
+const sizeOk=(d,sz)=>{if(!sz)return true;const p=sz.split("-");return d.clients>=+p[0]&&d.clients<=+p[1];};
+
+function buildFilters(){
+  const svcs=[...new Set(DATA.flatMap(d=>d.services.split("; ")))].filter(Boolean).sort();
+  document.getElementById("svcSel").innerHTML='<option value="">All services</option>'+svcs.map(s=>`<option>${s}</option>`).join("");
+}
+function current(){
+  const ln=document.getElementById("leanSel").value;
+  const sv=document.getElementById("svcSel").value;
+  const q=document.getElementById("search").value.trim().toLowerCase();
+  const vo=document.getElementById("validOnly").checked;
+  const sz=document.getElementById("sizeSel").value;
+  let rows=DATA.filter(d=>(!ln||d.lean===ln)&&(!sv||d.services.includes(sv))&&(!q||(d.vendor+" "+d.top_clients).toLowerCase().includes(q))&&(!vo||isPersonalValid(d))&&sizeOk(d,sz));
+  rows.sort((a,b)=>{
+    let x=a[sortKey],y=b[sortKey];
+    if(typeof x==="number")return (x-y)*sortDir;
+    if(sortKey==="most_recent")return (Date.parse(x||0)-Date.parse(y||0))*sortDir;
+    return String(x).localeCompare(String(y))*sortDir;
+  });
+  return rows;
+}
+function render(){
+  const rows=current();
+  const total=rows.reduce((s,d)=>s+d.total,0);
+  const r=rows.filter(d=>d.lean==="R").length, dd=rows.filter(d=>d.lean==="D").length;
+  document.getElementById("kpis").innerHTML=[
+    [rows.length.toLocaleString(),"Firms"],
+    [fmt(total),"Total billed"],
+    [r.toLocaleString(),"R-leaning"],
+    [dd.toLocaleString(),"D-leaning"]
+  ].map(k=>`<div class="kpi"><div class="n">${k[0]}</div><div class="l">${k[1]}</div></div>`).join("");
+
+  document.getElementById("headRow").innerHTML=COLS.map(c=>`<th class="${c.cls||""}" data-k="${c.key}">${c.label}${sortKey===c.key?`<span class="arrow">${sortDir<0?"▼":"▲"}</span>`:""}</th>`).join("");
+  document.querySelectorAll("th[data-k]").forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=(k==="total"||k==="clients"||k==="most_recent")?-1:1;}render();});
+
+  const tb=document.getElementById("rows");
+  if(!rows.length){tb.innerHTML='<tr><td colspan="7" class="empty">No matching firms.</td></tr>';return;}
+  const CAP=400, shown=rows.slice(0,CAP);
+  let html=shown.map(d=>`<tr>
+    <td class="vendor">${esc(d.vendor)}${(d.website||d.email)?`<span style="display:block;color:#34E0C4;font-size:11px;margin-top:2px;">${esc(d.website||"")}${d.website&&d.email?" · ":""}${d.email?esc(d.email):""}${d.email?(d.email_status==="valid"?(isRole(d.email)?' <span style="color:#FF743F;font-size:10px;" title="role inbox — not for cold outreach">role</span>':' <span style="color:#7CE3B0;font-weight:700;" title="Clearout-verified, named inbox">✓</span>'):' <span style="color:#8A99B0;" title="not verified yet">·?</span>'):""}</span>`:""}${d.contact_name?`<span style="display:block;color:#FF5C8A;font-size:11px;margin-top:1px;">${esc(d.contact_name)}${d.contact_title?` · ${esc(d.contact_title)}`:""}</span>`:""}</td>
+    <td><span class="lean lean-${d.lean}">${d.lean}</span></td>
+    <td><span class="svc">${esc(d.services)}</span></td>
+    <td class="num total">${fmt(d.total)}</td>
+    <td class="num muted">${d.clients}</td>
+    <td class="clients-list">${esc(d.top_clients)}</td>
+    <td class="muted">${d.most_recent||""}</td>
+  </tr>`).join("");
+  if(rows.length>CAP)html+=`<tr><td colspan="7" class="empty">Showing top ${CAP} of ${rows.length.toLocaleString()} firms — narrow by lean / service / search, or export for the full set.</td></tr>`;
+  tb.innerHTML=html;
+}
+document.getElementById("leanSel").onchange=render;
+document.getElementById("svcSel").onchange=render;
+document.getElementById("search").oninput=render;
+document.getElementById("validOnly").onchange=render;
+document.getElementById("sizeSel").onchange=render;
+// one-click: export ONLY Clearout-verified emails (deliverable send list), personal-first
+document.getElementById("exportValid").onclick=()=>{
+  // PERSONAL only — named inboxes you'd actually cold-email. Role boxes (info@/contact@) are excluded.
+  const rows=current().filter(isPersonalValid).sort((a,b)=>b.total-a.total);
+  if(!rows.length){alert("No personal verified emails in the current view.");return;}
+  const head=["Email","Firm","ContactName","Title","LinkedIn","Phone","Lean","Services","TopClient","Billed","Clients"];
+  const csv=[head.join(",")].concat(rows.map(d=>[d.email,d.vendor,d.contact_name||"",d.apollo_title||d.contact_title||"",d.linkedin_url||"",d.phone||"",d.lean,d.services,(d.top_clients||"").split(" | ")[0],d.total,d.clients].map(v=>`"${String(v==null?"":v).replace(/"/g,'""')}"`).join(","))).join("\n");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="video_named_emails.csv";a.click();
+};
+document.getElementById("exportBtn").onclick=()=>{
+  const rows=current();
+  const head=["Vendor","Lean(inferred)","Services","ServicesDetail","TotalBilled","Clients","TopClients","MostRecent","States","Website","ContactName","ContactTitle","Email","AffiliationConfirmed"];
+  const csv=[head.join(",")].concat(rows.map(d=>[d.vendor,d.lean,d.services,d.services_detail,d.total,d.clients,d.top_clients,d.most_recent,d.states,d.website,d.contact_name,d.contact_title,d.email,d.affiliation_confirmed].map(v=>`"${String(v==null?"":v).replace(/"/g,'""')}"`).join(","))).join("\n");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="video_prospects.csv";a.click();
+};
+(async function(){
+  try{
+    const r=await fetch("data/vendor_master.json",{cache:"no-store"});
+    DATA=(await r.json()).filter(d=>/Media & Ads/.test(d.services||''));
+    const total=DATA.reduce((s,d)=>s+d.total,0);
+    const tagged=DATA.filter(d=>d.lean==="R"||d.lean==="D").length;
+    document.getElementById("dataBanner").innerHTML=`<b>${DATA.length.toLocaleString()} firms</b> (3+ campaigns, or 2+ with a $10k+ book — small-race shops included) · ${fmt(total)} billed · lean inferred for ${tagged.toLocaleString()} from their client mix. Sort by <b>#&nbsp;Clients</b> to rank by campaign volume.`;
+    buildFilters();render();
+  }catch(e){
+    document.getElementById("dataBanner").innerHTML='<b>No data.</b> Run <code>node build-vendor-master.js</code> in expenditure-engine first.';
+  }
+})();
+</script>
+</body>
+</html>

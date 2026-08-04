@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Story Group · Outreach-Ready Contacts</title>
+<style>
+  :root{--navy:#00193B;--card:#0D1F3C;--border:#2A3F5F;--body:#E8ECF1;--muted:#8A99B0;--pink:#FF2257;--coral:#FF743F;--teal:#34E0C4;--green:#7CE3B0;--blue:#6FD0FF;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--navy);color:var(--body);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;font-size:14px;line-height:1.45;}
+  .topbar{height:6px;background:var(--pink);width:100%;}
+  .wrap{max-width:1400px;margin:0 auto;padding:28px 24px 64px;}
+  .logo{font-family:Georgia,serif;font-size:15px;}
+  .logo b{color:var(--pink);font-style:italic;font-weight:700;}
+  .logo span{color:var(--muted);}
+  .accent{width:50px;height:2px;background:var(--pink);margin:8px 0 0;}
+  header h1{font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:30px;margin:14px 0 4px;}
+  header h1 em{color:var(--pink);font-style:italic;}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 16px;}
+  a.back{color:#6FD0FF;text-decoration:none;font-size:12.5px;}
+  a.back:hover{text-decoration:underline;}
+  .banner{background:rgba(124,227,176,.10);border:1px solid #7CE3B0;border-radius:6px;padding:10px 14px;font-size:12.5px;color:#CFEEDE;margin:14px 0 20px;}
+  .banner b{color:#7CE3B0;}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:0 0 20px;}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:14px 16px;cursor:pointer;transition:border-color .15s;}
+  .kpi:hover{border-color:var(--pink);}
+  .kpi.active{border-color:var(--pink);background:#13294a;}
+  .kpi .n{font-family:Georgia,serif;color:var(--pink);font-size:26px;line-height:1;}
+  .kpi .l{color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;margin-top:6px;}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 14px;}
+  select,input[type=search]{background:var(--card);border:1px solid var(--border);color:var(--body);padding:9px 11px;border-radius:6px;font-size:13px;outline:none;}
+  input[type=search]{min-width:240px;flex:1;}
+  select:focus,input:focus{border-color:var(--pink);}
+  .btn{background:transparent;border:1px solid var(--border);color:var(--body);padding:9px 14px;border-radius:6px;font-size:13px;cursor:pointer;}
+  .btn:hover{border-color:var(--pink);color:#fff;}
+  .btn.pink{background:var(--pink);border-color:var(--pink);color:#fff;font-weight:600;}
+  .spacer{flex:1;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{position:sticky;top:0;background:#08213f;color:var(--body);text-align:left;padding:10px 12px;border-bottom:2px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap;font-size:11px;text-transform:uppercase;letter-spacing:.05em;}
+  thead th:hover{color:var(--pink);}
+  thead th .arrow{color:var(--pink);font-size:10px;margin-left:4px;}
+  th.num,td.num{text-align:right;}
+  tbody td{padding:10px 12px;border-bottom:1px solid rgba(42,63,95,.5);vertical-align:top;}
+  tbody tr:hover{background:rgba(42,63,95,.28);}
+  td.total{font-family:Georgia,serif;color:#fff;}
+  td.firm b{color:#fff;font-weight:600;}
+  td.firm .svc{display:block;font-size:11px;color:var(--teal);margin-top:2px;}
+  td.person b{color:#fff;font-weight:600;}
+  td.person .title{display:block;font-size:11px;color:var(--muted);margin-top:1px;}
+  a.email{color:var(--teal);text-decoration:none;}
+  a.email:hover{text-decoration:underline;}
+  a.li{display:inline-block;color:var(--blue);text-decoration:none;border:1px solid var(--blue);border-radius:5px;padding:2px 8px;font-size:11px;font-weight:600;}
+  a.li:hover{background:var(--blue);color:var(--navy);}
+  .pill{display:inline-block;font-size:10px;padding:1px 7px;border-radius:9px;margin-left:6px;border:1px solid;vertical-align:middle;}
+  .pill.ver{color:var(--green);border-color:var(--green);}
+  .pill.guess{color:var(--coral);border-color:var(--coral);}
+  .clients-list{color:var(--muted);font-size:12px;max-width:240px;}
+  .lean{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;border:1px solid;font-weight:600;}
+  .lean-R{color:#FF6E92;border-color:#FF6E92;}
+  .lean-D{color:#6FD0FF;border-color:#6FD0FF;}
+  .lean-Mixed{color:#C9A0FF;border-color:#C9A0FF;}
+  .lean-Unknown{color:var(--muted);border-color:var(--border);}
+  .muted{color:var(--muted);}
+  .empty{padding:40px;text-align:center;color:var(--muted);}
+  footer{margin-top:30px;color:var(--muted);font-size:11px;border-top:.5px solid var(--pink);padding-top:10px;}
+  @media(max-width:880px){.kpis{grid-template-columns:repeat(2,1fr);}}
+  .mainnav{display:flex;flex-wrap:wrap;gap:2px;margin:18px 0 2px;border-bottom:1px solid var(--border);}
+  .mainnav a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:600;padding:9px 16px;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;}
+  .mainnav a:hover{color:var(--body);}
+  .mainnav a.active{color:var(--pink);border-bottom-color:var(--pink);}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="wrap">
+  <div class="logo"><b>story</b><span>group</span></div>
+  <div class="accent"></div>
+  <nav class="mainnav" id="mainnav">
+    <a href="index.html">Expenditure Explorer</a>
+    <a href="vendors-master.html">Vendor List</a>
+    <a href="outreach-ready.html">Outreach-Ready</a>
+    <a href="texting.html">Texting Buyers</a>
+    <a href="video.html">Could Use Video</a>
+    <a href="subvendors.html">Sub-Vendors</a>
+  </nav>
+  <script>(function(){var p=(location.pathname.split('/').pop()||'index.html');document.querySelectorAll('#mainnav a').forEach(function(a){if(a.getAttribute('href')===p)a.classList.add('active');});})();</script>
+  <header>
+    <h1>Outreach <em>Ready</em></h1>
+    <p class="sub">The firms we can actually reach right now — a real named principal with a verified email and/or LinkedIn. This is the list you load into Instantly + HeyReach.</p>
+  </header>
+
+  <div class="banner" id="dataBanner"><b>Loading…</b></div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="controls">
+    <select id="leanSel">
+      <option value="">All leans</option>
+      <option value="R">R-leaning</option>
+      <option value="D">D-leaning</option>
+      <option value="Mixed">Mixed</option>
+      <option value="Unknown">Unknown</option>
+    </select>
+    <input type="search" id="search" placeholder="Search firm, person, or client…">
+    <div class="spacer"></div>
+    <button class="btn pink" id="exportBtn">Export send list → CSV</button>
+  </div>
+
+  <div style="overflow:auto;border:1px solid var(--border);border-radius:8px;">
+    <table>
+      <thead><tr id="headRow"></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <footer>STORY GROUP · INTERNAL GTM TOOL · OUTREACH-READY CONTACTS — verified via own-site mine + Apollo Match. Emails are work addresses; ✓ = Apollo-verified. No backend.</footer>
+</div>
+
+<script>
+const COLS=[
+  {key:"vendor",label:"Firm"},
+  {key:"contact_name",label:"Contact"},
+  {key:"email",label:"Email"},
+  {key:"linkedin_url",label:"LinkedIn"},
+  {key:"lean",label:"Lean"},
+  {key:"top_clients",label:"Top Client"},
+  {key:"total",label:"Billed",cls:"num"}
+];
+let DATA=[], sortKey="total", sortDir=-1, channel="";
+const fmt=n=>"$"+Math.round(n).toLocaleString();
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+// use the Clearout-reconciled email (named-personal or role, but always deliverable), not just Apollo's
+const mailOf=d=>(d.email_status==="valid"&&d.email)?d.email:"";
+
+function current(){
+  const ln=document.getElementById("leanSel").value;
+  const q=document.getElementById("search").value.trim().toLowerCase();
+  let rows=DATA.filter(d=>{
+    if(ln&&d.lean!==ln)return false;
+    if(channel==="email"&&!mailOf(d))return false;
+    if(channel==="linkedin"&&!d.linkedin_url)return false;
+    if(channel==="both"&&!(mailOf(d)&&d.linkedin_url))return false;
+    if(q&&!(d.vendor+" "+d.contact_name+" "+(d.top_clients||"")).toLowerCase().includes(q))return false;
+    return true;
+  });
+  rows.sort((a,b)=>{
+    let x=a[sortKey],y=b[sortKey];
+    if(typeof x==="number")return (x-y)*sortDir;
+    return String(x||"").localeCompare(String(y||""))*sortDir;
+  });
+  return rows;
+}
+function render(){
+  const all=DATA;
+  const emailable=all.filter(d=>mailOf(d)).length, li=all.filter(d=>d.linkedin_url).length, both=all.filter(d=>mailOf(d)&&d.linkedin_url).length;
+  const kpiDefs=[["",all.length,"Reachable contacts"],["email",emailable,"Emailable (Instantly)"],["linkedin",li,"On LinkedIn (HeyReach)"],["both",both,"Both channels"]];
+  document.getElementById("kpis").innerHTML=kpiDefs.map(k=>`<div class="kpi ${channel===k[0]?"active":""}" data-ch="${k[0]}"><div class="n">${k[1]}</div><div class="l">${k[2]}</div></div>`).join("");
+  document.querySelectorAll(".kpi").forEach(el=>el.onclick=()=>{channel=channel===el.dataset.ch?"":el.dataset.ch;render();});
+
+  document.getElementById("headRow").innerHTML=COLS.map(c=>`<th class="${c.cls||""}" data-k="${c.key}">${c.label}${sortKey===c.key?`<span class="arrow">${sortDir<0?"▼":"▲"}</span>`:""}</th>`).join("");
+  document.querySelectorAll("th[data-k]").forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=(k==="total")?-1:1;}render();});
+
+  const rows=current();
+  const tb=document.getElementById("rows");
+  if(!rows.length){tb.innerHTML='<tr><td colspan="7" class="empty">No contacts match.</td></tr>';return;}
+  tb.innerHTML=rows.map(d=>{
+    const em=mailOf(d);
+    const verPill=em?(d.email_status==="valid"?'<span class="pill ver">✓ Clearout</span>':'<span class="pill guess">unverified</span>')+(d.email_role?' <span class="pill guess">role</span>':''):"";
+    const emailCell=em?`<a class="email" href="mailto:${esc(em)}">${esc(em)}</a>${verPill}`:'<span class="muted">—</span>';
+    const liCell=d.linkedin_url?`<a class="li" href="${esc(d.linkedin_url)}" target="_blank" rel="noopener">in ↗</a>`:'<span class="muted">—</span>';
+    return `<tr>
+      <td class="firm"><b>${esc(d.vendor)}</b><span class="svc">${esc(d.services)}</span></td>
+      <td class="person"><b>${esc(d.contact_name)}</b><span class="title">${esc(d.apollo_title||d.contact_title||"")}</span></td>
+      <td>${emailCell}</td>
+      <td>${liCell}</td>
+      <td><span class="lean lean-${d.lean}">${d.lean}</span></td>
+      <td class="clients-list">${esc((d.top_clients||"").split(" | ")[0])}</td>
+      <td class="num total">${fmt(d.total)}</td>
+    </tr>`;
+  }).join("");
+}
+document.getElementById("leanSel").onchange=render;
+document.getElementById("search").oninput=render;
+document.getElementById("exportBtn").onclick=()=>{
+  const rows=current();
+  const head=["Firm","Lean","Services","Billed","Clients","TopClient","ContactName","Title","Email","EmailStatus","LinkedIn","Channel"];
+  const csv=[head.join(",")].concat(rows.map(d=>{
+    const em=mailOf(d), li=d.linkedin_url||"", ch=em&&li?"both":em?"email":"linkedin";
+    return [d.vendor,d.lean,d.services,d.total,d.clients,(d.top_clients||"").split(" | ")[0],d.contact_name,d.apollo_title||d.contact_title||"",em,d.email_status||"",li,ch].map(v=>`"${String(v==null?"":v).replace(/"/g,'""')}"`).join(",");
+  })).join("\n");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="verified_contacts.csv";a.click();
+};
+(async function(){
+  try{
+    const r=await fetch("data/vendor_master.json",{cache:"no-store"});
+    const raw=await r.json();
+    DATA=raw.filter(d=>d.contact_name&&(mailOf(d)||d.linkedin_url)).sort((a,b)=>b.total-a.total);
+    document.getElementById("dataBanner").innerHTML=`<b>${DATA.length} reachable contacts</b> mined from ${raw.length.toLocaleString()} firms · click a stat to filter by channel · these are real named principals, not role inboxes.`;
+    render();
+  }catch(e){
+    document.getElementById("dataBanner").innerHTML='<b>No data.</b> Run the enrichers in expenditure-engine first.';
+  }
+})();
+</script>
+</body>
+</html>

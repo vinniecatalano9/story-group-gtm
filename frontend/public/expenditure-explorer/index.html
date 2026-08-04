@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Story Group · Campaign Expenditure Explorer</title>
+<style>
+  :root{
+    --navy:#00193B; --card:#0D1F3C; --border:#2A3F5F;
+    --body:#E8ECF1; --muted:#8A99B0; --pink:#FF2257; --coral:#FF743F;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--navy); color:var(--body);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    font-size:14px; line-height:1.45;
+  }
+  .topbar{height:6px;background:var(--pink);width:100%;}
+  .wrap{max-width:1280px;margin:0 auto;padding:28px 24px 64px;}
+  header h1{
+    font-family:Georgia,"Times New Roman",serif; font-weight:600;
+    font-size:30px; margin:14px 0 4px;
+  }
+  header h1 em{color:var(--pink);font-style:italic;}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 18px;}
+  .logo{font-family:Georgia,serif;font-size:15px;}
+  .logo b{color:var(--pink);font-style:italic;font-weight:700;}
+  .logo span{color:var(--muted);}
+  .accent{width:50px;height:2px;background:var(--pink);margin:8px 0 0;}
+
+  .banner{
+    background:rgba(255,116,63,.12); border:1px solid var(--coral);
+    border-radius:6px; padding:10px 14px; font-size:12.5px; color:#FFD9C8;
+    margin:0 0 20px; display:flex; gap:8px; align-items:center;
+  }
+  .banner b{color:var(--coral);}
+  .banner.live{background:rgba(124,227,176,.10);border-color:#7CE3B0;color:#CFEEDE;}
+  .banner.live b{color:#7CE3B0;}
+
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:0 0 20px;}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:14px 16px;}
+  .kpi .n{font-family:Georgia,serif;color:var(--pink);font-size:26px;line-height:1;}
+  .kpi .l{color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;margin-top:6px;}
+  .kpi .s{color:var(--body);font-size:12px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 14px;}
+  select,input[type=search]{
+    background:var(--card);border:1px solid var(--border);color:var(--body);
+    padding:9px 11px;border-radius:6px;font-size:13px;outline:none;
+  }
+  input[type=search]{min-width:240px;flex:1;}
+  select:focus,input:focus{border-color:var(--pink);}
+  .btn{
+    background:transparent;border:1px solid var(--border);color:var(--body);
+    padding:9px 14px;border-radius:6px;font-size:13px;cursor:pointer;
+  }
+  .btn:hover{border-color:var(--pink);color:#fff;}
+  .btn.pink{background:var(--pink);border-color:var(--pink);color:#fff;font-weight:600;}
+  .btn.pink:hover{background:#e01347;}
+  .spacer{flex:1;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{
+    position:sticky;top:0;background:#08213f;color:var(--body);
+    text-align:left;padding:10px 12px;border-bottom:2px solid var(--border);
+    cursor:pointer;user-select:none;white-space:nowrap;font-size:11px;
+    text-transform:uppercase;letter-spacing:.05em;
+  }
+  thead th:hover{color:var(--pink);}
+  thead th .arrow{color:var(--pink);font-size:10px;margin-left:4px;}
+  th.num,td.num{text-align:right;}
+  tbody td{padding:9px 12px;border-bottom:1px solid rgba(42,63,95,.5);vertical-align:top;}
+  tbody tr:hover{background:rgba(42,63,95,.28);}
+  td.amt{font-family:Georgia,serif;color:#fff;}
+  .state-chip{
+    display:inline-block;background:#08213f;border:1px solid var(--border);
+    border-radius:4px;padding:1px 7px;font-size:11px;color:var(--muted);letter-spacing:.04em;
+  }
+  .cat{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;border:1px solid;}
+  .cat-media{color:#FF9D7A;border-color:#FF9D7A;}
+  .cat-digital{color:#6FD0FF;border-color:#6FD0FF;}
+  .cat-mail{color:#C9A0FF;border-color:#C9A0FF;}
+  .cat-consult{color:#FF6E92;border-color:#FF6E92;}
+  .cat-poll{color:#7CE3B0;border-color:#7CE3B0;}
+  .cat-fund{color:#FFD56B;border-color:#FFD56B;}
+  .cat-text{color:#34E0C4;border-color:#34E0C4;}
+  .cat-other{color:var(--muted);border-color:var(--border);}
+  .payee{color:#fff;font-weight:500;}
+  .muted{color:var(--muted);}
+  .empty{padding:40px;text-align:center;color:var(--muted);}
+
+  details{margin-top:26px;border-top:1px solid var(--border);padding-top:16px;}
+  details summary{cursor:pointer;color:var(--pink);font-size:13px;}
+  details a{color:#6FD0FF;}
+  details li{margin:4px 0;color:var(--muted);font-size:12.5px;}
+  footer{margin-top:30px;color:var(--muted);font-size:11px;border-top:.5px solid var(--pink);padding-top:10px;}
+  .tabs{display:flex;gap:4px;margin:0 0 16px;border-bottom:1px solid var(--border);}
+  .tab{padding:9px 16px;font-size:13px;color:var(--muted);cursor:pointer;border:1px solid transparent;border-bottom:none;border-radius:6px 6px 0 0;}
+  .tab:hover{color:var(--body);}
+  .tab.active{color:#fff;background:var(--card);border-color:var(--border);border-bottom:2px solid var(--pink);margin-bottom:-1px;}
+  .strong{color:#fff;font-weight:500;}
+  #kpis{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));}
+  tbody tr.clickrow{cursor:pointer;}
+  .drill-overlay{display:none;position:fixed;inset:0;background:rgba(0,8,20,.72);z-index:100;padding:40px 20px;overflow:auto;}
+  .drill-overlay.open{display:flex;align-items:flex-start;justify-content:center;}
+  .drill-panel{background:var(--navy);border:1px solid var(--border);border-radius:10px;max-width:1040px;width:100%;padding:20px 24px;box-shadow:0 24px 70px rgba(0,0,0,.55);}
+  .drill-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+  #drillTitle{font-family:Georgia,serif;font-size:20px;color:#fff;}
+  #drillSub{color:var(--muted);font-size:12px;margin-top:2px;}
+  @media(max-width:880px){.kpis{grid-template-columns:repeat(2,1fr);}}
+  .mainnav{display:flex;flex-wrap:wrap;gap:2px;margin:18px 0 2px;border-bottom:1px solid var(--border);}
+  .mainnav a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:600;padding:9px 16px;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;}
+  .mainnav a:hover{color:var(--body);}
+  .mainnav a.active{color:var(--pink);border-bottom-color:var(--pink);}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="wrap">
+  <div class="logo"><b>story</b><span>group</span></div>
+  <div class="accent"></div>
+  <nav class="mainnav" id="mainnav">
+    <a href="index.html">Expenditure Explorer</a>
+    <a href="vendors-master.html">Vendor List</a>
+    <a href="outreach-ready.html">Outreach-Ready</a>
+    <a href="texting.html">Texting Buyers</a>
+    <a href="video.html">Could Use Video</a>
+    <a href="subvendors.html">Sub-Vendors</a>
+  </nav>
+  <script>(function(){var p=(location.pathname.split('/').pop()||'index.html');document.querySelectorAll('#mainnav a').forEach(function(a){if(a.getAttribute('href')===p)a.classList.add('active');});})();</script>
+  <header>
+    <h1>Campaign <em>Expenditure Explorer</em></h1>
+    <p class="sub">Who campaigns pay, what for, and how much — across 27 live states. Switch views and sort any column. Use the tabs above to jump to the vendor list, your outreach contacts, and the texting / sub-vendor segments.</p>
+  </header>
+
+  <div class="banner" id="dataBanner">
+    <b>SAMPLE DATA</b><span>— 25 illustrative rows so you can see the UX. Load a real state export (CSV/JSON) to replace it. Names below are fictional.</span>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-view="expenditures">Expenditures</div>
+    <div class="tab" data-view="buyers">Buyers · Committees</div>
+    <div class="tab" data-view="vendors">Vendors · Firms</div>
+  </div>
+
+  <div class="controls">
+    <select id="stateSel"></select>
+    <select id="catSel"></select>
+    <input type="search" id="search" placeholder="Search consultant, committee, or purpose…">
+    <div class="spacer"></div>
+    <button class="btn" id="exportBtn">Export view → CSV</button>
+    <label class="btn" for="fileInput" style="margin:0;">Load file…</label>
+    <input type="file" id="fileInput" accept=".csv,.json" style="display:none;">
+    <button class="btn" id="resetBtn">Reset to sample</button>
+  </div>
+
+  <div class="muted" style="font-size:11px;margin:0 0 10px;">↳ Tip: on <b style="color:var(--body)">Buyers</b> or <b style="color:var(--body)">Vendors</b>, click any row to see its exact transactions.</div>
+  <div style="overflow:auto;border:1px solid var(--border);border-radius:8px;">
+    <table>
+      <thead><tr id="headRow"></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <details>
+    <summary>Where to download real expenditure data (Tier-1 states — bulk file or API)</summary>
+    <ul>
+      <li>Texas — <a href="https://www.ethics.texas.gov/data-reports/campaign-finance/" target="_blank">TEC full CSV database</a> (payee + purpose)</li>
+      <li>Virginia — <a href="https://apps.elections.virginia.gov/SBE_CSV/CF/" target="_blank">SBE Schedule D yearly CSV</a></li>
+      <li>Washington — <a href="https://data.wa.gov" target="_blank">PDC on data.wa.gov</a> (Socrata API, expense codes)</li>
+      <li>Pennsylvania — <a href="https://www.pa.gov/agencies/dos/resources/voting-and-elections-resources/campaign-finance-data" target="_blank">DOS Full Export (Expenses CSV)</a></li>
+      <li>Florida — <a href="https://dos.elections.myflorida.com/campaign-finance/expenditures/" target="_blank">Div. of Elections</a> (tab-delimited export)</li>
+      <li>Ohio · California · Colorado · Illinois · Michigan · Minnesota · NY — all bulk CSV (see the 50-state map).</li>
+    </ul>
+    <p class="muted" style="font-size:12px;">Loader auto-maps common headers (payee/vendor/recipient → Consultant, purpose/description → Purpose, committee/filer/candidate → Paid By, amount, date). Messy exports may need a quick column tidy first.</p>
+  </details>
+
+  <div id="drill" class="drill-overlay" onclick="if(event.target===this)closeDrill()">
+    <div class="drill-panel">
+      <div class="drill-head"><div><div id="drillTitle"></div><div id="drillSub"></div></div><button class="btn" onclick="closeDrill()">✕ Close</button></div>
+      <div id="drillBody" style="overflow:auto;max-height:62vh;margin-top:14px;"></div>
+    </div>
+  </div>
+
+  <footer>STORY GROUP · INTERNAL GTM TOOL · CAMPAIGN EXPENDITURE EXPLORER — runs entirely in your browser, no upload, no backend.</footer>
+</div>
+
+<script>
+const SAMPLE = [
+  ["TX","Friends of Mark Halloran","Lone Star Media Group","Television ad buy",145000,"2026-03-12"],
+  ["TX","Texans for Dana Wills","Redline Digital LLC","Digital advertising",38500,"2026-04-02"],
+  ["VA","Carter for Senate","Old Dominion Strategies","General consulting",22000,"2026-05-01"],
+  ["VA","Friends of Beth Compton","Commonwealth Mail Co.","Direct mail printing",17850,"2026-04-18"],
+  ["WA","Committee to Elect Ryan Park","Cascade Public Affairs","Communications consulting",12500,"2026-05-09"],
+  ["WA","Evergreen Values PAC","Summit Media Partners","Media buy - cable",64000,"2026-03-28"],
+  ["CA","Nguyen for Assembly","Golden State Digital","Online advertising / social",41200,"2026-04-22"],
+  ["CA","Taxpayers for Reform","Pacific Strategy Group","Political consulting",30000,"2026-02-15"],
+  ["FL","Friends of Carlos Mendez","Sunshine Media Buying","Broadcast advertising",98000,"2026-05-14"],
+  ["FL","Liberty First PAC","Gulf Coast Mail","Direct mail",26500,"2026-04-30"],
+  ["PA","Keystone Forward","Liberty Bell Communications","PR / earned media consulting",15000,"2026-05-06"],
+  ["PA","Friends of Tom Reilly","Three Rivers Polling","Survey research",19500,"2026-03-19"],
+  ["OH","Buckeye Patriots PAC","Midwest Media Group","TV ad production",52000,"2026-04-11"],
+  ["OH","Mahoney for Congress","Capitol Digital Partners","Programmatic ads",28750,"2026-05-02"],
+  ["CO","Coloradans for Liberty","Rocky Mountain Strategies","Campaign consulting",24000,"2026-04-07"],
+  ["CO","Friends of Sarah Kline","Front Range Mail","Mail program",13200,"2026-05-11"],
+  ["TX","Lone Star Leadership PAC","Brazos Public Relations","Media relations / PR",18000,"2026-05-20"],
+  ["VA","Old Dominion PAC","Capitol Hill Digital","Email & SMS program",9800,"2026-05-18"],
+  ["WA","Friends of Lisa Tran","Northwest Polling Co.","Polling",14500,"2026-04-25"],
+  ["CA","Reform California","Bayfront Media","Radio advertising",22300,"2026-03-30"],
+  ["FL","Friends of Dale Whitman","Peninsula Strategy","Fundraising consulting",11000,"2026-04-14"],
+  ["PA","Commonwealth Conservatives","Allegheny Advertising","Digital video ads",33500,"2026-05-08"],
+  ["OH","Friends of Greg Salinas","Lake Erie Communications","Press / comms consulting",16750,"2026-05-15"],
+  ["CO","Mountain West PAC","Mile High Media","Cable TV buy",47000,"2026-03-22"],
+  ["TX","Friends of Priya Anand","Capitol Consulting Group","General political consulting",27500,"2026-04-28"]
+].map(r=>({state:r[0],paid_by:r[1],payee:r[2],purpose:r[3],amount:r[4],date:r[5]}));
+
+const chip=s=>`<span class="state-chip">${s}</span>`;
+const catTag=c=>`<span class="cat ${CAT_CLASS[c]||"cat-other"}">${c}</span>`;
+const normV=s=>(s||"").toUpperCase().replace(/[.,]/g,"").replace(/\s+/g," ").replace(/\s+(LLC|INC|INCORPORATED|CO|LP|LTD|PLLC|LLP|GROUP)$/,"").trim();
+const topKey=o=>{let bk="",bv=-1;for(const k in o){if(o[k]>bv){bv=o[k];bk=k;}}return bk;};
+
+function aggBuyers(f){
+  const m={};
+  f.forEach(d=>{
+    const o=m[d.paid_by]||(m[d.paid_by]={committee:d.paid_by,state:d.state,spend:0,items:0,cat:{},vend:{},last_date:""});
+    o.spend+=d.amount;o.items++;
+    o.cat[d.category]=(o.cat[d.category]||0)+d.amount;
+    if(d.payee)o.vend[d.payee]=(o.vend[d.payee]||0)+d.amount;
+    if((d.date||"")>o.last_date)o.last_date=d.date;
+  });
+  return Object.values(m).map(o=>({committee:o.committee,state:o.state,spend:o.spend,items:o.items,top_category:topKey(o.cat),top_vendor:topKey(o.vend),last_date:o.last_date}));
+}
+// keep the Vendors view to real consultant firms — exclude infra/banks, media outlets, committees &
+// candidates, commodity vendors, and the texting/data PLATFORMS themselves (mirrors build-vendor-master.js)
+const NF_INFRA=/\b(USPS|POSTAL|POSTMASTER|\bUPS\b|FEDEX|GOOGLE|META|FACEBOOK|INSTAGRAM|YOUTUBE|AMAZON|MICROSOFT|\bAPPLE\b|STRIPE|PAYPAL|\bSQUARE\b|VENMO|ACTBLUE|ACT BLUE|WINRED|ANEDOT|NATIONBUILDER|NGP ?VAN|EVERYACTION|MAILCHIMP|CONSTANT CONTACT|SQUARESPACE|\bWIX\b|GODADDY|\bZOOM\b|ADOBE|DOCUSIGN|INTUIT|QUICKBOOKS|AMERICAN EXPRESS|\bVISA\b|MASTERCARD|WELLS FARGO|\bCHASE\b|BANK OF AMERICA|CITIBANK|CAPITAL ONE|STAPLES|OFFICE DEPOT|COSTCO|WALMART|\bUBER\b|\bLYFT\b|MARRIOTT|HILTON|VERIZON|AT&T|T-MOBILE|COMCAST|XFINITY|SPECTRUM|VISTAPRINT|TRADE DESK|SIMPLI\.?FI|TABOOLA|POSTAGE|BILL\.COM|CARD PURCHASE)\b/i;
+const NF_OUTLET=/\b(CBS|NBC|\bABC\b|FOX NEWS|ESPN|UNIVISION|TELEMUNDO|IHEART|CUMULUS|SINCLAIR|NEXSTAR|TEGNA|HEARST|SCRIPPS|AUDACY|DIRECTV|\bDISH\b|\bHULU\b|\bROKU\b|NETFLIX|SIRIUSXM|PANDORA|SPOTIFY|\bNPR\b|\bPBS\b|GANNETT|POLITICO|AXIOS|OUTFRONT|\bLAMAR\b|CLEAR CHANNEL|OUTDOOR ADVERTISING|BILLBOARD)\b|\b[KW][A-Z]{2,3}(-TV|-AM|-FM|-DT|-CD|-LD)\b|-TV\b|-FM\b/i;
+const NF_CMTE=/\(I\)|\(I\/E\)|\(IE\)|FRIENDS OF|COMMITTEE TO ELECT|RE-?ELECT|CITIZENS FOR|NEIGHBORS FOR|VOTERS FOR|\bFOR (GOVERNOR|SENATE|CONGRESS|ASSEMBLY|MAYOR|ATTORNEY|LIEUTENANT|TREASURER|SECRETARY|CONTROLLER|COUNCIL|SUPERVISOR|SHERIFF|JUDGE|DISTRICT ATTORNEY|STATE|COUNTY|CITY|SCHOOL|PRESIDENT)\b|NON-?ITEMIZED|UNITEMIZED|PETTY CASH|MISCELLANEOUS|ANONYMOUS|\b(DEMOCRATIC|REPUBLICAN)\b[^,]*\b(PARTY|COMMITTEE|CAUCUS)\b|CENTRAL COMMITTEE|\b(DCCC|DSCC|NRCC|NRSC|RNC|DNC|RGA|DGA)\b|BALLOT (MEASURE|FUND)|YES ON|\bNO ON\b|PROP(OSITION)? ?\d|REPRODUCTIVE FREEDOM|WORKING FAMILIES FUND|DEMOCRATIC SOCIALISTS|DEPARTMENT OF ELECTIONS|,\s+(MICHAEL|JOHN|JEFF|TOM|DON|ED|CHRIS|TIM|RANDALL|ANDRAE|MANUEL|ELIZABETH|SCOTT)\b/i;
+const NF_COMMODITY=/\b(PRINT(ING|ERS?)?|MINUTEMAN|FASTSIGNS|SIGNARAMA|\bPRESS\b|SIGNS?|SIGNAGE|BANNERS?|PROMOTIONAL|\bAPPAREL\b|CATERING|RESTAURANT|\bCAFE\b|BRASSERIE|\bGRILL\b|HOTEL|RESORT|BANQUET|\bGOLF\b|COUNTRY CLUB|WINERY|BREWERY|\bDINING\b|STEAKHOUSE|TAVERN|AIRLINES?|\bTRAVEL\b|\bHERTZ\b|GAS STATION|\bRUTTERS\b)\b/i;
+const NF_PLATFORM=/\b(SCALE TO WIN|SWITCHBOARD|RUMBLE ?UP|TATANGO|THRU ?TEXT|GET ?THRU|GETTHRU|TOSKR|\bHUSTLE\b|OPN SESAME|CALL ?HUB|\bSUBTEXT\b|MOBILE COMMONS|PROMPT\.?IO|\bPEERLY\b|\bTWILIO\b|SENDHUB|TEXTUS|SIMPLETEXTING|EZ ?TEXTING|SLICK ?TEXT|PROJECT BROADCAST|CIRCUIT TEXTING|VICTORY TEXT|ADVOTEXT|DTC MESSAGING|\bROBOCENT\b|VOTER PHONES|VICTORY PHONES|STONES.? PHONES|\bRATENOW\b|\bPUBSENT\b|SOLIDARITY SOFTWARE|TEXTING ?(4|FOR) ?LESS|\bI ?360\b|\bCATALIST\b|TARGETSMART|STERLING DATA)\b/i;
+function isFirmPayee(p){return p && !NF_INFRA.test(p) && !NF_OUTLET.test(p) && !NF_CMTE.test(p) && !NF_COMMODITY.test(p) && !NF_PLATFORM.test(p);}
+function aggVendors(f){
+  const m={};
+  f.forEach(d=>{
+    const k=normV(d.payee);if(!k||!isFirmPayee(d.payee))return;
+    const o=m[k]||(m[k]={vendor:d.payee,paid:0,cl:new Set(),st:new Set(),cat:{},last_date:""});
+    o.paid+=d.amount;o.cl.add(d.paid_by);o.st.add(d.state);
+    o.cat[d.category]=(o.cat[d.category]||0)+d.amount;
+    if((d.date||"")>o.last_date)o.last_date=d.date;
+  });
+  return Object.values(m).map(o=>({vendor:o.vendor,paid:o.paid,clients:o.cl.size,states:o.st.size,top_category:topKey(o.cat),last_date:o.last_date}));
+}
+
+const VIEWS={
+  expenditures:{ rows:f=>f, sort:"amount", dir:-1, cols:[
+    {key:"state",label:"State",cell:d=>chip(d.state)},
+    {key:"payee",label:"Vendor (Payee)",cls:"strong",cell:d=>esc(d.payee)},
+    {key:"category",label:"Category",cell:d=>catTag(d.category)},
+    {key:"purpose",label:"Purpose",cls:"muted",cell:d=>esc(d.purpose)},
+    {key:"paid_by",label:"Paid By (Committee)",cell:d=>esc(d.paid_by)},
+    {key:"amount",label:"Amount",num:true,cls:"amt",cell:d=>fmt(d.amount)},
+    {key:"date",label:"Date",cls:"muted",cell:d=>d.date||""}
+  ]},
+  buyers:{ rows:aggBuyers, sort:"spend", dir:-1, cols:[
+    {key:"committee",label:"Committee (Prospect)",cls:"strong",cell:d=>esc(d.committee)},
+    {key:"state",label:"State",cell:d=>chip(d.state)},
+    {key:"spend",label:"Spend (shown)",num:true,cls:"amt",cell:d=>fmt(d.spend)},
+    {key:"items",label:"# Items",num:true,cls:"muted",cell:d=>d.items},
+    {key:"top_category",label:"Top Category",cell:d=>catTag(d.top_category)},
+    {key:"top_vendor",label:"Top Vendor",cell:d=>esc(d.top_vendor)},
+    {key:"last_date",label:"Last Activity",cls:"muted",cell:d=>d.last_date||""}
+  ]},
+  vendors:{ rows:aggVendors, sort:"paid", dir:-1, cols:[
+    {key:"vendor",label:"Vendor / Firm",cls:"strong",cell:d=>esc(d.vendor)},
+    {key:"paid",label:"$ Paid (shown)",num:true,cls:"amt",cell:d=>fmt(d.paid)},
+    {key:"clients",label:"# Clients",num:true,cls:"muted",cell:d=>d.clients},
+    {key:"states",label:"# States",num:true,cls:"muted",cell:d=>d.states},
+    {key:"top_category",label:"Top Category",cell:d=>catTag(d.top_category)},
+    {key:"last_date",label:"Last Activity",cls:"muted",cell:d=>d.last_date||""}
+  ]}
+};
+
+function categorize(p){
+  const s=(p||"").toLowerCase();
+  if(/\b(sms|p2p|mms|text|texts|texting|robotext)\b|peer.?to.?peer|mass text|text blast/.test(s)) return "Texting";
+  if(/poll|survey|research/.test(s)) return "Polling";
+  if(/mail|postage|print/.test(s)) return "Direct Mail";
+  if(/digital|online|web|social|email|seo|programmatic/.test(s)) return "Digital";
+  if(/media|advertis|tv|television|radio|broadcast|cable|video|commercial/.test(s)) return "Media & Ads";
+  if(/fundrais|finance|call time/.test(s)) return "Fundraising";
+  if(/consult|strateg|public relations|\bpr\b|comms|communication|advis/.test(s)) return "Consulting";
+  return "Other";
+}
+const CAT_CLASS={"Media & Ads":"cat-media","Digital":"cat-digital","Direct Mail":"cat-mail","Consulting":"cat-consult","Polling":"cat-poll","Fundraising":"cat-fund","Texting":"cat-text","Other":"cat-other"};
+
+let DATA=[], isSample=true, viewKey="expenditures";
+
+function load(rows,sample,persist){
+  DATA=rows.map(r=>({...r,amount:Number(r.amount)||0,category:r.category||categorize(r.purpose)}));
+  isSample=!!sample;
+  const b=document.getElementById("dataBanner");
+  if(sample){b.className="banner";b.innerHTML='<b>SAMPLE DATA</b><span>— 25 illustrative rows so you can see the UX. Load a real state export (CSV/JSON) to replace it. Names below are fictional.</span>';b.style.display="flex";}
+  else{b.style.display="none";}
+  buildFilters(); render();
+  if(persist){ try{localStorage.setItem("expData",JSON.stringify(DATA));}catch(e){} }
+}
+
+function buildFilters(){
+  const states=[...new Set(DATA.map(d=>d.state))].sort();
+  const cats=[...new Set(DATA.map(d=>d.category))].sort();
+  const ss=document.getElementById("stateSel"), cs=document.getElementById("catSel");
+  ss.innerHTML='<option value="">All states</option>'+states.map(s=>`<option>${s}</option>`).join("");
+  cs.innerHTML='<option value="">All categories</option>'+cats.map(c=>`<option>${c}</option>`).join("");
+}
+
+function fmt(n){return "$"+Math.round(n).toLocaleString();}
+
+function current(){
+  const st=document.getElementById("stateSel").value;
+  const ct=document.getElementById("catSel").value;
+  const q=document.getElementById("search").value.trim().toLowerCase();
+  return DATA.filter(d=>
+    (!st||d.state===st)&&(!ct||d.category===ct)&&
+    (!q||(d.payee+" "+d.paid_by+" "+d.purpose).toLowerCase().includes(q)));
+}
+
+function render(){
+  const view=VIEWS[viewKey];
+  let rows=view.rows(current());
+  const sk=view.sort,dir=view.dir;
+  rows.sort((a,b)=>{
+    let x=a[sk],y=b[sk];
+    if(typeof x==="number"&&typeof y==="number")return (x-y)*dir;
+    if(sk.includes("date"))return (Date.parse(x||0)-Date.parse(y||0))*dir;
+    return String(x).localeCompare(String(y))*dir;
+  });
+  document.querySelectorAll("#tabs .tab").forEach(t=>t.classList.toggle("active",t.dataset.view===viewKey));
+  renderKpis(rows);
+  // Header
+  document.getElementById("headRow").innerHTML=view.cols.map(c=>
+    `<th class="${c.num?"num":""}" data-k="${c.key}">${c.label}${sk===c.key?`<span class="arrow">${dir<0?"▼":"▲"}</span>`:""}</th>`).join("");
+  document.querySelectorAll("th[data-k]").forEach(th=>th.onclick=()=>{
+    const k=th.dataset.k;
+    if(view.sort===k)view.dir*=-1;else{view.sort=k;const col=view.cols.find(c=>c.key===k);view.dir=((col&&col.num)||k.includes("date"))?-1:1;}
+    render();
+  });
+  // Rows
+  const tb=document.getElementById("rows"), ncol=view.cols.length;
+  if(!rows.length){tb.innerHTML=`<tr><td colspan="${ncol}" class="empty">No matching rows.</td></tr>`;return;}
+  const CAP=300, shown=rows.slice(0,CAP);
+  let html=shown.map(d=>{
+    const k=viewKey==="vendors"?d.vendor:viewKey==="buyers"?d.committee:null;
+    const clk=k!=null?` class="clickrow" data-m="${viewKey==="vendors"?"vendor":"buyer"}" data-k="${esc(k).replace(/"/g,"&quot;")}"`:"";
+    return "<tr"+clk+">"+view.cols.map(c=>`<td class="${c.num?"num ":""}${c.cls||""}">${c.cell(d)}</td>`).join("")+"</tr>";
+  }).join("");
+  if(rows.length>CAP) html+=`<tr><td colspan="${ncol}" class="empty">Showing top ${CAP} of ${rows.length.toLocaleString()} (sorted by ${sk}). Narrow by state / category / search, or Export view → CSV for the full set.</td></tr>`;
+  tb.innerHTML=html;
+}
+function renderKpis(rows){
+  let cards;
+  if(viewKey==="expenditures"){
+    const total=rows.reduce((s,d)=>s+d.amount,0);
+    const byP={};rows.forEach(d=>byP[d.payee]=(byP[d.payee]||0)+d.amount);
+    const top=Object.entries(byP).sort((a,b)=>b[1]-a[1])[0];
+    cards=[[fmt(total),"Total spend shown",""],[rows.length.toLocaleString(),"Expenditure records",""],[new Set(rows.map(d=>d.payee)).size.toLocaleString(),"Unique vendors",""],[new Set(rows.map(d=>d.paid_by)).size.toLocaleString(),"Unique committees",""],[top?fmt(top[1]):"—","Top vendor",top?top[0]:""]];
+  }else if(viewKey==="buyers"){
+    const total=rows.reduce((s,d)=>s+d.spend,0), top=rows.slice().sort((a,b)=>b.spend-a.spend)[0];
+    cards=[[rows.length.toLocaleString(),"Committees (prospects)",""],[fmt(total),"Total spend shown",""],[fmt(rows.length?total/rows.length:0),"Avg per committee",""],[top?fmt(top.spend):"—","Top spender",top?top.committee:""]];
+  }else{
+    const total=rows.reduce((s,d)=>s+d.paid,0), cross=rows.filter(d=>d.states>=3).length, top=rows.slice().sort((a,b)=>b.paid-a.paid)[0];
+    cards=[[rows.length.toLocaleString(),"Vendors / firms",""],[fmt(total),"Total paid shown",""],[cross.toLocaleString(),"Cross-state (3+)",""],[top?fmt(top.paid):"—","Top firm",top?top.vendor:""]];
+  }
+  document.getElementById("kpis").innerHTML=cards.map(k=>`<div class="kpi"><div class="n">${k[0]}</div><div class="l">${k[1]}</div><div class="s">${k[2]||""}</div></div>`).join("");
+}
+function esc(s){return String(s==null?"":s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+
+// ---- CSV parsing + header auto-map ----
+function parseCSV(text){
+  const rows=[];let i=0,f="",row=[],q=false;
+  while(i<text.length){const c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i++;}else q=false;}else f+=c;}
+    else{if(c==='"')q=true;else if(c===","){row.push(f);f="";}
+      else if(c==="\n"){row.push(f);rows.push(row);row=[];f="";}
+      else if(c!=="\r")f+=c;}
+    i++;}
+  if(f.length||row.length){row.push(f);rows.push(row);}
+  return rows;
+}
+const ALIASES={
+  state:["state","st"],
+  paid_by:["committee","filer","candidate","paid by","committee name","filer name","payor","cand name","registrant"],
+  payee:["payee","vendor","recipient","paid to","expended to","payee name","vendor name","expenditure payee"],
+  purpose:["purpose","description","expenditure purpose","memo","purpose of expenditure","expense category","desc","category"],
+  amount:["amount","expenditure amount","expend amount","amount paid","expense amount","total","amt"],
+  date:["date","expenditure date","expend date","transaction date","date of expenditure","exp date"]
+};
+function pick(headers,opts){
+  const low=headers.map(h=>h.trim().toLowerCase());
+  for(const o of opts){const idx=low.indexOf(o);if(idx>=0)return idx;}
+  for(const o of opts){const idx=low.findIndex(h=>h.includes(o));if(idx>=0)return idx;}
+  return -1;
+}
+function ingestCSV(text){
+  const rows=parseCSV(text).filter(r=>r.length>1);
+  if(rows.length<2){alert("Could not read rows from that file.");return;}
+  const headers=rows[0];
+  const map={};for(const k in ALIASES)map[k]=pick(headers,ALIASES[k]);
+  if(map.payee<0||map.amount<0){alert("Couldn't find a payee/vendor or amount column. Check the export headers.");return;}
+  const out=rows.slice(1).map(r=>({
+    state:map.state>=0?(r[map.state]||"").trim():"—",
+    paid_by:map.paid_by>=0?(r[map.paid_by]||"").trim():"—",
+    payee:(r[map.payee]||"").trim(),
+    purpose:map.purpose>=0?(r[map.purpose]||"").trim():"",
+    amount:Number(String(r[map.amount]||"").replace(/[$,()\s]/g,""))||0,
+    date:map.date>=0?(r[map.date]||"").trim():""
+  })).filter(d=>d.payee||d.amount);
+  load(out,false,true);
+}
+
+// ---- wiring ----
+document.getElementById("stateSel").onchange=render;
+document.getElementById("catSel").onchange=render;
+document.getElementById("search").oninput=render;
+document.querySelectorAll("#tabs .tab").forEach(t=>t.onclick=()=>{viewKey=t.dataset.view;render();});
+document.getElementById("rows").addEventListener("click",e=>{const tr=e.target.closest("tr.clickrow");if(tr)openDrill(tr.dataset.m,tr.dataset.k);});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDrill();});
+function openDrill(mode,name){
+  const rows=(mode==="vendor"?DATA.filter(d=>normV(d.payee)===normV(name)):DATA.filter(d=>d.paid_by===name)).sort((a,b)=>b.amount-a.amount);
+  const total=rows.reduce((s,d)=>s+d.amount,0);
+  document.getElementById("drillTitle").textContent=name;
+  document.getElementById("drillSub").innerHTML=`${rows.length.toLocaleString()} transactions · ${fmt(total)} total · ${[...new Set(rows.map(d=>d.state))].length} state(s) · ${mode==="vendor"?"paid by":"paid to"} ${new Set(rows.map(d=>mode==="vendor"?d.paid_by:d.payee)).size} ${mode==="vendor"?"committees":"vendors"}`;
+  const lead=mode==="vendor"?"Paid By (Committee)":"Vendor (Payee)";
+  const CAP=400,shown=rows.slice(0,CAP);
+  let h='<table><thead><tr><th>'+lead+'</th><th>State</th><th>Category</th><th>Purpose</th><th class="num">Amount</th><th>Date</th></tr></thead><tbody>';
+  h+=shown.map(d=>`<tr><td class="strong">${esc(mode==="vendor"?d.paid_by:d.payee)}</td><td><span class="state-chip">${d.state}</span></td><td>${catTag(d.category)}</td><td class="muted">${esc(d.purpose)}</td><td class="num amt">${fmt(d.amount)}</td><td class="muted">${d.date||""}</td></tr>`).join("");
+  if(rows.length>CAP)h+=`<tr><td colspan="6" class="empty">Showing top ${CAP} of ${rows.length.toLocaleString()} by amount.</td></tr>`;
+  document.getElementById("drillBody").innerHTML=h+"</tbody></table>";
+  document.getElementById("drill").classList.add("open");
+}
+function closeDrill(){document.getElementById("drill").classList.remove("open");}
+document.getElementById("resetBtn").onclick=()=>{localStorage.removeItem("expData");load(SAMPLE,true,false);};
+document.getElementById("fileInput").onchange=e=>{
+  const file=e.target.files[0];if(!file)return;
+  const fr=new FileReader();
+  fr.onload=()=>{
+    try{
+      if(file.name.toLowerCase().endsWith(".json")){
+        const arr=JSON.parse(fr.result);
+        load(arr.map(d=>({state:d.state||"—",paid_by:d.paid_by||d.committee||"—",payee:d.payee||d.vendor||"",purpose:d.purpose||d.description||"",amount:d.amount||0,date:d.date||""})),false,true);
+      } else ingestCSV(fr.result);
+    }catch(err){alert("Failed to parse file: "+err.message);}
+  };
+  fr.readAsText(file);
+};
+document.getElementById("exportBtn").onclick=()=>{
+  const view=VIEWS[viewKey];
+  let rows=view.rows(current());
+  rows.sort((a,b)=>{let x=a[view.sort],y=b[view.sort];return ((typeof x==="number"&&typeof y==="number")?(x-y):String(x).localeCompare(String(y)))*view.dir;});
+  let head,line;
+  if(viewKey==="expenditures"){head=["State","Vendor","Category","Purpose","PaidBy","Amount","Date"];line=d=>[d.state,d.payee,d.category,d.purpose,d.paid_by,d.amount,d.date];}
+  else if(viewKey==="buyers"){head=["Committee","State","Spend","Items","TopCategory","TopVendor","LastActivity"];line=d=>[d.committee,d.state,d.spend,d.items,d.top_category,d.top_vendor,d.last_date];}
+  else{head=["Vendor","Paid","Clients","States","TopCategory","LastActivity"];line=d=>[d.vendor,d.paid,d.clients,d.states,d.top_category,d.last_date];}
+  const csv=[head.join(",")].concat(rows.map(d=>line(d).map(v=>`"${String(v).replace(/"/g,'""')}"`).join(","))).join("\n");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download=viewKey+"_view.csv";a.click();
+};
+
+// boot: prefer live scraped data → saved upload → sample
+(async function(){
+  try{
+    const [dRes,mRes]=await Promise.all([
+      fetch("data/expenditures.json",{cache:"no-store"}),
+      fetch("data/manifest.json",{cache:"no-store"})
+    ]);
+    if(dRes.ok){
+      const arr=await dRes.json();
+      if(Array.isArray(arr)&&arr.length){
+        load(arr,false,false);
+        if(mRes.ok){
+          const m=await mRes.json();
+          const b=document.getElementById("dataBanner");
+          b.className="banner live";
+          b.innerHTML='<b>LIVE DATA</b><span>— '+(m.totalRows||arr.length).toLocaleString()+
+            ' consultant/media expenditures · '+m.liveStates+' of '+m.totalStatesTracked+
+            ' states live · updated '+new Date(m.generatedAt).toLocaleDateString()+
+            '. Use "Load file" to add a state by hand.</span>';
+          b.style.display="flex";
+        }
+        return;
+      }
+    }
+  }catch(e){}
+  try{const saved=localStorage.getItem("expData");
+    if(saved){const arr=JSON.parse(saved);if(arr&&arr.length){load(arr,false,false);return;}}
+  }catch(e){}
+  load(SAMPLE,true,false);
+})();
+</script>
+</body>
+</html>

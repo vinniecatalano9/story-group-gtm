@@ -1,0 +1,206 @@
+{
+  "generatedAt": "2026-06-18T03:01:32.913Z",
+  "totalStatesTracked": 51,
+  "liveStates": 33,
+  "states": [
+    {
+      "code": "CA",
+      "name": "California",
+      "rows": 44015,
+      "status": "ok"
+    },
+    {
+      "code": "CO",
+      "name": "Colorado",
+      "rows": 3194,
+      "status": "ok"
+    },
+    {
+      "code": "CT",
+      "name": "Connecticut",
+      "rows": 2847,
+      "status": "ok"
+    },
+    {
+      "code": "HI",
+      "name": "Hawaii",
+      "rows": 605,
+      "status": "ok"
+    },
+    {
+      "code": "ID",
+      "name": "Idaho",
+      "rows": 3270,
+      "status": "ok"
+    },
+    {
+      "code": "IN",
+      "name": "Indiana",
+      "rows": 1659,
+      "status": "ok"
+    },
+    {
+      "code": "MI",
+      "name": "Michigan",
+      "rows": 4585,
+      "status": "ok"
+    },
+    {
+      "code": "MN",
+      "name": "Minnesota",
+      "rows": 2373,
+      "status": "ok"
+    },
+    {
+      "code": "NE",
+      "name": "Nebraska",
+      "rows": 2558,
+      "status": "ok"
+    },
+    {
+      "code": "NM",
+      "name": "New Mexico",
+      "rows": 2064,
+      "status": "ok"
+    },
+    {
+      "code": "NY",
+      "name": "New York",
+      "rows": 7182,
+      "status": "ok"
+    },
+    {
+      "code": "OK",
+      "name": "Oklahoma",
+      "rows": 4109,
+      "status": "ok"
+    },
+    {
+      "code": "PA",
+      "name": "Pennsylvania",
+      "rows": 11324,
+      "status": "ok"
+    },
+    {
+      "code": "TX",
+      "name": "Texas",
+      "rows": 25258,
+      "status": "ok"
+    },
+    {
+      "code": "VA",
+      "name": "Virginia",
+      "rows": 9298,
+      "status": "ok"
+    },
+    {
+      "code": "WA",
+      "name": "Washington",
+      "rows": 7121,
+      "status": "ok"
+    },
+    {
+      "code": "DC",
+      "name": "Washington DC",
+      "rows": 421,
+      "status": "ok"
+    },
+    {
+      "code": "AZ",
+      "name": "Arizona",
+      "rows": 1611,
+      "status": "ok"
+    },
+    {
+      "code": "KY",
+      "name": "Kentucky",
+      "rows": 1788,
+      "status": "ok"
+    },
+    {
+      "code": "MA",
+      "name": "Massachusetts",
+      "rows": 6979,
+      "status": "ok"
+    },
+    {
+      "code": "NJ",
+      "name": "New Jersey",
+      "rows": 21955,
+      "status": "ok"
+    },
+    {
+      "code": "NC",
+      "name": "North Carolina",
+      "rows": 4597,
+      "status": "ok"
+    },
+    {
+      "code": "SC",
+      "name": "South Carolina",
+      "rows": 3243,
+      "status": "ok"
+    },
+    {
+      "code": "TN",
+      "name": "Tennessee",
+      "rows": 111,
+      "status": "ok"
+    },
+    {
+      "code": "WI",
+      "name": "Wisconsin",
+      "rows": 686,
+      "status": "ok"
+    },
+    {
+      "code": "OR",
+      "name": "Oregon",
+      "rows": 628,
+      "status": "ok"
+    },
+    {
+      "code": "FL",
+      "name": "Florida",
+      "rows": 3741,
+      "status": "ok"
+    },
+    {
+      "code": "AL",
+      "name": "Alabama",
+      "rows": 4175,
+      "status": "ok"
+    },
+    {
+      "code": "LA",
+      "name": "Louisiana",
+      "rows": 6419,
+      "status": "ok"
+    },
+    {
+      "code": "AR",
+      "name": "Arkansas",
+      "rows": 5062,
+      "status": "ok"
+    },
+    {
+      "code": "KS",
+      "name": "Kansas",
+      "rows": 91,
+      "status": "ok"
+    },
+    {
+      "code": "IL",
+      "name": "Illinois",
+      "rows": 15588,
+      "status": "ok"
+    },
+    {
+      "code": "UT",
+      "name": "Utah",
+      "rows": 296,
+      "status": "ok"
+    }
+  ],
+  "totalRows": 184077
+}
