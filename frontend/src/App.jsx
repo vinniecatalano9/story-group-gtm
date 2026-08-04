@@ -43,6 +43,35 @@ function Nav() {
       {link('/transcripts', 'Transcripts')}
       {link('/cleaner', 'Email Cleaner')}
       {link('/tracker', 'Tracker')}
+      <div className="relative group">
+        <button
+          type="button"
+          className="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 text-white/50 group-hover:text-white/80 group-hover:bg-white/5 flex items-center gap-1.5"
+        >
+          Vendors
+          <span className="text-[9px] opacity-60">▼</span>
+        </button>
+        <div className="hidden group-hover:block absolute left-0 top-full pt-2 z-50">
+          <div className="glass-nav rounded-xl border border-white/10 py-2 min-w-[220px] shadow-xl">
+            {[
+              ['/expenditure-explorer/vendors-master.html', 'Master Vendor List'],
+              ['/expenditure-explorer/video.html', 'Could Use Video'],
+              ['/expenditure-explorer/outreach-ready.html', 'Outreach-Ready Contacts'],
+              ['/expenditure-explorer/texting.html', 'Texting Buyers'],
+              ['/expenditure-explorer/subvendors.html', 'Sub-Vendor Links'],
+              ['/expenditure-explorer/', 'Expenditure Explorer'],
+            ].map(([href, label]) => (
+              <a
+                key={href}
+                href={href}
+                className="block px-4 py-2 text-sm font-medium text-white/50 hover:text-white/90 hover:bg-white/5 transition-all duration-150"
+              >
+                {label}
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
       <a
         href="/pr-mastery/"
         className="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 text-white/50 hover:text-white/80 hover:bg-white/5"
