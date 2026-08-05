@@ -96,7 +96,11 @@ async function syncQueue(opts = {}) {
     const raw = d.raw_payload?.data || d.raw_payload || {};
     const cid = d.heyreach_conversation_id || raw.conversation_id || null;
     if (cid) docsByConvo.add(cid);
-    if (d.profile_url) docsByUrl.add(d.profile_url);
+    // Only OPEN cards suppress a new one for the same person. Including handled
+    // cards here meant a prospect who replied, got worked and closed, then came
+    // back in a new thread was silently skipped forever — 38 people were sitting
+    // in that state, waiting on us, with nothing on the board.
+    if (d.profile_url && d.handled !== true) docsByUrl.add(d.profile_url);
     if (d.handled === true) continue;
 
     const c = (cid && byId.get(cid)) || (d.profile_url && byUrl.get(d.profile_url));
