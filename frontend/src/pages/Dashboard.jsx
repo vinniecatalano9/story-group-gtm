@@ -424,6 +424,7 @@ function AutoTrackedCard({ api }) {
   // 150/wk per the SOP is ~30 a working day.
   const idle = perAccount.filter(([, r]) => !r.requests_sent).map(([n]) => n);
 
+  const mt = today.meetings || null;
   const tiles = [
     { label: 'Requests sent', value: li.requests_sent ?? 0, sub: 'today, all accounts' },
     { label: 'Acceptance', value: acceptance == null ? '—' : `${Math.round(acceptance * 100)}%`,
@@ -449,6 +450,41 @@ function AutoTrackedCard({ api }) {
           </div>
         ))}
       </div>
+
+      {/* Meetings, read straight off Google Calendar */}
+      {mt && (
+        <div className="mb-5">
+          <div className="flex items-baseline justify-between mb-2">
+            <h4 className="text-[11px] font-semibold text-muted uppercase tracking-[0.12em]">Meetings · from Google Calendar</h4>
+            <span className="text-[10px] text-muted">{mt.today} booked today</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+            {[
+              { l: 'Booked, 7 days', v: mt.last_7d ?? 0 },
+              { l: 'Discovery', v: mt.last_7d_discovery ?? 0 },
+              { l: 'Second calls', v: mt.last_7d_second_calls ?? 0 },
+              { l: 'Upcoming, 30 days', v: mt.upcoming_30d ?? 0 },
+            ].map(x => (
+              <div key={x.l} className="glass-card rounded-xl p-4 border-l-2 border-l-emerald-500/40">
+                <p className="text-[10px] font-semibold text-muted uppercase tracking-[0.12em] mb-1">{x.l}</p>
+                <p className="font-serif italic text-2xl font-bold text-body leading-none">{x.v}</p>
+              </div>
+            ))}
+          </div>
+          {Array.isArray(mt.next) && mt.next.length > 0 && (
+            <p className="text-[12px] text-muted">
+              Next up:{' '}
+              {mt.next.map((n, i) => (
+                <span key={n.date + n.prospect + i}>
+                  {i > 0 && ' · '}
+                  <span className="text-body">{n.prospect}</span>{' '}
+                  <span className="text-muted">{n.date.slice(5)} {n.callType === 'second' ? '(2nd)' : ''}</span>
+                </span>
+              ))}
+            </p>
+          )}
+        </div>
+      )}
 
       {idle.length > 0 && (
         <p className="text-[12px] text-coral-400 mb-4">
