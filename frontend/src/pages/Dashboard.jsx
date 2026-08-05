@@ -107,6 +107,9 @@ export default function Dashboard({ api }) {
       {/* Source attribution — 30 days */}
       <SourceAttribution attribution={attribution} />
 
+      {/* LinkedIn + reply queue — captured nightly by cron, no manual logging */}
+      <AutoTrackedCard api={api} />
+
       {/* Email Engine (auto via Instantly) */}
       <EnginePipelineCard funnel={enginePipeline} loading={engineLoading} />
 
@@ -391,6 +394,109 @@ function SourceAttribution({ attribution }) {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Everything on this card is captured by the nightly cron straight from HeyReach
+ * and Firestore — nothing here needs logging by hand. The SOP's weekly targets
+ * are baked in so a number that misses shows itself instead of waiting to be
+ * noticed on Thursday.
+ */
+function AutoTrackedCard({ api }) {
+  const [rows, setRows] = useState(null);
+  useEffect(() => {
+    fetch(`${api}/api/dashboard/daily-metrics?days=7`)
+      .then(r => r.json())
+      .then(d => setRows(d.metrics || []))
+      .catch(() => setRows([]));
+  }, [api]);
+
+  if (!rows) return <p className="text-muted text-center py-6">Loading auto-tracked stats…</p>;
+  const today = rows[0];
+  if (!today) return null;
+
+  const li = today.linkedin || {};
+  const q = today.queue || {};
+  const perAccount = Object.entries(li.per_account || {});
+  const acceptance = li.requests_sent ? li.requests_accepted / li.requests_sent : null;
+  // 150/wk per the SOP is ~30 a working day.
+  const idle = perAccount.filter(([, r]) => !r.requests_sent).map(([n]) => n);
+
+  const tiles = [
+    { label: 'Requests sent', value: li.requests_sent ?? 0, sub: 'today, all accounts' },
+    { label: 'Acceptance', value: acceptance == null ? '—' : `${Math.round(acceptance * 100)}%`,
+      sub: 'target ≥20%', bad: acceptance != null && acceptance < 0.2 },
+    { label: 'Needs reply', value: q.needs_reply ?? 0, sub: 'real signals waiting' },
+    { label: 'Waiting 3d+', value: q.waiting_3d_plus ?? 0, sub: 'going stale', bad: (q.waiting_3d_plus || 0) > 0 },
+  ];
+
+  return (
+    <div className="glass-card rounded-2xl p-6">
+      <div className="flex items-baseline justify-between mb-1 flex-wrap gap-2">
+        <h3 className="font-serif text-lg font-bold text-body">LinkedIn &amp; Reply Queue (Auto)</h3>
+        <span className="text-[10px] text-muted uppercase tracking-[0.12em]">Nightly snapshot · no manual logging</span>
+      </div>
+      <p className="text-muted text-xs mb-4">Straight from HeyReach and the reply queue. Manual tracker entry is not needed for any of these.</p>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        {tiles.map(t => (
+          <div key={t.label} className={`glass-card rounded-xl p-4 border-l-2 ${t.bad ? 'border-l-coral-500/70' : 'border-l-brand-500/40'}`}>
+            <p className="text-[10px] font-semibold text-muted uppercase tracking-[0.12em] mb-1">{t.label}</p>
+            <p className={`font-serif italic text-2xl font-bold leading-none ${t.bad ? 'text-coral-400' : 'text-body'}`}>{t.value}</p>
+            <p className="text-[11px] text-muted mt-1.5">{t.sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {idle.length > 0 && (
+        <p className="text-[12px] text-coral-400 mb-4">
+          Sent nothing today: <span className="font-semibold">{idle.join(', ')}</span>. Check send limits, lead supply, and whether the campaign froze.
+        </p>
+      )}
+
+      {perAccount.length > 0 && (
+        <div className="overflow-x-auto mb-5">
+          <table className="w-full text-sm min-w-[420px]">
+            <thead>
+              <tr className="text-[10px] text-muted uppercase tracking-[0.12em]">
+                <th className="text-left font-semibold pb-2">Account</th>
+                <th className="text-right font-semibold pb-2">Sent</th>
+                <th className="text-right font-semibold pb-2">Accepted</th>
+                <th className="text-right font-semibold pb-2">Positive</th>
+              </tr>
+            </thead>
+            <tbody>
+              {perAccount.sort((a, b) => b[1].requests_sent - a[1].requests_sent).map(([name, r]) => (
+                <tr key={name} className="border-t border-navy-border/60">
+                  <td className="py-1.5 text-body">{name}</td>
+                  <td className={`py-1.5 text-right tabular-nums ${r.requests_sent ? 'text-body' : 'text-coral-400 font-semibold'}`}>{r.requests_sent}</td>
+                  <td className="py-1.5 text-right tabular-nums text-muted">{r.requests_accepted}</td>
+                  <td className="py-1.5 text-right tabular-nums text-muted">{r.positive_replies}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { l: 'Open cards', v: q.open ?? 0, bad: false },
+          { l: 'Awaiting a draft', v: q.awaiting_draft ?? 0, bad: false },
+          { l: 'Positives untagged', v: q.positives_untagged ?? 0, bad: (q.positives_untagged || 0) > 0 },
+          { l: 'No sub-sequence', v: q.positives_no_subsequence ?? 0, bad: (q.positives_no_subsequence || 0) > 0 },
+        ].map(x => (
+          <div key={x.l} className="glass-card rounded-xl p-3">
+            <p className="text-[10px] font-semibold text-muted uppercase tracking-[0.12em] mb-1">{x.l}</p>
+            <p className={`text-lg font-bold tabular-nums ${x.bad ? 'text-coral-400' : 'text-body'}`}>{x.v}</p>
+          </div>
+        ))}
+      </div>
+      <p className="text-[11px] text-muted mt-3">
+        Untagged and no-sub-sequence are the two leaks from Sameer's Jul 22 audit. Both should sit at zero.
+      </p>
     </div>
   );
 }
