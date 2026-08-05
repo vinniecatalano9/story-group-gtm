@@ -91,9 +91,66 @@ async function runDailyMetrics() {
     });
 
     const bookedSnap = await leads.where('status', '==', 'booked').count().get();
-    const meetingsBooked = bookedSnap.data().count;
+    const leadStatusBooked = bookedSnap.data().count;
     const closedLeadSnap = await leads.where('status', '==', 'closed').count().get();
     const closedLeads = closedLeadSnap.data().count;
+
+    // ---- Meetings, straight off Google Calendar ----
+    // meetings_booked used to come only from leads with status 'booked', which
+    // reads 0 because nothing in the pipeline ever sets it. The calendar is the
+    // real record: a meeting exists when it's on it.
+    let meetings = null;
+    try {
+      const { google } = require('googleapis');
+      const { summarizeMeetings } = require('../lib/meetings');
+      const calendarId = process.env.GOOGLE_CALENDAR_ID || 'primary';
+      const cal = google.calendar({
+        version: 'v3',
+        auth: new google.auth.GoogleAuth({ scopes: ['https://www.googleapis.com/auth/calendar.readonly'] }),
+      });
+      const pull = async (timeMin, timeMax) => {
+        const items = []; let pageToken;
+        do {
+          const r = await cal.events.list({
+            calendarId, timeMin, timeMax,
+            singleEvents: true, orderBy: 'startTime', maxResults: 250, pageToken,
+          });
+          items.push(...(r.data.items || []));
+          pageToken = r.data.nextPageToken;
+        } while (pageToken);
+        return items;
+      };
+      const dayEnd = dayStart + 86400000;
+      const weekAgo = dayStart - 7 * 86400000;
+      const monthAhead = dayStart + 30 * 86400000;
+
+      const [todayEvents, weekEvents, aheadEvents] = await Promise.all([
+        pull(new Date(dayStart).toISOString(), new Date(dayEnd).toISOString()),
+        pull(new Date(weekAgo).toISOString(), new Date(dayEnd).toISOString()),
+        pull(new Date(dayStart).toISOString(), new Date(monthAhead).toISOString()),
+      ]);
+
+      const t = summarizeMeetings(todayEvents);
+      const w = summarizeMeetings(weekEvents);
+      const a = summarizeMeetings(aheadEvents);
+      meetings = {
+        today: t.total,
+        today_discovery: t.discovery,
+        today_second_calls: t.second_calls,
+        last_7d: w.total,
+        last_7d_discovery: w.discovery,
+        last_7d_second_calls: w.second_calls,
+        last_7d_held: w.held,
+        upcoming_30d: a.upcoming,
+        next: a.items.filter(x => !x.held).slice(0, 5)
+          .map(x => ({ date: x.date, prospect: x.prospect, callType: x.callType })),
+      };
+    } catch (e) {
+      console.warn('[daily-metrics] Calendar read failed:', e.message);
+    }
+
+    // Prefer the calendar; fall back to the old lead-status count.
+    const meetingsBooked = meetings ? meetings.last_7d : leadStatusBooked;
 
     // ---- LinkedIn outbound (HeyReach) — the SOP weekly table needs these and
     // nothing was capturing them. Per-account so a frozen or throttled sender
@@ -152,6 +209,11 @@ async function runDailyMetrics() {
 
       // LinkedIn outbound, today, per the SOP weekly table.
       linkedin: li,
+
+      // Meetings off Google Calendar. meetings_booked above is the 7-day count
+      // so it stays comparable to the rest of the weekly view.
+      meetings,
+      lead_status_booked: leadStatusBooked,
 
       // Reply-queue health — the numbers Sameer's Jul 22 audit was built on.
       queue: {
