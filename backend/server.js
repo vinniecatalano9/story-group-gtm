@@ -831,6 +831,22 @@ cron.schedule('*/30 * * * *', async () => {
   await syncQueue();
 }, { timezone: 'America/Chicago' });
 
+// Draft backlog: every 10 min, work through replies that have no draft yet.
+// Previously reclassify only ran as a tail step inside queueSync, and only when
+// that run created or refreshed something — so once the queue was in sync, a
+// card sitting there with no draft would never get one. Each classification is
+// a ~2 min Claude call, so this grinds through in small batches rather than
+// blocking anything.
+cron.schedule('*/10 * * * *', async () => {
+  try {
+    const { reclassifyBacklog } = require('./cron/reclassify');
+    const r = await reclassifyBacklog({ limit: 4 });
+    if (r.processed) console.log('[cron] draft backlog:', JSON.stringify(r));
+  } catch (e) {
+    console.error('[cron] draft backlog error:', e.message);
+  }
+}, { timezone: 'America/Chicago' });
+
 /**
  * POST /api/heyreach/queue-sync
  * Run the LinkedIn queue sync on demand instead of waiting for the half-hourly

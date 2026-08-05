@@ -468,14 +468,14 @@ export default function LinkedInReplies({ api }) {
   const [showHandled, setShowHandled] = useState(false);
   // Default ON — open straight to the leads worth time. Toggle off to see everything.
   const [interestedOnly, setInterestedOnly] = useState(true);
-  // Sender accounts toggled OFF (e.g. hide Aaron's threads). Persisted per browser.
-  // Aaron starts hidden on EVERY load per Vincent — unhiding lasts for the
-  // session only; the next visit hides him again.
-  const ALWAYS_START_HIDDEN = ['Aaron Evans'];
+  // Sender accounts toggled OFF. Persisted per browser via the sender chips.
+  // Aaron used to be force-hidden on every load; that's off now — his threads
+  // show like everyone else's, and hiding any sender is a manual choice that
+  // sticks until it's toggled back.
   const [hiddenSenders, setHiddenSenders] = useState(() => {
     let stored = [];
     try { stored = JSON.parse(localStorage.getItem('li_hidden_senders') || '[]'); } catch { /* ignore */ }
-    return new Set([...stored, ...ALWAYS_START_HIDDEN]);
+    return new Set(stored);
   });
 
   const senderOf = (r) => r.heyreach_account_name || r.ulinc_account_name || 'Other';
@@ -489,11 +489,15 @@ export default function LinkedInReplies({ api }) {
     });
   };
 
+  // Worth working. This used to be a whitelist of four classifications, which
+  // meant a timing objection, a process question, a referral or a "send me info"
+  // all fell out of the default view — everything that isn't a flat no is worth
+  // a reply, so this is a blocklist now: hide the hard nos and the noise, show
+  // the rest.
+  const NOT_WORTH_WORKING = ['not_interested', 'ooo', 'bounce'];
   const isHot = (r) =>
-    r.classification === 'interested' ||
     r.auto_tag_interested === true ||
-    r.classification === 'cost_question' ||
-    r.classification === 'cost_question_repeat';
+    !NOT_WORTH_WORKING.includes(r.classification);
 
   const fetchReplies = useCallback(() => {
     setLoading(true);
@@ -561,7 +565,7 @@ export default function LinkedInReplies({ api }) {
                 : 'border-white/10 text-white/40 bg-white/5 hover:text-white/70'
             }`}
           >
-            🔥 Interested only
+            🔥 Hide the nos
           </button>
           <label className="flex items-center gap-2 text-sm text-white/40 cursor-pointer">
             <input
@@ -631,7 +635,7 @@ export default function LinkedInReplies({ api }) {
           return (
             <p className="text-white/30 py-10 text-center">
               {interestedOnly && replies.length > 0
-                ? `No interested leads pending — ${replies.length} other message${replies.length === 1 ? '' : 's'} hidden by the Interested filter`
+                ? `Nothing left to work — ${replies.length} message${replies.length === 1 ? '' : 's'} hidden as nos, out-of-office or bounces`
                 : showHandled ? 'No LinkedIn messages yet' : 'All caught up'}
             </p>
           );

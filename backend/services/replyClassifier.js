@@ -27,6 +27,35 @@
 
 const { claudeJSON } = require('./claude');
 
+/**
+ * Strip every dash out of an outbound message.
+ *
+ * The prompt has forbidden dashes since v3 and the model kept emitting them
+ * anyway ("Fair question Mary — pricing is built around..."), which is the
+ * single clearest tell that a message was machine-written. An instruction is a
+ * request; this is the guarantee.
+ *
+ * Order matters: ranges become "to" before the generic hyphen rule would turn
+ * "$8-15K" into "$8 15K".
+ */
+function stripDashes(text) {
+  if (!text) return text;
+  return String(text)
+    // "$8-15K", "2-3", "10-15" → "$8 to 15K"
+    .replace(/(\d)\s*[-–—]\s*(\d)/g, '$1 to $2')
+    // Spaced dash used as a connector → comma. "Fair question Mary — pricing" → "Fair question Mary, pricing"
+    .replace(/\s+[-–—]+\s+/g, ', ')
+    // Dash hugging a word on both sides → space. "pay-for-performance" → "pay for performance"
+    .replace(/([A-Za-z])[-–—]([A-Za-z])/g, '$1 $2')
+    // Anything left over (leading, trailing, doubled) → gone.
+    .replace(/[-–—]+/g, ' ')
+    // Tidy up the damage.
+    .replace(/ {2,}/g, ' ')
+    .replace(/ ,/g, ',')
+    .replace(/,\s*,/g, ',')
+    .replace(/[ \t]+$/gm, '');
+}
+
 function buildPrompt({ channel, email, company, replyText, firstName, slots, todayDow }) {
   const isLinkedIn = channel === 'linkedin';
 
@@ -111,11 +140,11 @@ Follow-up discipline: roughly 80% of price-first askers never book. Cap the chas
 --- COST_QUESTION_REPEAT (they pressed again and will not book without a number, NOW give the range) ---
 Only when they have already gotten the personalized answer. Give the range straight, then bring it back to the call.
 Email:
-"Totally fair ${name}, most engagements run $8-15K/mo depending on how aggressive the media push is, and if you'd rather start lighter we also run focused media-booking projects in the $4-5K range. Where you'd land comes down to your goals, which is the 15 minutes I'd want on a call. Free this week?"
+"Totally fair ${name}, most engagements run $8K to $15K a month depending on how aggressive the media push is, and if you'd rather start lighter we also run focused media booking projects in the $4K to $5K range. Where you'd land comes down to your goals, which is the 15 minutes I'd want on a call. Free this week?"
 
 LinkedIn (3 messages):
-Message 1: Totally fair ${name}, most engagements run $8-15K/mo depending on how aggressive the push is.
-Message 2: If you'd rather start lighter, we also run focused media-booking projects around $4-5K.
+Message 1: Totally fair ${name}, most engagements run $8K to $15K a month depending on how aggressive the push is.
+Message 2: If you'd rather start lighter, we also run focused media booking projects around $4K to $5K.
 Message 3: Where you'd land comes down to your goals. Worth 15 minutes this week to map it out?
 
 --- MORE_INFO (process question) ---
@@ -197,7 +226,7 @@ draft_response='', suggested_action='Wait until return / clean from list.'
 - Pricing is PERSONALIZED. On the FIRST cost question: no numbers, no range, frame it as built around their goals and bring it to the call. ONLY if they press again and will not book without a number do you give the $8-15K/mo range plus the $4-5K lighter media-booking option. Never name tiers (Foundation/Amplify/Influence/Command).
 - For "is this paid / free / pay-to-play?": ALWAYS reframe to earned-not-paid. We do not pay outlets; the retainer is the strategy and pitching work; editorial independence is why it works. This is the #1 reason deals stall, never leave it unanswered.
 - Do NOT hardcode CNN or left-leaning outlets. Many founders are conservative-leaning and "you lost me at CNN" is real churn. Say "reporters and producers who cover your space."
-- NO em-dashes and no hyphens used as connectors. Use commas and periods. Dashes read as machine-written, and sounding human is the whole point.
+- ZERO dashes of any kind in draft_response. No em-dashes, no en-dashes, no hyphens, not even inside words or number ranges. Write "pay for performance" not "pay-for-performance", "$8K to $15K" not "$8-15K", "back to back" not "back-to-back". A dash is the single clearest tell that a message was machine-written, and sounding human is the whole point. (Dashes in THESE INSTRUCTIONS are fine, they are not the message.)
 - Never send a deck. Answer ONE question (the strongest hook) and redirect the rest to the call. Never offer pay-for-performance.
 - Sign off "Vincent" on email only. LinkedIn does not sign.
 
@@ -243,6 +272,8 @@ async function classifyReply({ channel, email, company, replyText, firstName, sl
       buildPrompt({ channel, email, company, replyText, firstName, slots, todayDow }),
       { timeout: 120000 }
     );
+    // Belt and braces: the prompt bans dashes, this makes it true.
+    if (result && result.draft_response) result.draft_response = stripDashes(result.draft_response);
     return result;
   } catch (e) {
     console.error('[replyClassifier] Failed:', e.message);

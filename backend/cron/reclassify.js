@@ -1,16 +1,18 @@
-// cron/reclassify.js — re-run the v3 classifier over unhandled replies.
+// cron/reclassify.js — re-run the current classifier over unhandled replies.
 //
-// Upgrades drafts written under the old (v2) macros — and surfaces replies that
-// were left 'other' while the Claude token was dead — to the v3 macros (anchored
-// pricing + earned-not-paid reframe + Calendly). Bounded per run; each update
-// persists immediately, so a partial run still makes progress.
+// Gives a draft to any unhandled reply that doesn't have one, and upgrades
+// drafts written under superseded macros. Clearing a doc's reclassified_at is
+// how you queue it for a redraft. Bounded per run; each update persists
+// immediately, so a partial run still makes progress.
 
 const { db } = require('../services/db');
 const { classifyReply } = require('../services/replyClassifier');
 const { isMediaOutreach } = require('../lib/mediaFilter');
 
 async function reclassifyBacklog({ limit = 25 } = {}) {
-  const snap = await db.collection('replies').orderBy('created_at', 'desc').limit(400).get();
+  // Scan wider than the queue is deep. At 400 the oldest unhandled replies sat
+  // outside the window and could never be picked up.
+  const snap = await db.collection('replies').orderBy('created_at', 'desc').limit(1500).get();
   const candidates = [];
   snap.forEach(doc => {
     const d = doc.data();
