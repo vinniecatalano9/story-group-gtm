@@ -81,7 +81,10 @@ async function syncQueue(opts = {}) {
     if (url) byUrl.set(url, c);
   }
 
-  const snap = await db.collection('replies').orderBy('created_at', 'desc').limit(800).get();
+  // Every heyreach doc, not the newest N. This set is what stops the create pass
+  // below from re-adding a thread we already have; capping it at 800 meant older
+  // cards fell outside the window and got duplicated on the next backfill.
+  const snap = await db.collection('replies').where('source', '==', 'heyreach').get();
   const docsByConvo = new Set();
   const docsByUrl = new Set();
   let cleared = 0, refreshed = 0, tagged = 0, created = 0, orphaned = 0;

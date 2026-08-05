@@ -468,8 +468,32 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
       classification: 'other',          // default until classifier runs
       created_at: new Date(),
     };
-    const ref = await db.collection('replies').add(replyDoc);
-    console.log(`[heyreach webhook] Saved reply ${ref.id} from ${fullName || profileUrl}`);
+    // One card per conversation, not one per message. Without this a prospect
+    // who sends three messages gets three separate cards, all of them stale
+    // except the last — Read Egger and Paul Dagum each had three.
+    let ref = null;
+    if (replyDoc.heyreach_conversation_id) {
+      const dupe = await db.collection('replies')
+        .where('heyreach_conversation_id', '==', replyDoc.heyreach_conversation_id)
+        .where('handled', '==', false)
+        .limit(1).get();
+      if (!dupe.empty) {
+        ref = dupe.docs[0].ref;
+        await ref.update({
+          reply_text: replyText,
+          message_date: messageDate,
+          heyreach_tags: tags,
+          auto_tag_interested: isInterestedTag,
+          raw_payload: payload,
+          reclassified_at: null,   // their newest message needs a fresh draft
+        });
+        console.log(`[heyreach webhook] Updated existing card ${ref.id} for ${fullName || profileUrl}`);
+      }
+    }
+    if (!ref) {
+      ref = await db.collection('replies').add(replyDoc);
+      console.log(`[heyreach webhook] Saved reply ${ref.id} from ${fullName || profileUrl}`);
+    }
 
     // Fire-and-forget classify-and-draft using the shared playbook
     (async () => {
