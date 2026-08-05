@@ -302,6 +302,24 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
             <span className="text-xs text-white/25">via {reply.heyreach_account_name}</span>
           )}
           <span className="text-xs text-white/30">{time}</span>
+          {/* How long they've been waiting on us. Silent under 2 days, then
+              increasingly loud — the point is that a good reply going stale is
+              the expensive failure, not an untidy queue. */}
+          {(() => {
+            const raw = reply.message_date || reply.created_at;
+            const ms = raw?._seconds ? raw._seconds * 1000 : (raw ? new Date(raw).getTime() : 0);
+            if (!ms) return null;
+            const d = Math.floor((Date.now() - ms) / 86400000);
+            if (d < 2) return null;
+            const tone = d >= 7 ? 'border-red-500/30 text-red-300 bg-red-500/15'
+              : d >= 3 ? 'border-amber-500/30 text-amber-300 bg-amber-500/15'
+              : 'border-white/10 text-white/40 bg-white/5';
+            return (
+              <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-lg border ${tone}`}>
+                waiting {d}d
+              </span>
+            );
+          })()}
           {reply.ulinc_contact_id && (
             <button
               onClick={() => setShowConvo(!showConvo)}
@@ -468,6 +486,8 @@ export default function LinkedInReplies({ api }) {
   const [showHandled, setShowHandled] = useState(false);
   // Default ON — open straight to the leads worth time. Toggle off to see everything.
   const [interestedOnly, setInterestedOnly] = useState(true);
+  // "Needs reply" header button — the short list the team actually owes an answer to.
+  const [needsReplyOnly, setNeedsReplyOnly] = useState(false);
   // Sender accounts toggled OFF. Persisted per browser via the sender chips.
   // Aaron used to be force-hidden on every load; that's off now — his threads
   // show like everyone else's, and hiding any sender is a manual choice that
@@ -498,6 +518,24 @@ export default function LinkedInReplies({ api }) {
   const isHot = (r) =>
     r.auto_tag_interested === true ||
     !NOT_WORTH_WORKING.includes(r.classification);
+
+  // "Needs reply" is tighter than "not a no": a real buying signal a person is
+  // waiting on. 'other' and 'question_other' are deliberately out — they're the
+  // catch-all buckets and they're where the noise lands.
+  const NEEDS_REPLY = [
+    'interested', 'cost_question', 'cost_question_repeat', 'more_info', 'send_info',
+    'guarantee', 'timing_objection', 'times_rejected', 'why_reach_out', 'referral', 're_engage',
+  ];
+  const needsReply = (r) =>
+    r.auto_tag_interested === true || NEEDS_REPLY.includes(r.classification);
+
+  // How long they've been waiting on us.
+  const waitedDays = (r) => {
+    const raw = r.message_date || r.created_at;
+    const ms = raw?._seconds ? raw._seconds * 1000 : (raw ? new Date(raw).getTime() : 0);
+    if (!ms) return null;
+    return Math.floor((Date.now() - ms) / 86400000);
+  };
 
   const fetchReplies = useCallback(() => {
     setLoading(true);
@@ -555,6 +593,32 @@ export default function LinkedInReplies({ api }) {
           <span className="text-sm text-white/30">
             {replies.filter(r => (!interestedOnly || isHot(r)) && !hiddenSenders.has(senderOf(r))).length} pending
           </span>
+          {(() => {
+            const owed = replies.filter(r => needsReply(r) && !hiddenSenders.has(senderOf(r)));
+            const stale = owed.filter(r => (waitedDays(r) ?? 0) >= 3).length;
+            return (
+              <button
+                onClick={() => setNeedsReplyOnly(!needsReplyOnly)}
+                title={stale ? `${stale} have been waiting 3+ days` : 'Real buying signals waiting on a reply'}
+                className={`flex items-center gap-2 px-3 py-1.5 text-sm font-semibold rounded-xl border transition-all ${
+                  needsReplyOnly
+                    ? 'border-amber-400/50 text-amber-300 bg-amber-500/20 ring-1 ring-amber-400/30'
+                    : owed.length
+                      ? 'border-amber-500/30 text-amber-400 bg-amber-500/10 hover:bg-amber-500/20'
+                      : 'border-white/10 text-white/30 bg-white/5'
+                }`}
+              >
+                <span className={owed.length ? 'animate-pulse' : ''}>●</span>
+                NEED TO RESPOND
+                <span className="px-1.5 py-0.5 rounded-md bg-amber-400/20 text-amber-200 text-xs tabular-nums">
+                  {owed.length}
+                </span>
+                {stale > 0 && (
+                  <span className="text-xs font-normal text-red-300/90">{stale} over 3d</span>
+                )}
+              </button>
+            );
+          })()}
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -630,11 +694,15 @@ export default function LinkedInReplies({ api }) {
       {loading ? (
         <p className="text-white/30 py-10 text-center">Loading...</p>
       ) : (() => {
-        const visible = replies.filter(r => (!interestedOnly || isHot(r)) && !hiddenSenders.has(senderOf(r)));
+        const visible = replies
+          .filter(r => (!interestedOnly || isHot(r)) && !hiddenSenders.has(senderOf(r)))
+          .filter(r => !needsReplyOnly || needsReply(r));
         if (visible.length === 0) {
           return (
             <p className="text-white/30 py-10 text-center">
-              {interestedOnly && replies.length > 0
+              {needsReplyOnly
+                ? 'Nobody is waiting on a reply. Nice.'
+                : interestedOnly && replies.length > 0
                 ? `Nothing left to work — ${replies.length} message${replies.length === 1 ? '' : 's'} hidden as nos, out-of-office or bounces`
                 : showHandled ? 'No LinkedIn messages yet' : 'All caught up'}
             </p>
