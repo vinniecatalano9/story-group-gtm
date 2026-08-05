@@ -14,7 +14,21 @@ const axios = require('axios');
 const { db } = require('../services/db');
 
 const HR_BASE = 'https://api.heyreach.io/api/public';
-const CREATE_WINDOW_DAYS = 14; // don't resurrect ancient threads
+
+// How far back to create cards for lead-waiting threads we've never seen.
+// This is a floor on how long a webhook outage can go unnoticed: anything that
+// slipped through and is older than the window was invisible FOREVER, because
+// every later run skipped it too. On 2026-08-05 that had silently stranded 123
+// threads where the lead spoke last, all of them older than the 14-day window.
+// Override per-run (see syncQueue options) to backfill wider.
+const CREATE_WINDOW_DAYS = Number(process.env.QUEUE_SYNC_CREATE_WINDOW_DAYS) || 14;
+
+// A pending card whose conversation is gone from HeyReach entirely belongs to a
+// LinkedIn profile that's since been swapped out. It can never be replied to —
+// SendMessage answers "This conversation does not exist" — so it has to leave
+// the queue instead of being worked forever. Grace period so a fresh webhook row
+// isn't cleared before it shows up in the list API.
+const ORPHAN_GRACE_DAYS = Number(process.env.QUEUE_SYNC_ORPHAN_GRACE_DAYS) || 2;
 
 function hrHeaders() {
   const k = process.env.HEYREACH_API_KEY;
@@ -24,17 +38,22 @@ function hrHeaders() {
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
+// Returns { items, complete } — `complete` is false when we didn't manage to
+// pull the whole inbox, which disables the orphan pass so a short read can never
+// mass-clear the queue.
 async function fetchAllConversations() {
   const items = [];
-  for (let offset = 0; offset < 2000; offset += 100) {
+  let totalCount = 0;
+  for (let offset = 0; offset < 20000; offset += 100) {
     const r = await axios.post(`${HR_BASE}/inbox/GetConversationsV2`,
       { offset, limit: 100, filters: {} }, { headers: hrHeaders() });
     const batch = r.data?.items || [];
+    totalCount = r.data?.totalCount || totalCount;
     items.push(...batch);
-    if (!batch.length || items.length >= (r.data?.totalCount || 0)) break;
+    if (!batch.length || items.length >= totalCount) break;
     await sleep(300);
   }
-  return items;
+  return { items, complete: totalCount > 0 && items.length >= totalCount };
 }
 
 function convoTags(c) {
@@ -45,8 +64,15 @@ function convoTags(c) {
 
 const isInterested = (tags) => tags.some(t => /interested/i.test(t) && !/not.?interested/i.test(t));
 
-async function syncQueue() {
-  const convos = await fetchAllConversations();
+/**
+ * @param {object} [opts]
+ * @param {number} [opts.createWindowDays] widen the backfill for a one-off catch-up
+ * @param {boolean} [opts.dryRun] report counts, write nothing
+ */
+async function syncQueue(opts = {}) {
+  const createWindowDays = Number(opts.createWindowDays) || CREATE_WINDOW_DAYS;
+  const dryRun = opts.dryRun === true;
+  const { items: convos, complete } = await fetchAllConversations();
   const byId = new Map();
   const byUrl = new Map();
   for (const c of convos) {
@@ -58,7 +84,8 @@ async function syncQueue() {
   const snap = await db.collection('replies').orderBy('created_at', 'desc').limit(800).get();
   const docsByConvo = new Set();
   const docsByUrl = new Set();
-  let cleared = 0, refreshed = 0, tagged = 0, created = 0;
+  let cleared = 0, refreshed = 0, tagged = 0, created = 0, orphaned = 0;
+  const orphanCutoff = Date.now() - ORPHAN_GRACE_DAYS * 24 * 60 * 60 * 1000;
 
   for (const doc of snap.docs) {
     const d = doc.data();
@@ -70,7 +97,16 @@ async function syncQueue() {
     if (d.handled === true) continue;
 
     const c = (cid && byId.get(cid)) || (d.profile_url && byUrl.get(d.profile_url));
-    if (!c) continue;
+    if (!c) {
+      // Not in HeyReach at all — the sender profile was retired. Only act on a
+      // complete pull, and only once past the grace period.
+      const createdAt = d.created_at?.toDate ? d.created_at.toDate().getTime() : new Date(d.created_at || 0).getTime();
+      if (complete && createdAt && createdAt < orphanCutoff) {
+        orphaned++;
+        if (!dryRun) await doc.ref.update({ handled: true, handled_reason: 'conversation_gone_profile_retired' });
+      }
+      continue;
+    }
 
     const update = {};
     const tags = convoTags(c);
@@ -91,11 +127,11 @@ async function syncQueue() {
       update.reclassified_at = null;
       refreshed++;
     }
-    if (Object.keys(update).length) await doc.ref.update(update);
+    if (Object.keys(update).length && !dryRun) await doc.ref.update(update);
   }
 
   // Direction 2: lead-waiting conversations with no dashboard card at all.
-  const cutoff = Date.now() - CREATE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  const cutoff = Date.now() - createWindowDays * 24 * 60 * 60 * 1000;
   for (const c of convos) {
     if (c.lastMessageSender !== 'CORRESPONDENT') continue;
     if (c.blockedByMe || c.blockedByParticipant || c.groupChat) continue;
@@ -107,6 +143,8 @@ async function syncQueue() {
     const p = c.correspondentProfile || {};
     const acct = c.linkedInAccount || {};
     const tags = convoTags(c);
+    created++;
+    if (dryRun) continue;
     await db.collection('replies').add({
       source: 'heyreach',
       email: null,
@@ -131,12 +169,11 @@ async function syncQueue() {
       classification: 'other',
       created_at: new Date(),
     });
-    created++;
   }
 
   // Give refreshed/created docs their drafts (bounded — rest caught next run)
   let reclassify = null;
-  if (refreshed + created > 0) {
+  if (!dryRun && refreshed + created > 0) {
     try {
       const { reclassifyBacklog } = require('./reclassify');
       reclassify = await reclassifyBacklog({ limit: 10 });
@@ -145,7 +182,8 @@ async function syncQueue() {
     }
   }
 
-  const result = { conversations: convos.length, cleared, refreshed, created, tagged, reclassify };
+  const result = { conversations: convos.length, complete, createWindowDays, dryRun,
+    cleared, refreshed, created, tagged, orphaned, reclassify };
   console.log('[queueSync]', JSON.stringify(result));
   return result;
 }

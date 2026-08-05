@@ -489,6 +489,12 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
           suggested_macro: cls.suggested_macro || 'NONE',
           suggested_action: cls.suggested_action || '',
           draft_response: cls.draft_response || '',
+          // SOP v2 Rules 3 and 4 — the tag and the sub-sequence ride along with
+          // every draft. As of Jul 27, 27 replies were untagged and 0 of 11
+          // positives were in a sub-sequence.
+          tag: cls.tag || '',
+          subsequence: cls.subsequence || '',
+          followups_recommended: Number(cls.followups_recommended) || 0,
         };
         // Heyreach auto-tagged this lead Interested — never let it land without
         // a draft. Fall back to the playbook's INTERESTED soft ask (LinkedIn split).
@@ -497,10 +503,12 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
           update.classification = 'interested';
           update.sentiment = 'positive';
           update.suggested_macro = 'INTERESTED_SOFT_ASK';
-          update.suggested_action = 'Reply with soft ask, no link yet.';
+          update.suggested_action = 'Reply with two specific times. No link on LinkedIn.';
+          update.tag = 'Interested';
+          update.subsequence = 'Call Time Sent';
           update.draft_response =
             `Message 1: Hey ${fn}, glad to hear it. We pitch founders' stories straight to reporters and producers who cover your space and earn the coverage, no paid placement.\n\n` +
-            `Message 2: Are you free for a quick call this week?`;
+            `Message 2: Does Tuesday at 10am EST or Wednesday at 2pm EST work?`;
         }
         await ref.update(update);
         console.log(`[heyreach webhook] Classified ${ref.id} as ${cls.classification}`);

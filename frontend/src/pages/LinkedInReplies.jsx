@@ -5,7 +5,13 @@ const CLASS_COLORS = {
   not_interested: 'bg-red-500/15 text-red-400 border-red-500/20',
   why_reach_out: 'bg-blue-500/15 text-blue-400 border-blue-500/20',
   more_info: 'bg-blue-500/15 text-blue-400 border-blue-500/20',
+  send_info: 'bg-blue-500/15 text-blue-400 border-blue-500/20',
   cost_question: 'bg-purple-500/15 text-purple-400 border-purple-500/20',
+  cost_question_repeat: 'bg-purple-500/15 text-purple-400 border-purple-500/20',
+  guarantee: 'bg-orange-500/15 text-orange-400 border-orange-500/20',
+  timing_objection: 'bg-amber-500/15 text-amber-400 border-amber-500/20',
+  times_rejected: 'bg-sky-500/15 text-sky-400 border-sky-500/20',
+  ghost_followup: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20',
   question_other: 'bg-white/10 text-white/50 border-white/10',
   referral: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20',
   re_engage: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20',
@@ -19,7 +25,13 @@ const CLASS_EMOJI = {
   not_interested: '🚫',
   why_reach_out: '❓',
   more_info: 'ℹ️',
+  send_info: '📄',
   cost_question: '💰',
+  cost_question_repeat: '💰',
+  guarantee: '🛡️',
+  timing_objection: '🗓️',
+  times_rejected: '🔁',
+  ghost_followup: '👻',
   referral: '🤝',
   re_engage: '🔄',
   ooo: '✈️',
@@ -402,9 +414,23 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
         </div>
       )}
 
-      {reply.suggested_macro && reply.suggested_macro !== 'NONE' && !showReply && (
-        <p className="text-xs text-white/30">
-          Macro: <span className="font-mono bg-white/5 px-1.5 py-0.5 rounded border border-white/10">{reply.suggested_macro}</span>
+      {/* Macro + the two things the Jul 22 audit found missing on every reply:
+          the Instantly tag and the sub-sequence. Both are manual in Instantly —
+          this is the reminder, not the action. */}
+      {!showReply && (reply.suggested_macro && reply.suggested_macro !== 'NONE' || reply.tag || reply.subsequence) && (
+        <p className="text-xs text-white/30 flex items-center gap-2 flex-wrap">
+          {reply.suggested_macro && reply.suggested_macro !== 'NONE' && (
+            <span>Macro: <span className="font-mono bg-white/5 px-1.5 py-0.5 rounded border border-white/10">{reply.suggested_macro}</span></span>
+          )}
+          {reply.tag && (
+            <span>Tag: <span className="font-mono bg-white/5 px-1.5 py-0.5 rounded border border-white/10">{reply.tag}</span></span>
+          )}
+          {reply.subsequence && (
+            <span>Sub-seq: <span className="font-mono bg-white/5 px-1.5 py-0.5 rounded border border-white/10">{reply.subsequence}</span></span>
+          )}
+          {reply.followups_recommended > 0 && (
+            <span className="text-white/25">follow up ~{reply.followups_recommended}x</span>
+          )}
         </p>
       )}
 

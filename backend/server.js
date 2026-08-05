@@ -156,9 +156,16 @@ app.get('/api/replies', async (req, res) => {
   try {
     const { getRepliesPage } = require('./services/db');
     const { classification, limit, show_handled, source, ulinc_status } = req.query;
+    const want = parseInt(limit) || 100;
+    // Every filter below runs in JS, AFTER Firestore has already applied the
+    // limit — so fetching only `want` rows silently truncates the queue: the
+    // newest N replies are mostly handled or the wrong source, and genuinely
+    // pending older ones fall off the end and can never be seen or worked.
+    // Over-fetch so the filters have the full set to work with, then slice.
+    const filtering = source || ulinc_status || show_handled !== 'true';
     let replies = await getRepliesPage({
       classification: classification || undefined,
-      limit: parseInt(limit) || 100,
+      limit: filtering ? Math.min(Math.max(want * 8, 800), 3000) : want,
     });
     // Filter by source. Recognize: ulinc, heyreach, linkedin (= ulinc+heyreach), email (= instantly).
     if (source === 'ulinc') {
@@ -305,16 +312,19 @@ app.post('/api/ulinc/webhook', async (req, res) => {
       let slots = null;
       try { slots = await getAvailableSlots(); } catch (e) {}
 
-      // Classify — use the same playbook prompt as the poller
-      let classification;
-      try {
-        const { CLASSIFY_PROMPT } = require('./cron/ulinc-poll');
-        const prompt = CLASSIFY_PROMPT ? CLASSIFY_PROMPT(contactName, company, messageText, firstName, null) : `Classify this LinkedIn reply. FROM: ${contactName}. MESSAGE: ${messageText}. Return JSON with classification, sentiment, summary, suggested_macro, suggested_action, draft_response.`;
-        classification = await claudeJSON(prompt, { timeout: 120000 });
-      } catch (e) {
-        console.error(`[ulinc-webhook] Classification failed for ${contactName}:`, e.message);
-        classification = { classification: 'other', sentiment: 'neutral', summary: 'Classification failed', suggested_macro: 'NONE', suggested_action: 'Review manually', draft_response: '' };
-      }
+      // Classify with the shared SOP v2 classifier — the same brain the HeyReach
+      // webhook and the Instantly email webhook use. Previously this pulled
+      // cron/ulinc-poll's own copy of the prompt, which still ran the retired
+      // March playbook (LinkedIn calendar link, flat follow-up sequence).
+      const { classifyReply } = require('./services/replyClassifier');
+      const classification = await classifyReply({
+        channel: 'linkedin',
+        email,
+        company,
+        replyText: messageText,
+        firstName,
+        slots,
+      });
 
       const replyId = await addReply({
         lead_id: lead?.id || null,
@@ -820,6 +830,29 @@ cron.schedule('*/30 * * * *', async () => {
   const { syncQueue } = require('./cron/queueSync');
   await syncQueue();
 }, { timezone: 'America/Chicago' });
+
+/**
+ * POST /api/heyreach/queue-sync
+ * Run the LinkedIn queue sync on demand instead of waiting for the half-hourly
+ * cron. Exists mainly for the backfill case: the routine run only creates cards
+ * for threads newer than CREATE_WINDOW_DAYS, so anything missed for longer than
+ * that needs an explicit wider pass.
+ *   { dry_run: true }              — report what would change, write nothing
+ *   { create_window_days: 365 }    — widen the backfill for this run only
+ */
+app.post('/api/heyreach/queue-sync', async (req, res) => {
+  try {
+    const { syncQueue } = require('./cron/queueSync');
+    const result = await syncQueue({
+      createWindowDays: req.body?.create_window_days,
+      dryRun: req.body?.dry_run === true,
+    });
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    console.error('[queue-sync] Error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // Auto-deploy: pull + rebuild backend + rebuild frontend + firebase deploy
 // Triggered by GitHub webhook or manual POST

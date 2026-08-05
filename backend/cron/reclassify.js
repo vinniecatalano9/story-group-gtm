@@ -34,6 +34,13 @@ async function reclassifyBacklog({ limit = 25 } = {}) {
         firstName: d.first_name || (d.full_name || '').split(' ')[0] || '',
         slots: null,
       });
+      // A fallback result is not a classification. Leave reclassified_at unset so
+      // the next run picks the row up again instead of stranding it.
+      if (cls.failed) {
+        failed++;
+        console.error('[reclassify] classifier fallback for', id, '— leaving unstamped for retry');
+        continue;
+      }
       await db.collection('replies').doc(id).update({
         classification: cls.classification || d.classification || 'other',
         sentiment: cls.sentiment || d.sentiment || 'neutral',
@@ -41,6 +48,9 @@ async function reclassifyBacklog({ limit = 25 } = {}) {
         suggested_macro: cls.suggested_macro || '',
         suggested_action: cls.suggested_action || '',
         draft_response: cls.draft_response || '',
+        tag: cls.tag || '',
+        subsequence: cls.subsequence || '',
+        followups_recommended: Number(cls.followups_recommended) || 0,
         reclassified_at: new Date(),
       });
       updated++;
