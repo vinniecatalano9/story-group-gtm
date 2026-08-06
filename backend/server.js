@@ -197,7 +197,14 @@ app.get('/api/replies', async (req, res) => {
       const cb = b.created_at?._seconds ? b.created_at._seconds * 1000 : (b.created_at ? new Date(b.created_at).getTime() : 0);
       return (db || cb) - (da || ca);
     });
-    res.json({ success: true, replies: replies.slice(0, parseInt(limit) || 50) });
+    // ICP verdict is computed per request rather than stored, so tightening a
+    // rule takes effect immediately instead of needing every card re-backfilled.
+    const { icpCheck } = require('./lib/icpCheck');
+    const page = replies.slice(0, parseInt(limit) || 50).map(r => ({
+      ...r,
+      icp: icpCheck({ headline: r.headline, company: r.company_name }),
+    }));
+    res.json({ success: true, replies: page });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

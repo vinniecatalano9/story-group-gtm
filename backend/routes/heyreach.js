@@ -530,6 +530,7 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
       full_name: fullName,
       lead_name: fullName,
       profile_url: profileUrl,
+      headline: lead.headline || lead.position || lead.title || '',
       company_name: companyName,
       reply_text: replyText,
       message_date: messageDate,

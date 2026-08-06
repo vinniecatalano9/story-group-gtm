@@ -382,6 +382,16 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
             <span className="text-xs text-white/25">via {reply.heyreach_account_name}</span>
           )}
           <span className="text-xs text-white/30">{time}</span>
+          {/* Not-worth-working flag from the headline. A prompt for a human, not
+              an auto-hide: it says why, and the card stays workable. */}
+          {reply.icp?.verdict === 'kill' && (
+            <span
+              title={reply.headline ? `Headline: ${reply.headline.slice(0, 220)}` : ''}
+              className="px-2 py-0.5 text-[10px] font-semibold rounded-lg border border-rose-500/30 text-rose-300 bg-rose-500/15"
+            >
+              NOT ICP · {reply.icp.reason}
+            </span>
+          )}
           {/* How long they've been waiting on us. Silent under 2 days, then
               increasingly loud — the point is that a good reply going stale is
               the expensive failure, not an untidy queue. */}
@@ -602,6 +612,7 @@ export default function LinkedInReplies({ api }) {
   const [interestedOnly, setInterestedOnly] = useState(true);
   // "Needs reply" header button — the short list the team actually owes an answer to.
   const [needsReplyOnly, setNeedsReplyOnly] = useState(false);
+  const [hideNonIcp, setHideNonIcp] = useState(false);
   // Sender accounts toggled OFF. Persisted per browser via the sender chips.
   // Aaron used to be force-hidden on every load; that's off now — his threads
   // show like everyone else's, and hiding any sender is a manual choice that
@@ -745,6 +756,23 @@ export default function LinkedInReplies({ api }) {
           >
             🔥 Hide the nos
           </button>
+          {(() => {
+            const n = replies.filter(r => r.icp?.verdict === 'kill' && !hiddenSenders.has(senderOf(r))).length;
+            if (!n) return null;
+            return (
+              <button
+                onClick={() => setHideNonIcp(!hideNonIcp)}
+                title="Students, retired, job seekers, support roles, sub-founder titles and PR competitors"
+                className={`px-3 py-1.5 text-sm font-medium rounded-xl border transition-all ${
+                  hideNonIcp
+                    ? 'border-rose-500/40 text-rose-300 bg-rose-500/20 ring-1 ring-rose-500/20'
+                    : 'border-white/10 text-white/40 bg-white/5 hover:text-white/70'
+                }`}
+              >
+                Hide non-ICP ({n})
+              </button>
+            );
+          })()}
           <label className="flex items-center gap-2 text-sm text-white/40 cursor-pointer">
             <input
               type="checkbox"
@@ -810,7 +838,8 @@ export default function LinkedInReplies({ api }) {
       ) : (() => {
         const visible = replies
           .filter(r => (!interestedOnly || isHot(r)) && !hiddenSenders.has(senderOf(r)))
-          .filter(r => !needsReplyOnly || needsReply(r));
+          .filter(r => !needsReplyOnly || needsReply(r))
+          .filter(r => !hideNonIcp || r.icp?.verdict !== 'kill');
         if (visible.length === 0) {
           return (
             <p className="text-white/30 py-10 text-center">

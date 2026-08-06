@@ -161,6 +161,7 @@ async function syncQueue(opts = {}) {
       full_name: [p.firstName, p.lastName].filter(Boolean).join(' '),
       lead_name: [p.firstName, p.lastName].filter(Boolean).join(' '),
       profile_url: url || '',
+      headline: p.headline || '',
       company_name: p.companyName || '',
       reply_text: c.lastMessageText.trim(),
       message_date: c.lastMessageAt || new Date().toISOString(),
