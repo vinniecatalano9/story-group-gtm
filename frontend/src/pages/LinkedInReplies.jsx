@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 const CLASS_COLORS = {
   interested: 'bg-green-500/15 text-green-400 border-green-500/20',
@@ -62,6 +62,7 @@ function formatTime(created_at) {
 function HeyreachThread({ conversationId, api }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
+  const scrollRef = useRef(null);
 
   useEffect(() => {
     let live = true;
@@ -71,6 +72,14 @@ function HeyreachThread({ conversationId, api }) {
       .catch(e => { if (live) setError(String(e)); });
     return () => { live = false; };
   }, [conversationId, api]);
+
+  // Open on the newest message, the way a chat app does — the latest exchange is
+  // what you're replying to. Scrolling up for the history is the deliberate act.
+  useEffect(() => {
+    if (!data || !scrollRef.current) return;
+    const el = scrollRef.current;
+    el.scrollTop = el.scrollHeight;
+  }, [data]);
 
   if (error) return <p className="text-xs text-red-400/80 py-2">Couldn't load the thread: {error}</p>;
   if (!data) return <p className="text-xs text-white/30 py-2">Loading conversation...</p>;
@@ -87,7 +96,7 @@ function HeyreachThread({ conversationId, api }) {
       <p className="text-xs font-medium text-white/40 uppercase tracking-wide mb-2">
         Conversation · {data.totalMessages} message{data.totalMessages === 1 ? '' : 's'}
       </p>
-      <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-1">
+      <div ref={scrollRef} className="space-y-2 max-h-[28rem] overflow-y-auto pr-1">
         {data.messages.map((m, i) => (
           <div key={i} className={`flex ${m.outgoing ? 'justify-end' : 'justify-start'}`}>
             <div
