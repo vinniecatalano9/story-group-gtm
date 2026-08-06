@@ -131,3 +131,124 @@ select option {
   background: #0D1F3C;
   color: #E8ECF1;
 }
+
+/* ============================================================================
+   LIGHT MODE
+   ----------------------------------------------------------------------------
+   The dashboard is a work surface, not a brochure. The navy theme reads well in
+   a screenshot and badly for an hour of inbox triage.
+
+   Nine page files carry ~450 hardcoded white-on-dark utilities (text-white/40,
+   bg-white/5, border-white/10 and so on). Rewriting them by hand would be slow
+   and easy to get subtly wrong, so this remaps the generated classes instead:
+   one file, every page flips together, and removing the `light` class on <html>
+   restores the dark theme exactly.
+
+   Every selector here is `.light .foo`, specificity (0,2,0), which beats
+   Tailwind's own (0,1,0) without needing !important.
+
+   Ink is #0F1B2D, a near-black pulled toward the brand navy so the palette
+   still feels like Story Group. Background is #F4F5F7, deliberately off-white:
+   pure #FFF against dark text is glarey over a long session.
+   ========================================================================== */
+
+.light {
+  --ink: 15, 27, 45;
+  --page: #F4F5F7;
+  --card: #FFFFFF;
+}
+
+.light body,
+body.light {
+  background: var(--page);
+  color: rgb(var(--ink));
+}
+
+/* The pink/coral atmosphere is far too strong over a light page. */
+.light body::before {
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(255, 34, 87, 0.035) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 80% 80%, rgba(255, 116, 63, 0.025) 0%, transparent 60%);
+}
+
+/* --- Surfaces ------------------------------------------------------------ */
+.light .glass,
+.light .glass-card {
+  background: var(--card);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid rgba(var(--ink), 0.10);
+  box-shadow: 0 1px 2px rgba(var(--ink), 0.04), 0 4px 16px rgba(var(--ink), 0.05);
+}
+.light .glass-card-hover:hover {
+  background: var(--card);
+  border-color: rgba(255, 34, 87, 0.35);
+  box-shadow: 0 4px 20px rgba(var(--ink), 0.10);
+}
+.light .glass-nav {
+  background: rgba(255, 255, 255, 0.92);
+  border-bottom: 1px solid rgba(var(--ink), 0.10);
+}
+.light .glass-input {
+  background: #FFFFFF;
+  border: 1px solid rgba(var(--ink), 0.16);
+  color: rgb(var(--ink));
+}
+.light .glass-input:focus {
+  background: #FFFFFF;
+  border-color: rgba(255, 34, 87, 0.6);
+}
+.light .glass-input::placeholder { color: rgba(var(--ink), 0.42); }
+
+/* --- Text: white opacity becomes ink opacity ------------------------------ */
+.light .text-white      { color: rgba(var(--ink), 0.95); }
+.light .text-white\/90  { color: rgba(var(--ink), 0.92); }
+.light .text-white\/85  { color: rgba(var(--ink), 0.88); }
+.light .text-white\/80  { color: rgba(var(--ink), 0.85); }
+.light .text-white\/75  { color: rgba(var(--ink), 0.80); }
+.light .text-white\/70  { color: rgba(var(--ink), 0.76); }
+.light .text-white\/65  { color: rgba(var(--ink), 0.72); }
+.light .text-white\/60  { color: rgba(var(--ink), 0.68); }
+.light .text-white\/55  { color: rgba(var(--ink), 0.64); }
+.light .text-white\/50  { color: rgba(var(--ink), 0.60); }
+.light .text-white\/40  { color: rgba(var(--ink), 0.56); }
+.light .text-white\/35  { color: rgba(var(--ink), 0.52); }
+.light .text-white\/30  { color: rgba(var(--ink), 0.50); }
+.light .text-white\/25  { color: rgba(var(--ink), 0.48); }
+.light .text-white\/20  { color: rgba(var(--ink), 0.45); }
+.light .text-body       { color: rgba(var(--ink), 0.92); }
+.light .text-muted      { color: rgba(var(--ink), 0.58); }
+
+/* --- Fills and borders ---------------------------------------------------- */
+.light .bg-white\/3,
+.light .bg-white\/\[0\.02\] { background-color: rgba(var(--ink), 0.025); }
+.light .bg-white\/5,
+.light .bg-white\/\[0\.07\] { background-color: rgba(var(--ink), 0.045); }
+.light .bg-white\/10        { background-color: rgba(var(--ink), 0.075); }
+.light .border-white\/5     { border-color: rgba(var(--ink), 0.08); }
+.light .border-white\/10    { border-color: rgba(var(--ink), 0.12); }
+.light .border-white\/15    { border-color: rgba(var(--ink), 0.16); }
+.light .border-white\/20    { border-color: rgba(var(--ink), 0.20); }
+.light .divide-white\/5 > * + * { border-color: rgba(var(--ink), 0.08); }
+
+/* --- Accents: the 300/400 tints are tuned for dark and vanish on white ----- */
+.light .text-red-400,    .light .text-red-300     { color: #C81E3A; }
+.light .text-green-400,  .light .text-green-300,
+.light .text-green-500                            { color: #15803D; }
+.light .text-emerald-400,.light .text-emerald-300 { color: #047857; }
+.light .text-blue-400                             { color: #1D4ED8; }
+.light .text-sky-400,    .light .text-sky-300     { color: #0369A1; }
+.light .text-indigo-400, .light .text-indigo-300  { color: #4338CA; }
+.light .text-purple-400, .light .text-purple-300,
+.light .text-purple-500                           { color: #6D28D9; }
+.light .text-yellow-400, .light .text-yellow-300,
+.light .text-amber-400,  .light .text-amber-300   { color: #A16207; }
+.light .text-orange-400                           { color: #C2410C; }
+.light .text-rose-300                             { color: #BE123C; }
+.light .text-cyan-400                             { color: #0E7490; }
+.light .text-gray-400,   .light .text-slate-400   { color: rgba(var(--ink), 0.58); }
+/* Brand pink at #FF2257 is only ~3.9:1 on white, so text uses the deeper step.
+   Fills and bars keep the real brand colour. */
+.light .text-brand-400,  .light .text-brand-300,
+.light .text-brand-500                            { color: #D1103F; }
+.light .text-coral-400,  .light .text-coral-500   { color: #C2410C; }
