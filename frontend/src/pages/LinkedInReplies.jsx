@@ -12,12 +12,12 @@ const CLASS_COLORS = {
   timing_objection: 'bg-amber-500/15 text-amber-400 border-amber-500/20',
   times_rejected: 'bg-sky-500/15 text-sky-400 border-sky-500/20',
   ghost_followup: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20',
-  question_other: 'bg-white/10 text-white/50 border-white/10',
+  question_other: 'bg-white/10 text-white/75 border-white/10',
   referral: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20',
   re_engage: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20',
   ooo: 'bg-gray-500/15 text-gray-400 border-gray-500/20',
   bounce: 'bg-red-500/15 text-red-400 border-red-500/20',
-  other: 'bg-white/10 text-white/50 border-white/10',
+  other: 'bg-white/10 text-white/75 border-white/10',
 };
 
 const CLASS_EMOJI = {
@@ -115,10 +115,10 @@ function HeyreachThread({ conversationId, api, leadName, accountId }) {
   if (error) return <p className="text-xs text-red-400/80 py-2">Couldn't load the thread: {error}</p>;
   if (!data) return (
     <div className="mt-2 border-t border-white/10 pt-3 min-h-[5rem]">
-      <p className="text-xs text-white/25">Loading conversation...</p>
+      <p className="text-xs text-white/55">Loading conversation...</p>
     </div>
   );
-  if (!data.messages.length) return <p className="text-xs text-white/30 py-2">No messages in this thread</p>;
+  if (!data.messages.length) return <p className="text-xs text-white/55 py-2">No messages in this thread</p>;
 
   const stamp = (iso) => {
     if (!iso) return '';
@@ -128,28 +128,28 @@ function HeyreachThread({ conversationId, api, leadName, accountId }) {
 
   return (
     <div className="mt-2 border-t border-white/10 pt-3">
-      <p className="text-xs font-medium text-white/40 uppercase tracking-wide mb-2">
+      <p className="text-xs font-medium text-white/65 uppercase tracking-wide mb-2">
         Conversation · {data.totalMessages} message{data.totalMessages === 1 ? '' : 's'}
       </p>
       <div ref={scrollRef} className="space-y-2 max-h-[28rem] overflow-y-auto pr-1">
         {data.messages.map((m, i) => (
           <div key={i} className={`flex ${m.outgoing ? 'justify-end' : 'justify-start'}`}>
             <div
-              className={`max-w-[82%] rounded-2xl px-3 py-2 text-sm ${
+              className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 text-[14px] leading-relaxed ${
                 m.outgoing
                   ? 'bg-indigo-500/15 border border-indigo-400/20 rounded-br-sm'
                   : 'bg-white/5 border border-white/10 rounded-bl-sm'
               }`}
             >
               <div className="flex items-baseline gap-2 mb-0.5">
-                <span className={`text-[10px] font-semibold uppercase tracking-wide ${m.outgoing ? 'text-indigo-300/80' : 'text-white/40'}`}>
+                <span className={`text-[11px] font-semibold uppercase tracking-wide ${m.outgoing ? 'text-indigo-300/80' : 'text-white/65'}`}>
                   {m.outgoing ? 'Us' : (data.correspondent.name || 'Them')}
                 </span>
                 {m.isInMail && <span className="text-[9px] px-1 py-0.5 rounded bg-amber-500/15 text-amber-300/90">InMail</span>}
-                <span className="text-[10px] text-white/25 ml-auto">{stamp(m.createdAt)}</span>
+                <span className="text-[11px] text-white/55 ml-auto">{stamp(m.createdAt)}</span>
               </div>
-              {m.subject && <p className="text-[11px] font-semibold text-white/50 mb-1">{m.subject}</p>}
-              <p className={`whitespace-pre-line leading-relaxed ${m.outgoing ? 'text-white/80' : 'text-white/70'}`}>
+              {m.subject && <p className="text-[11px] font-semibold text-white/75 mb-1">{m.subject}</p>}
+              <p className={`whitespace-pre-line leading-relaxed ${m.outgoing ? 'text-white/90' : 'text-white/85'}`}>
                 {m.body}
               </p>
             </div>
@@ -175,14 +175,14 @@ function ConversationThread({ contactId, api }) {
       .catch(() => setLoading(false));
   }, [contactId, api]);
 
-  if (loading) return <p className="text-xs text-white/30 py-2">Loading conversation...</p>;
-  if (!messages.length) return <p className="text-xs text-white/30 py-2">No previous messages</p>;
+  if (loading) return <p className="text-xs text-white/55 py-2">Loading conversation...</p>;
+  if (!messages.length) return <p className="text-xs text-white/55 py-2">No previous messages</p>;
 
   const isUlinc = source === 'ulinc';
 
   return (
     <div className="space-y-2 mt-2 border-t border-white/10 pt-3">
-      <p className="text-xs font-medium text-white/40 uppercase tracking-wide">
+      <p className="text-xs font-medium text-white/65 uppercase tracking-wide">
         Conversation History ({messages.length})
       </p>
       <div className="space-y-2 max-h-80 overflow-y-auto">
@@ -201,17 +201,17 @@ function ConversationThread({ contactId, api }) {
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="font-medium text-white/40">
+                <span className="font-medium text-white/65">
                   {isOutgoing ? 'You' : 'Them'}
                   {m.classification && (
-                    <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ml-1.5 ${CLASS_COLORS[m.classification] || CLASS_COLORS.other}`}>
+                    <span className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-medium ml-1.5 ${CLASS_COLORS[m.classification] || CLASS_COLORS.other}`}>
                       {m.classification.replace(/_/g, ' ')}
                     </span>
                   )}
                 </span>
-                <span className="text-white/20">{formatTime(time)}</span>
+                <span className="text-white/55">{formatTime(time)}</span>
               </div>
-              <p className={isOutgoing ? 'text-brand-300' : 'text-white/50 italic'}>
+              <p className={isOutgoing ? 'text-brand-300' : 'text-white/75 italic'}>
                 {isOutgoing ? '' : '"'}{text.substring(0, 300)}{text.length > 300 ? '...' : ''}{isOutgoing ? '' : '"'}
               </p>
               {m.draft_response && (
@@ -239,10 +239,10 @@ function CopyButton({ text }) {
   return (
     <button
       onClick={copy}
-      className={`shrink-0 px-2 py-1 text-[10px] font-medium rounded-lg border transition-all ${
+      className={`shrink-0 px-2 py-1 text-[11px] font-medium rounded-lg border transition-all ${
         copied
           ? 'border-green-500/30 text-green-400 bg-green-500/10'
-          : 'border-white/10 text-white/40 bg-white/5 hover:text-white/80 hover:bg-white/10'
+          : 'border-white/10 text-white/65 bg-white/5 hover:text-white/90 hover:bg-white/10'
       }`}
     >
       {copied ? 'Copied!' : 'Copy'}
@@ -372,10 +372,10 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
             {reply.contact_name || reply.full_name || reply.lead_name || reply.email || 'Unknown'}
           </span>
           {reply.company_name && (
-            <span className="ml-1.5 text-xs text-white/30">· {reply.company_name}</span>
+            <span className="ml-1.5 text-xs text-white/55">· {reply.company_name}</span>
           )}
           {reply.email && reply.contact_name && !reply.email.startsWith('linkedin:') && (
-            <span className="ml-1.5 text-xs text-white/30">{reply.email}</span>
+            <span className="ml-1.5 text-xs text-white/55">{reply.email}</span>
           )}
           <span className={`ml-2 inline-block px-2.5 py-0.5 rounded-lg text-xs font-medium ${colors}`}>
             {cls.replace(/_/g, ' ')}
@@ -410,15 +410,15 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
         </div>
         <div className="flex items-center gap-3">
           {reply.heyreach_account_name && (
-            <span className="text-xs text-white/25">via {reply.heyreach_account_name}</span>
+            <span className="text-xs text-white/55">via {reply.heyreach_account_name}</span>
           )}
-          <span className="text-xs text-white/30">{time}</span>
+          <span className="text-xs text-white/55">{time}</span>
           {/* Not-worth-working flag from the headline. A prompt for a human, not
               an auto-hide: it says why, and the card stays workable. */}
           {reply.icp?.verdict === 'kill' && (
             <span
               title={reply.headline ? `Headline: ${reply.headline.slice(0, 220)}` : ''}
-              className="px-2 py-0.5 text-[10px] font-semibold rounded-lg border border-rose-500/30 text-rose-300 bg-rose-500/15"
+              className="px-2 py-0.5 text-[11px] font-semibold rounded-lg border border-rose-500/30 text-rose-300 bg-rose-500/15"
             >
               NOT ICP · {reply.icp.reason}
             </span>
@@ -434,9 +434,9 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
             if (d < 2) return null;
             const tone = d >= 7 ? 'border-red-500/30 text-red-300 bg-red-500/15'
               : d >= 3 ? 'border-amber-500/30 text-amber-300 bg-amber-500/15'
-              : 'border-white/10 text-white/40 bg-white/5';
+              : 'border-white/10 text-white/65 bg-white/5';
             return (
-              <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-lg border ${tone}`}>
+              <span className={`px-2 py-0.5 text-[11px] font-semibold rounded-lg border ${tone}`}>
                 waiting {d}d
               </span>
             );
@@ -477,9 +477,9 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
         const full = reply.reply_text || '';
         const long = full.length > 400;
         return (
-          <div className="text-sm text-white/60 bg-white/5 rounded-xl p-3 border border-white/5">
+          <div className="text-white/85 bg-white/[0.07] rounded-xl p-3.5 border border-white/10">
             <p
-              className={`italic whitespace-pre-line leading-relaxed ${long && !showFullMsg ? 'max-h-28 overflow-hidden' : ''}`}
+              className={`whitespace-pre-line leading-relaxed text-[15px] ${long && !showFullMsg ? 'max-h-32 overflow-hidden' : ''}`}
               style={long && !showFullMsg ? { maskImage: 'linear-gradient(to bottom, black 60%, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, black 60%, transparent)' } : undefined}
             >
               "{full}"
@@ -497,14 +497,14 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
       })()}
 
       {reply.summary && reply.summary !== 'Classification failed' && (
-        <p className="text-sm text-white/50">
-          <span className="font-medium text-white/60">Summary:</span> {reply.summary}
+        <p className="text-sm text-white/75">
+          <span className="font-medium text-white/85">Summary:</span> {reply.summary}
         </p>
       )}
 
       {reply.draft_response && !showReply && (
         <div className="text-sm">
-          <span className="font-medium text-white/50">Suggested Reply:</span>
+          <span className="font-medium text-white/75">Suggested Reply:</span>
           <div className="mt-1 space-y-2">
             {reply.draft_response.split(/\n{2,}/).map((block, i) => (
               <div
@@ -521,14 +521,14 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
 
       {showReply && isHeyreach && (
         <div className="space-y-3 border-t border-white/10 pt-3">
-          <p className="text-xs font-medium text-white/40 uppercase tracking-wide">
+          <p className="text-xs font-medium text-white/65 uppercase tracking-wide">
             Send LinkedIn Reply — one message at a time, you control the pacing
           </p>
           {msgBlocks.map((b, i) => (
             <div key={i} className={`space-y-1.5 ${b.sent ? 'opacity-50' : ''}`}>
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-medium text-white/30 uppercase tracking-wide">Message {i + 1}</span>
-                {b.sent && <span className="text-[10px] text-green-400">✓ Sent</span>}
+                <span className="text-[11px] font-medium text-white/55 uppercase tracking-wide">Message {i + 1}</span>
+                {b.sent && <span className="text-[11px] text-green-400">✓ Sent</span>}
               </div>
               <div className="flex items-start gap-2">
                 <textarea
@@ -549,7 +549,7 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
               </div>
             </div>
           ))}
-          <p className="text-[10px] text-white/25">
+          <p className="text-[11px] text-white/55">
             Messages send in order — Message 2 unlocks after Message 1 is sent. The card marks done after the last one.
           </p>
         </div>
@@ -557,7 +557,7 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
 
       {showReply && !isHeyreach && (
         <div className="space-y-2 border-t border-white/10 pt-3">
-          <p className="text-xs font-medium text-white/40 uppercase tracking-wide">Send LinkedIn Reply</p>
+          <p className="text-xs font-medium text-white/65 uppercase tracking-wide">Send LinkedIn Reply</p>
           <textarea
             value={replyText}
             onChange={e => setReplyText(e.target.value)}
@@ -566,7 +566,7 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
             placeholder="Type your reply..."
           />
           <div className="flex items-center justify-between">
-            <span className="text-xs text-white/30">{replyText.length} chars</span>
+            <span className="text-xs text-white/55">{replyText.length} chars</span>
             <button
               onClick={sendReply}
               disabled={sending || !replyText.trim()}
@@ -582,7 +582,7 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
           the Instantly tag and the sub-sequence. Both are manual in Instantly —
           this is the reminder, not the action. */}
       {!showReply && (reply.suggested_macro && reply.suggested_macro !== 'NONE' || reply.tag || reply.subsequence) && (
-        <p className="text-xs text-white/30 flex items-center gap-2 flex-wrap">
+        <p className="text-xs text-white/55 flex items-center gap-2 flex-wrap">
           {reply.suggested_macro && reply.suggested_macro !== 'NONE' && (
             <span>Macro: <span className="font-mono bg-white/5 px-1.5 py-0.5 rounded border border-white/10">{reply.suggested_macro}</span></span>
           )}
@@ -593,14 +593,14 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
             <span>Sub-seq: <span className="font-mono bg-white/5 px-1.5 py-0.5 rounded border border-white/10">{reply.subsequence}</span></span>
           )}
           {reply.followups_recommended > 0 && (
-            <span className="text-white/25">follow up ~{reply.followups_recommended}x</span>
+            <span className="text-white/55">follow up ~{reply.followups_recommended}x</span>
           )}
         </p>
       )}
 
       {/* Ulinc Status Buttons */}
       <div className="flex items-center gap-2 pt-1">
-        <span className="text-xs text-white/30 mr-1">Status:</span>
+        <span className="text-xs text-white/55 mr-1">Status:</span>
         {ULINC_STATUSES.map(s => (
           <button
             key={s.value}
@@ -746,7 +746,7 @@ export default function LinkedInReplies({ api }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <h1 className="text-2xl font-bold text-white">LinkedIn Messages</h1>
-          <span className="text-sm text-white/30">
+          <span className="text-sm text-white/55">
             {replies.filter(r => (!interestedOnly || isHot(r)) && !hiddenSenders.has(senderOf(r))).length} pending
           </span>
           {(() => {
@@ -761,7 +761,7 @@ export default function LinkedInReplies({ api }) {
                     ? 'border-amber-400/50 text-amber-300 bg-amber-500/20 ring-1 ring-amber-400/30'
                     : owed.length
                       ? 'border-amber-500/30 text-amber-400 bg-amber-500/10 hover:bg-amber-500/20'
-                      : 'border-white/10 text-white/30 bg-white/5'
+                      : 'border-white/10 text-white/55 bg-white/5'
                 }`}
               >
                 <span className={owed.length ? 'animate-pulse' : ''}>●</span>
@@ -782,7 +782,7 @@ export default function LinkedInReplies({ api }) {
             className={`px-3 py-1.5 text-sm font-medium rounded-xl border transition-all ${
               interestedOnly
                 ? 'border-green-500/30 text-green-400 bg-green-500/15 ring-1 ring-green-500/20'
-                : 'border-white/10 text-white/40 bg-white/5 hover:text-white/70'
+                : 'border-white/10 text-white/65 bg-white/5 hover:text-white/85'
             }`}
           >
             🔥 Hide the nos
@@ -797,14 +797,14 @@ export default function LinkedInReplies({ api }) {
                 className={`px-3 py-1.5 text-sm font-medium rounded-xl border transition-all ${
                   hideNonIcp
                     ? 'border-rose-500/40 text-rose-300 bg-rose-500/20 ring-1 ring-rose-500/20'
-                    : 'border-white/10 text-white/40 bg-white/5 hover:text-white/70'
+                    : 'border-white/10 text-white/65 bg-white/5 hover:text-white/85'
                 }`}
               >
                 Hide non-ICP ({n})
               </button>
             );
           })()}
-          <label className="flex items-center gap-2 text-sm text-white/40 cursor-pointer">
+          <label className="flex items-center gap-2 text-sm text-white/65 cursor-pointer">
             <input
               type="checkbox"
               checked={showHandled}
@@ -842,7 +842,7 @@ export default function LinkedInReplies({ api }) {
         if (senders.length < 2) return null;
         return (
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-white/30">Senders:</span>
+            <span className="text-xs text-white/55">Senders:</span>
             {senders.map(name => {
               const hidden = hiddenSenders.has(name);
               const count = replies.filter(r => senderOf(r) === name && (!interestedOnly || isHot(r))).length;
@@ -852,7 +852,7 @@ export default function LinkedInReplies({ api }) {
                   onClick={() => toggleSender(name)}
                   className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-all ${
                     hidden
-                      ? 'border-white/10 text-white/25 bg-white/5 line-through'
+                      ? 'border-white/10 text-white/55 bg-white/5 line-through'
                       : 'border-sky-500/20 text-sky-400 bg-sky-500/10 hover:bg-sky-500/20'
                   }`}
                 >
@@ -865,7 +865,7 @@ export default function LinkedInReplies({ api }) {
       })()}
 
       {loading ? (
-        <p className="text-white/30 py-10 text-center">Loading...</p>
+        <p className="text-white/55 py-10 text-center">Loading...</p>
       ) : (() => {
         const visible = replies
           .filter(r => (!interestedOnly || isHot(r)) && !hiddenSenders.has(senderOf(r)))
@@ -873,7 +873,7 @@ export default function LinkedInReplies({ api }) {
           .filter(r => !hideNonIcp || r.icp?.verdict !== 'kill');
         if (visible.length === 0) {
           return (
-            <p className="text-white/30 py-10 text-center">
+            <p className="text-white/55 py-10 text-center">
               {needsReplyOnly
                 ? 'Nobody is waiting on a reply. Nice.'
                 : interestedOnly && replies.length > 0

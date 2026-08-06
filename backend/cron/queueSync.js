@@ -30,6 +30,20 @@ const CREATE_WINDOW_DAYS = Number(process.env.QUEUE_SYNC_CREATE_WINDOW_DAYS) || 
 // isn't cleared before it shows up in the list API.
 const ORPHAN_GRACE_DAYS = Number(process.env.QUEUE_SYNC_ORPHAN_GRACE_DAYS) || 2;
 
+// Rejecting PAID placement is not a rejection of us. "I won't pay to be
+// featured" is the single most common misread of what we sell, and it is what
+// the earned-not-paid reframe exists to answer. Auto-closing those threw away
+// recoverable conversations, so anything matching this stays in the queue for a
+// human even when it also reads as a no.
+const PAY_VERB_RE = /\b(pay|paying|paid|pay for)\b/i;
+// \w* on the tail, not \b: "features", "podcasts" and "magazines" are how people
+// actually write these, and a trailing \b makes the singular form unmatchable.
+const PLACEMENT_NOUN_RE = /\b(?:media|press|placement\w*|feature\w*|coverage|publicity|appearance\w*|article\w*|interview\w*|podcast\w*|magazine\w*|pay[- ]to[- ]play)/i;
+// Distance between the two words is unreliable: "not interested in any features
+// on websites, podcasts, magazines, etc. that I have to pay for" puts eight
+// words between them. Co-occurrence in the same message is the signal.
+const isPaidMisread = (t) => PAY_VERB_RE.test(t) && PLACEMENT_NOUN_RE.test(t);
+
 // A flat no, or "I have no budget for this", ends the conversation. Those cards
 // were piling up in the queue looking like work: 45 of 206 open cards on
 // 2026-08-06. They close themselves now. Nothing is deleted, so they stay
@@ -137,7 +151,8 @@ async function syncQueue(opts = {}) {
 
     // Dead conversation: they said no, or said they won't pay. Only when the
     // lead spoke last, so we never close a thread mid-exchange on our side.
-    if (c.lastMessageSender === 'CORRESPONDENT' && HARD_NO_RE.test((c.lastMessageText || '').trim())) {
+    const lastText = (c.lastMessageText || '').trim();
+    if (c.lastMessageSender === 'CORRESPONDENT' && HARD_NO_RE.test(lastText) && !isPaidMisread(lastText)) {
       update.handled = true;
       update.handled_reason = 'closed_hard_no_or_no_budget';
       update.classification = 'not_interested';
