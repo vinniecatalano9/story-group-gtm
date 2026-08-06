@@ -644,15 +644,22 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
       {/* Say what's wrong in a sentence and the draft is rewritten around it.
           The alternative was editing by hand and losing whatever the macro got
           right. House rules still apply to the rewrite. */}
-      {draft && !showReply && (
+      {!showReply && (
         <div className="space-y-1.5">
+          {!draft && (
+            <p className="text-sm text-white/55">
+              <span className="inline-block animate-pulse">✎</span> Writing a suggested reply. It lands in about a minute, or ask for something specific below.
+            </p>
+          )}
           <div className="flex items-center gap-2">
             <input
               value={feedback}
               onChange={e => { setFeedback(e.target.value); setRedraftErr(''); }}
               onKeyDown={e => { if (e.key === 'Enter' && feedback.trim() && !redrafting) redraft(); }}
               disabled={redrafting}
-              placeholder="Not quite? Say what to change, e.g. mention we also do PR for companies raising a round"
+              placeholder={draft
+                ? 'Not quite? Say what to change, e.g. mention we also do PR for companies raising a round'
+                : 'Ask for a reply, e.g. give me two options, one that waits for the hire and one that does not'}
               className="flex-1 text-sm rounded-xl px-3 py-2 bg-white/5 border border-white/10 text-white/85 placeholder:text-white/40 focus:outline-none focus:border-indigo-400/60 disabled:opacity-50"
             />
             <button
@@ -660,7 +667,7 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
               disabled={redrafting || !feedback.trim()}
               className="px-3 py-2 text-sm font-medium rounded-xl border border-indigo-500/30 text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
             >
-              {redrafting ? 'Rewriting...' : 'Rewrite'}
+              {redrafting ? (draft ? 'Rewriting...' : 'Drafting...') : (draft ? 'Rewrite' : 'Draft it')}
             </button>
           </div>
           {redraftErr && <p className="text-xs text-red-400">{redraftErr}</p>}
