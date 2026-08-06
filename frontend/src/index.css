@@ -252,3 +252,16 @@ body.light {
 .light .text-brand-400,  .light .text-brand-300,
 .light .text-brand-500                            { color: #D1103F; }
 .light .text-coral-400,  .light .text-coral-500   { color: #C2410C; }
+
+/* Accents carrying an opacity modifier generate their own classes
+   (.text-red-300\/90 and friends), which the plain overrides above never
+   touched, so these stayed tuned for a dark background. Same treatment, and the
+   pale 200 tint that is legible on a dark chip and invisible on a light one. */
+.light .text-amber-200                                    { color: #92400E; }
+.light .text-amber-300\/90, .light .text-amber-400\/80    { color: #A16207; }
+.light .text-red-300\/90,   .light .text-red-400\/80,
+.light .text-red-400\/60                                  { color: #C81E3A; }
+.light .text-green-400\/50, .light .text-green-400\/60    { color: #15803D; }
+.light .text-blue-400\/60                                 { color: #1D4ED8; }
+.light .text-purple-400\/60                               { color: #6D28D9; }
+.light .text-indigo-300\/80                               { color: #4338CA; }
