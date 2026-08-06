@@ -317,6 +317,65 @@ router.post('/reply', express.json({ limit: '1mb' }), async (req, res) => {
 });
 
 /**
+ * POST /api/heyreach/redraft
+ * Body: { reply_id, feedback }
+ *
+ * Rewrite a suggested reply from a one-line note ("mention we also do PR for
+ * companies raising a round"). The alternative was copying the draft out,
+ * editing it by hand, and losing whatever the macro got right — so the note
+ * steers the draft and the house rules still hold it in shape.
+ *
+ * Feedback is kept on the record. A pattern in what keeps getting corrected is
+ * a macro that needs changing, not a draft.
+ */
+router.post('/redraft', express.json(), async (req, res) => {
+  try {
+    const { reply_id, feedback } = req.body || {};
+    if (!reply_id || !(feedback || '').trim()) {
+      return res.status(400).json({ error: 'reply_id and feedback required' });
+    }
+    const { db } = require('../services/db');
+    const ref = db.collection('replies').doc(reply_id);
+    const doc = await ref.get();
+    if (!doc.exists) return res.status(404).json({ error: 'reply not found' });
+    const d = doc.data();
+
+    const cls = await classifyReply({
+      channel: d.source === 'heyreach' || d.source === 'ulinc' ? 'linkedin' : 'email',
+      email: d.email || null,
+      company: d.company_name || '',
+      headline: d.headline || '',
+      replyText: d.reply_text || '',
+      firstName: d.first_name || (d.full_name || '').split(' ')[0] || '',
+      slots: null,
+      feedback: String(feedback).trim(),
+      previousDraft: d.draft_response || '',
+    });
+    if (cls.failed) return res.status(502).json({ error: 'Draft service unavailable, nothing was changed' });
+
+    const update = {
+      draft_response: cls.draft_response || '',
+      classification: cls.classification || d.classification || 'other',
+      suggested_macro: cls.suggested_macro || d.suggested_macro || '',
+      suggested_action: cls.suggested_action || '',
+      tag: cls.tag || d.tag || '',
+      subsequence: cls.subsequence || d.subsequence || '',
+      followups_recommended: Number(cls.followups_recommended) || d.followups_recommended || 0,
+      reclassified_at: new Date(),
+      last_feedback: String(feedback).trim(),
+      // Keep the version they rejected so a bad rewrite is recoverable.
+      previous_draft: d.draft_response || '',
+    };
+    await ref.update(update);
+    console.log(`[heyreach redraft] ${d.full_name || reply_id}: "${String(feedback).slice(0, 80)}"`);
+    res.json({ ok: true, ...update, reclassified_at: undefined });
+  } catch (e) {
+    console.error('[heyreach redraft] Error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/**
  * GET /api/heyreach/thread/:conversationId
  *
  * The full back-and-forth for one conversation, oldest first, so the dashboard

@@ -257,9 +257,19 @@ function stripLabel(block) {
 
 function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
   const [marking, setMarking] = useState(false);
-  // Open by default — the back and forth is the context you reply from.
-  const [showConvo, setShowConvo] = useState(true);
+  // Collapsed by default. Opening every card eagerly meant ~90 thread fetches on
+  // load and a page full of "Loading conversation...". The affordance below the
+  // message is what makes it findable, which was the actual problem.
+  const [showConvo, setShowConvo] = useState(false);
   const [showFullMsg, setShowFullMsg] = useState(false);
+  const [feedback, setFeedback] = useState('');
+  const [redrafting, setRedrafting] = useState(false);
+  const [redraftErr, setRedraftErr] = useState('');
+  // The draft and macro live in state so a rewrite lands in place on this card
+  // instead of needing a page refresh to be seen.
+  const [draft, setDraft] = useState(reply.draft_response || '');
+  const [macro, setMacro] = useState(reply.suggested_macro || '');
+  const [lastNote, setLastNote] = useState(reply.last_feedback || '');
   const [showReply, setShowReply] = useState(false);
   const [replyText, setReplyText] = useState(reply.draft_response || '');
   const [sending, setSending] = useState(false);
@@ -271,6 +281,32 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
   const emoji = CLASS_EMOJI[cls] || '💬';
   const time = formatTime(reply.message_date || reply.created_at);
   const borderColor = colors.split(' ')[2] || 'border-white/10';
+
+  const redraft = async () => {
+    if (!feedback.trim() || redrafting) return;
+    setRedrafting(true); setRedraftErr('');
+    try {
+      const res = await fetch(`${api}/api/heyreach/redraft`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reply_id: reply.id, feedback: feedback.trim() }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Rewrite failed');
+      const next = d.draft_response || '';
+      setDraft(next);
+      setMacro(d.suggested_macro || '');
+      setLastNote(feedback.trim());
+      // Re-seed the per-message send boxes so the rewrite is what actually goes out.
+      setMsgBlocks(next.split(/\n{2,}/).map(t => stripLabel(t)).filter(Boolean)
+        .map(text => ({ text, sent: false, sending: false })));
+      setReplyText(next);
+      setFeedback('');
+    } catch (e) {
+      setRedraftErr(String(e.message || e));
+    }
+    setRedrafting(false);
+  };
 
   const markDone = async () => {
     setMarking(true);
@@ -496,17 +532,41 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
         );
       })()}
 
+      {(reply.heyreach_conversation_id || reply.ulinc_contact_id) && (
+        <button
+          onClick={() => setShowConvo(!showConvo)}
+          className="flex items-center gap-2 text-sm font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+        >
+          <span className="text-base leading-none">💬</span>
+          {showConvo ? 'Hide full conversation' : 'Open full conversation'}
+          <span className="text-white/40">{showConvo ? '▴' : '▾'}</span>
+        </button>
+      )}
+
+      {showConvo && (
+        reply.heyreach_conversation_id
+          ? <HeyreachThread
+              conversationId={reply.heyreach_conversation_id}
+              api={api}
+              leadName={reply.full_name || ''}
+              accountId={reply.heyreach_account_id || null}
+            />
+          : reply.ulinc_contact_id
+            ? <ConversationThread contactId={reply.ulinc_contact_id} api={api} />
+            : null
+      )}
+
       {reply.summary && reply.summary !== 'Classification failed' && (
         <p className="text-sm text-white/75">
           <span className="font-medium text-white/85">Summary:</span> {reply.summary}
         </p>
       )}
 
-      {reply.draft_response && !showReply && (
+      {draft && !showReply && (
         <div className="text-sm">
           <span className="font-medium text-white/75">Suggested Reply:</span>
           <div className="mt-1 space-y-2">
-            {reply.draft_response.split(/\n{2,}/).map((block, i) => (
+            {draft.split(/\n{2,}/).map((block, i) => (
               <div
                 key={i}
                 className="flex items-start gap-2 bg-brand-500/10 border border-brand-500/15 rounded-xl p-3"
@@ -581,10 +641,39 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
       {/* Macro + the two things the Jul 22 audit found missing on every reply:
           the Instantly tag and the sub-sequence. Both are manual in Instantly —
           this is the reminder, not the action. */}
-      {!showReply && (reply.suggested_macro && reply.suggested_macro !== 'NONE' || reply.tag || reply.subsequence) && (
+      {/* Say what's wrong in a sentence and the draft is rewritten around it.
+          The alternative was editing by hand and losing whatever the macro got
+          right. House rules still apply to the rewrite. */}
+      {draft && !showReply && (
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <input
+              value={feedback}
+              onChange={e => { setFeedback(e.target.value); setRedraftErr(''); }}
+              onKeyDown={e => { if (e.key === 'Enter' && feedback.trim() && !redrafting) redraft(); }}
+              disabled={redrafting}
+              placeholder="Not quite? Say what to change, e.g. mention we also do PR for companies raising a round"
+              className="flex-1 text-sm rounded-xl px-3 py-2 bg-white/5 border border-white/10 text-white/85 placeholder:text-white/40 focus:outline-none focus:border-indigo-400/60 disabled:opacity-50"
+            />
+            <button
+              onClick={redraft}
+              disabled={redrafting || !feedback.trim()}
+              className="px-3 py-2 text-sm font-medium rounded-xl border border-indigo-500/30 text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              {redrafting ? 'Rewriting...' : 'Rewrite'}
+            </button>
+          </div>
+          {redraftErr && <p className="text-xs text-red-400">{redraftErr}</p>}
+          {lastNote && !feedback && !redrafting && (
+            <p className="text-xs text-white/40">Last note: {lastNote}</p>
+          )}
+        </div>
+      )}
+
+      {!showReply && (macro && macro !== 'NONE' || reply.tag || reply.subsequence) && (
         <p className="text-xs text-white/55 flex items-center gap-2 flex-wrap">
-          {reply.suggested_macro && reply.suggested_macro !== 'NONE' && (
-            <span>Macro: <span className="font-mono bg-white/5 px-1.5 py-0.5 rounded border border-white/10">{reply.suggested_macro}</span></span>
+          {macro && macro !== 'NONE' && (
+            <span>Macro: <span className="font-mono bg-white/5 px-1.5 py-0.5 rounded border border-white/10">{macro}</span></span>
           )}
           {reply.tag && (
             <span>Tag: <span className="font-mono bg-white/5 px-1.5 py-0.5 rounded border border-white/10">{reply.tag}</span></span>
@@ -617,18 +706,6 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
         ))}
       </div>
 
-      {showConvo && (
-        reply.heyreach_conversation_id
-          ? <HeyreachThread
-              conversationId={reply.heyreach_conversation_id}
-              api={api}
-              leadName={reply.full_name || ''}
-              accountId={reply.heyreach_account_id || null}
-            />
-          : reply.ulinc_contact_id
-            ? <ConversationThread contactId={reply.ulinc_contact_id} api={api} />
-            : null
-      )}
     </div>
   );
 }

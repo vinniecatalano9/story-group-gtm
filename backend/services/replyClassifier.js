@@ -64,7 +64,7 @@ function stripDashes(text) {
     .split(KEEP).join('-');
 }
 
-function buildPrompt({ channel, email, company, replyText, firstName, slots, todayDow, caseBlock }) {
+function buildPrompt({ channel, email, company, replyText, firstName, slots, todayDow, caseBlock, feedback, previousDraft }) {
   const isLinkedIn = channel === 'linkedin';
 
   const channelGuidance = isLinkedIn
@@ -105,6 +105,21 @@ ${replyText}
 ${ctaContext}
 TODAY IS: ${todayDow || '(not provided)'}
 
+${feedback ? `=== REVISION REQUEST — THIS OVERRIDES THE MACRO ===
+A human read your previous draft and asked for a change. Their note is the
+instruction; the macros below are the house style it has to stay inside.
+
+PREVIOUS DRAFT:
+${previousDraft || '(none)'}
+
+WHAT THEY WANT CHANGED:
+${feedback}
+
+Rewrite the draft applying that note. Change what they asked for and leave the
+rest alone — do not rewrite lines they did not comment on, and do not lose the
+booking ask. Every rule below still applies: no dashes, no exclamation points,
+day name or date but never both, and no calendar link on LinkedIn.
+` : ''}
 === STEP 1 — CLASSIFY ===
 Match the prospect's message to one of these, prefer the most specific:
 
@@ -345,7 +360,7 @@ Return ONE JSON object only, no other text:
 Return ONLY the JSON object. No preamble, no markdown fences.`;
 }
 
-async function classifyReply({ channel, email, company, replyText, firstName, slots, headline }) {
+async function classifyReply({ channel, email, company, replyText, firstName, slots, headline, feedback, previousDraft }) {
   const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const todayDow = days[new Date().getDay()];
 
@@ -361,7 +376,7 @@ async function classifyReply({ channel, email, company, replyText, firstName, sl
 
   try {
     const result = await claudeJSON(
-      buildPrompt({ channel, email, company, replyText, firstName, slots, todayDow, caseBlock }),
+      buildPrompt({ channel, email, company, replyText, firstName, slots, todayDow, caseBlock, feedback, previousDraft }),
       { timeout: 120000 }
     );
     // Belt and braces: the prompt bans dashes, this makes it true.
