@@ -1,0 +1,922 @@
+[
+ {
+  "industry": "CONSTRUCTION & TRADES",
+  "title": "Building a Regional Contractor into an Industry Authority",
+  "challenge": "The firm had a strong track record but zero media presence. Competitors with inferior work were winning bids through superior branding and relationship visibility. A recent workplace safety incident also threatened the firm's OSHA record and bonding capacity, with local media beginning to investigate.",
+  "metrics": [
+   [
+    "Qualified bid invitations",
+    "+185% in 12 months"
+   ],
+   [
+    "Safety incident media coverage",
+    "Contained to 3 stories, all neutral tone"
+   ],
+   [
+    "Employee applications",
+    "+220% year-over-year"
+   ],
+   [
+    "LinkedIn follower growth",
+    "+8,500 in 6 months"
+   ]
+  ]
+ },
+ {
+  "industry": "HEALTHCARE & PHARMACEUTICALS",
+  "title": "Restoring Trust After a Drug Safety Controversy",
+  "challenge": "Mainstream media ran sensationalized coverage of patient complaints, and a class-action lawsuit filing generated viral social media backlash. The company's stock dropped 15% in one week and physician prescribing sentiment was declining rapidly.",
+  "metrics": [
+   [
+    "Media sentiment shift",
+    "Net negative to net neutral in 45 days"
+   ],
+   [
+    "National broadcast placements",
+    "18 segments"
+   ],
+   [
+    "Physician confidence score",
+    "Recovered to 82% (from 54%)"
+   ],
+   [
+    "Stock price recovery",
+    "Full recovery within 90 days"
+   ]
+  ]
+ },
+ {
+  "industry": "FINANCIAL SERVICES & BANKING",
+  "title": "Navigating a Regulatory Investigation with Reputation Intact",
+  "challenge": "News of the investigation leaked to financial media, triggering customer concern and a noticeable uptick in deposit withdrawals. Competitors began running ads highlighting their own compliance records, and local elected officials were calling for hearings.",
+  "metrics": [
+   [
+    "Customer retention during investigation",
+    "97.2% (vs. 89% industry avg)"
+   ],
+   [
+    "Earned media placements",
+    "22 strategic appearances"
+   ],
+   [
+    "Deposit stabilization",
+    "Outflows reversed within 30 days"
+   ],
+   [
+    "Employee confidence survey",
+    "88% positive sentiment"
+   ]
+  ]
+ },
+ {
+  "industry": "TECHNOLOGY & SAAS",
+  "title": "Launching a B2B SaaS Platform from Stealth to Market Leader",
+  "challenge": "The company needed to establish credibility in a crowded market dominated by legacy players. With no existing media relationships, thought leadership presence, or brand recognition, they risked being lost in the noise during their critical launch window.",
+  "metrics": [
+   [
+    "Launch media impressions",
+    "22 million in first 30 days"
+   ],
+   [
+    "Inbound demo requests",
+    "+480% vs. pre-launch baseline"
+   ],
+   [
+    "Podcast downloads attributed",
+    "320,000 in launch quarter"
+   ],
+   [
+    "LinkedIn follower growth",
+    "+12,000 in 60 days"
+   ]
+  ]
+ },
+ {
+  "industry": "ENERGY & UTILITIES",
+  "title": "Rebuilding Community Trust After an Environmental Incident",
+  "challenge": "Environmental activists and local media framed the incident as corporate negligence, organizing protests and generating national attention. State regulators opened an investigation, and municipal governments threatened to revoke operating permits.",
+  "metrics": [
+   [
+    "Community approval rating",
+    "Recovered from 28% to 71% in 6 months"
+   ],
+   [
+    "Media narrative shift",
+    "65% positive coverage by month 4"
+   ],
+   [
+    "Operating permits",
+    "All permits renewed without challenge"
+   ],
+   [
+    "Town hall attendance",
+    "1,200+ community members"
+   ]
+  ]
+ },
+ {
+  "industry": "REAL ESTATE & DEVELOPMENT",
+  "title": "Positioning a Developer as the Market Authority During a",
+  "challenge": "Project cancellations across the sector were making headlines, investor confidence was low, and the company's pipeline of mixed-use developments was stalling due to financing concerns and community opposition at zoning hearings.",
+  "metrics": [
+   [
+    "Investor inquiries",
+    "+210% during campaign period"
+   ],
+   [
+    "Zoning approvals",
+    "3 of 3 contested projects approved"
+   ],
+   [
+    "Media placements",
+    "25 earned media hits"
+   ],
+   [
+    "Podcast audience reached",
+    "1.4 million listeners"
+   ]
+  ]
+ },
+ {
+  "industry": "LEGAL & LAW FIRMS",
+  "title": "Elevating a Litigation Firm to National Prominence",
+  "challenge": "Despite a strong win record, the firm had virtually no media presence, no thought leadership platform, and was losing competitive pitches to firms with better brand recognition and larger marketing budgets.",
+  "metrics": [
+   [
+    "National case inquiries",
+    "+380% year-over-year"
+   ],
+   [
+    "Media appearances",
+    "30+ broadcast segments"
+   ],
+   [
+    "Website traffic from owned video",
+    "+145%"
+   ],
+   [
+    "Average case value from media leads",
+    "2.4x higher than referral leads"
+   ]
+  ]
+ },
+ {
+  "industry": "NONPROFIT & ADVOCACY",
+  "title": "Scaling a Veterans Nonprofit into a National Brand",
+  "challenge": "Despite meaningful on-the-ground impact, the organization had limited national visibility. Donor acquisition costs were rising, corporate sponsors were difficult to attract without brand credibility, and competing nonprofits with larger marketing budgets were dominating media attention and grant opportunities.",
+  "metrics": [
+   [
+    "Earned media impressions",
+    "45 million"
+   ],
+   [
+    "New donor acquisitions",
+    "18,000+ during campaign period"
+   ],
+   [
+    "Fundraising during campaign",
+    "+85% vs. prior quarter"
+   ],
+   [
+    "Social video shares",
+    "2.3 million"
+   ]
+  ]
+ },
+ {
+  "industry": "HOSPITALITY & TOURISM",
+  "title": "Recovering a Luxury Brand After a Viral Guest Complaint",
+  "challenge": "The video was shared across TikTok, X, and news aggregators, accumulating 8 million views in 48 hours. Booking cancellations spiked 40%, and travel media outlets ran stories questioning the brand's service culture. Franchise partners were demanding a corporate response.",
+  "metrics": [
+   [
+    "Booking recovery",
+    "Full recovery in 60 days"
+   ],
+   [
+    "Negative review volume",
+    "Decreased 72% within 30 days"
+   ],
+   [
+    "Brand sentiment score",
+    "Returned to pre-crisis levels in 45 days"
+   ],
+   [
+    "CEO video views",
+    "1.6 million"
+   ]
+  ]
+ },
+ {
+  "industry": "AGRICULTURE & FOOD PRODUCTION",
+  "title": "Defending a Food Brand During a Product Recall Crisis",
+  "challenge": "The recall generated immediate national news coverage, and competitor brands capitalized with aggressive marketing. Consumer trust plummeted, retail partners threatened to delist the product, and a social media boycott campaign gained 50,000 signatures in one week.",
+  "metrics": [
+   [
+    "Retail re-listing rate",
+    "98% of partners re-listed within 90 days"
+   ],
+   [
+    "Consumer trust index",
+    "Exceeded pre-recall levels by month 6"
+   ],
+   [
+    "Media tone at relaunch",
+    "89% positive or neutral"
+   ],
+   [
+    "Relaunch video campaign reach",
+    "12 million impressions"
+   ]
+  ]
+ },
+ {
+  "industry": "EDUCATION & HIGHER LEARNING",
+  "title": "Repositioning a University After an Admissions Scandal",
+  "challenge": "National media coverage and social media outrage threatened enrollment numbers, donor commitments, and faculty recruitment. Current students were organizing protests, and the university's accreditation board issued a formal inquiry.",
+  "metrics": [
+   [
+    "Enrollment applications",
+    "Only -3% (vs. projected -20%)"
+   ],
+   [
+    "Donor retention rate",
+    "91% of major donors retained"
+   ],
+   [
+    "Accreditation outcome",
+    "Full accreditation maintained"
+   ],
+   [
+    "Presidential address video views",
+    "420,000"
+   ]
+  ]
+ },
+ {
+  "industry": "DEFENSE & GOVERNMENT CONTRACTING",
+  "title": "Winning a Major Contract Through Strategic Thought Leadership",
+  "challenge": "Despite superior technology, the company lacked name recognition with key decision-makers at the Department of Defense and Congressional appropriators. Their competitors had decades of relationships and established media presence in defense trade circles.",
+  "metrics": [
+   [
+    "Contract awards",
+    "Won $240M prime contract"
+   ],
+   [
+    "Briefings secured",
+    "12 offices briefed"
+   ],
+   [
+    "Defense media impressions",
+    "8.5 million"
+   ],
+   [
+    "Trade show lead generation",
+    "+320% vs. prior year"
+   ]
+  ]
+ },
+ {
+  "industry": "RETAIL & E-COMMERCE",
+  "title": "Saving a DTC Brand from a Social Media Firestorm",
+  "challenge": "A viral social media thread triggered a boycott hashtag that trended nationally for 48 hours. Daily revenue dropped 35%, influencer partners began distancing, and mainstream media picked up the story.",
+  "metrics": [
+   [
+    "Revenue recovery",
+    "Full recovery within 21 days"
+   ],
+   [
+    "Customer retention rate",
+    "92% of subscription customers retained"
+   ],
+   [
+    "New customer acquisition",
+    "+15% in 60 days (counter-boycott effect)"
+   ],
+   [
+    "Social sentiment ratio",
+    "Shifted from 30/70 to 65/35 positive"
+   ]
+  ]
+ },
+ {
+  "industry": "MANUFACTURING & INDUSTRIAL",
+  "title": "Repositioning a Legacy Manufacturer for a Modern Market",
+  "challenge": "The company was perceived as outdated by both customers and potential employees. Industry trade coverage was minimal, the brand had no digital presence to speak of, and regional talent was choosing competitors with more visible employer brands.",
+  "metrics": [
+   [
+    "Inbound customer inquiries",
+    "+175% in 6 months"
+   ],
+   [
+    "Job applications",
+    "+250% year-over-year"
+   ],
+   [
+    "Trade media coverage",
+    "20 feature stories"
+   ],
+   [
+    "Brand perception survey",
+    "\"Innovative\" rating improved from 22% to 61%"
+   ]
+  ]
+ },
+ {
+  "industry": "SPORTS & ENTERTAINMENT",
+  "title": "Managing an Athlete's Brand Through a Contract Dispute",
+  "challenge": "Leaked negotiation details painted the athlete as greedy, and fan sentiment turned sharply negative. Endorsement partners expressed concern, and the team's PR operation was actively shaping the narrative against the athlete's interests.",
+  "metrics": [
+   [
+    "Contract outcome",
+    "Signed at 115% of initial team offer"
+   ],
+   [
+    "Fan sentiment recovery",
+    "Returned to 78% positive (from 41%)"
+   ],
+   [
+    "Endorsement deals retained",
+    "100% of existing partners"
+   ],
+   [
+    "Social media following growth",
+    "+280,000 during negotiation period"
+   ]
+  ]
+ },
+ {
+  "industry": "INSURANCE",
+  "title": "Building a Regional Insurer's Brand After Catastrophic Claims",
+  "challenge": "Policyholders took to social media and local news to share stories of delayed or denied claims. State regulators opened a market conduct examination, competitors ran aggressive acquisition campaigns, and the company's agent network was losing confidence.",
+  "metrics": [
+   [
+    "Policy renewal rate",
+    "Stabilized at 87% (from 71% during crisis)"
+   ],
+   [
+    "Regulatory examination outcome",
+    "Closed with no enforcement action"
+   ],
+   [
+    "Agent retention",
+    "95% of contracted agents retained"
+   ],
+   [
+    "Net Promoter Score",
+    "Improved from -12 to +28 in 9 months"
+   ]
+  ]
+ },
+ {
+  "industry": "AUTOMOTIVE",
+  "title": "Launching a Regional Dealer Group as a Trusted Industry Voice",
+  "challenge": "Consumer trust in auto dealers consistently ranks among the lowest of any industry. The dealer group had no media presence, no community authority positioning, and was competing for attention against national brands with massive advertising budgets.",
+  "metrics": [
+   [
+    "Market share growth",
+    "+8% in primary DMA"
+   ],
+   [
+    "Google review average",
+    "Improved from 3.6 to 4.7 stars"
+   ],
+   [
+    "Media placements",
+    "22 earned media hits"
+   ],
+   [
+    "Website traffic from content",
+    "+190%"
+   ]
+  ]
+ },
+ {
+  "industry": "FAITH-BASED & RELIGIOUS ORGANIZATIONS",
+  "title": "Expanding a Church Network's National Reach and Influence",
+  "challenge": "Despite a loyal regional congregation, the church had minimal media presence outside its metro area. Competing voices in the faith space were dominating national conversations, and the church's digital content strategy was underperforming relative to its message quality.",
+  "metrics": [
+   [
+    "Podcast subscribers",
+    "+15,000 in 6 months"
+   ],
+   [
+    "National media impressions",
+    "18 million"
+   ],
+   [
+    "Weekly online service viewership",
+    "+340% growth"
+   ],
+   [
+    "Church visitor inquiries",
+    "+200% from outside metro area"
+   ]
+  ]
+ },
+ {
+  "industry": "CANNABIS & EMERGING INDUSTRIES",
+  "title": "Establishing Legitimacy for a Multi-State Cannabis Operator",
+  "challenge": "Despite legal status, mainstream media hesitance, banking restrictions, and public perception challenges made traditional PR and media strategies ineffective. The company needed to build trust with regulators, communities, and investors simultaneously while competitors operated in regulatory gray areas.",
+  "metrics": [
+   [
+    "New state license approvals",
+    "4 of 4 applications approved"
+   ],
+   [
+    "Institutional investor meetings",
+    "+300% increase in qualified meetings"
+   ],
+   [
+    "Community opposition at zoning hearings",
+    "Reduced from 60% to 15%"
+   ],
+   [
+    "Mainstream media placements",
+    "20 non-cannabis-specific outlets"
+   ]
+  ]
+ },
+ {
+  "industry": "TRANSPORTATION & LOGISTICS",
+  "title": "Turning a Supply Chain Crisis into a Brand-Building Opportunity",
+  "challenge": "Retail clients publicly blamed the logistics company in earnings calls, generating a wave of negative business media coverage. The company's B2B reputation was severely damaged, contract renewal negotiations stalled, and competitor sales teams were using the failures in competitive pitches.",
+  "metrics": [
+   [
+    "Client retention rate",
+    "94% of enterprise clients renewed"
+   ],
+   [
+    "New client acquisition",
+    "+40% in 6 months post-campaign"
+   ],
+   [
+    "Industry analyst sentiment",
+    "Upgraded from \"concerning\" to \"improving\""
+   ],
+   [
+    "Employee retention during crisis",
+    "96% (vs. 82% industry avg)"
+   ]
+  ]
+ },
+ {
+  "industry": "PRIVATE EQUITY & VENTURE CAPITAL",
+  "title": "Transforming a Managing Partner into a Dealflow Magnet",
+  "challenge": "The firm was consistently being outmaneuvered in competitive processes by PE shops whose partners were regularly quoted in financial media. Founders and intermediaries were bypassing the firm because they had never heard of them, despite a strong track record.",
+  "metrics": [
+   [
+    "Proprietary deal flow",
+    "+68% year-over-year"
+   ],
+   [
+    "Media placements",
+    "32 in tier-one financial outlets"
+   ],
+   [
+    "LinkedIn engagement rate",
+    "4.8% (vs. 1.2% industry avg)"
+   ],
+   [
+    "Conference keynote invitations",
+    "8 in first year"
+   ]
+  ]
+ },
+ {
+  "industry": "WEALTH MANAGEMENT & FINANCIAL ADVISORY",
+  "title": "Establishing a Financial Advisor as the Go-To Expert in Her Market",
+  "challenge": "The advisor relied entirely on referrals from existing clients and COIs, which was inconsistent and slow. Competitors in the market were gaining visibility through podcasts, local media, and social media thought leadership, making the advisor increasingly invisible to affluent prospects.",
+  "metrics": [
+   [
+    "Inbound prospect inquiries",
+    "+240% in 12 months"
+   ],
+   [
+    "Assets under management growth",
+    "+$120M in new AUM"
+   ],
+   [
+    "LinkedIn connections in target demo",
+    "+4,200"
+   ],
+   [
+    "Media appearances",
+    "20 in first year"
+   ]
+  ]
+ },
+ {
+  "industry": "COMMERCIAL REAL ESTATE BROKERAGE",
+  "title": "Making a CRE Broker the Voice of Her Metro Market",
+  "challenge": "Despite closing $180M in transactions annually, the broker had zero public profile. Competitors were winning listings through visibility and perceived market authority, while she relied exclusively on relationship-driven prospecting that was not scalable.",
+  "metrics": [
+   [
+    "Inbound listing inquiries",
+    "+310% year-over-year"
+   ],
+   [
+    "Transaction volume",
+    "Grew from $180M to $290M"
+   ],
+   [
+    "Media placements",
+    "26 across trade and regional business"
+   ],
+   [
+    "LinkedIn impressions",
+    "1.2M monthly average"
+   ]
+  ]
+ },
+ {
+  "industry": "CYBERSECURITY & IT SERVICES",
+  "title": "Positioning a CISO-Turned-CEO as an Industry Authority",
+  "challenge": "Enterprise buyers consistently chose competitors with recognized leadership over the client's technically superior offering. The CEO had no media relationships, no published thought leadership, and no conference presence, making it impossible to generate the trust required for six- and seven-figure security contracts.",
+  "metrics": [
+   [
+    "Enterprise contract pipeline",
+    "+$14M in qualified opportunities"
+   ],
+   [
+    "Media placements",
+    "28 across cybersecurity and business outlets"
+   ],
+   [
+    "Conference keynotes",
+    "5 tier-one events in first year"
+   ],
+   [
+    "LinkedIn follower growth",
+    "+18,000 (from 2,400 to 20,400)"
+   ]
+  ]
+ },
+ {
+  "industry": "HEALTHCARE LEADERSHIP",
+  "title": "Building a Hospital CEO into a Regional Healthcare Voice",
+  "challenge": "Larger health systems in the region were acquiring physician practices and dominating media coverage, positioning themselves as the future of healthcare delivery. The CEO needed to establish a compelling counter-narrative about independent community hospitals without appearing defensive or desperate.",
+  "metrics": [
+   [
+    "Physician recruitment",
+    "14 new physicians recruited (vs. 6 prior year)"
+   ],
+   [
+    "Media placements",
+    "22 across healthcare and regional outlets"
+   ],
+   [
+    "Community favorability rating",
+    "Increased from 62% to 84%"
+   ],
+   [
+    "LinkedIn engagement",
+    "3.6% rate (vs. 0.9% healthcare avg)"
+   ]
+  ]
+ },
+ {
+  "industry": "PROFESSIONAL SERVICES & CONSULTING",
+  "title": "Launching a Consulting Firm's Founder into the National",
+  "challenge": "The firm was winning projects primarily through competitive RFPs, which were expensive to pursue and had low win rates. The founder had deep expertise and a compelling story but no public presence, resulting in the firm being unknown to 90% of its addressable market.",
+  "metrics": [
+   [
+    "Inbound revenue",
+    "Grew from 15% to 55% of total revenue"
+   ],
+   [
+    "Media placements",
+    "24 in tier-one business outlets"
+   ],
+   [
+    "Keynote speaking engagements",
+    "10 paid events ($185K in fees)"
+   ],
+   [
+    "Book deal",
+    "Secured with major business publisher"
+   ]
+  ]
+ },
+ {
+  "industry": "ARCHITECTURE & DESIGN",
+  "title": "Elevating an Architecture Firm Principal to Design Thought",
+  "challenge": "The firm was competing on price against larger firms with nationally recognized principals. Despite award-winning work, the founding principal was unknown outside the regional market, and the firm was losing shortlist selections to competitors whose leaders had stronger media profiles.",
+  "metrics": [
+   [
+    "Shortlist selection rate",
+    "Improved from 30% to 65%"
+   ],
+   [
+    "Average project fee",
+    "+42% increase in first year"
+   ],
+   [
+    "National media features",
+    "18 (from zero prior)"
+   ],
+   [
+    "Conference speaking invitations",
+    "12 in first 18 months"
+   ]
+  ]
+ },
+ {
+  "industry": "FRANCHISE & MULTI-UNIT OPERATIONS",
+  "title": "Making a Franchise CEO the Face of Small Business Growth",
+  "challenge": "Franchise development was driven almost entirely by franchise brokers and paid lead generation, both expensive and inconsistent. The CEO had a compelling founder story and strong unit economics but no public profile to leverage, while competitors with weaker systems had higher brand recognition.",
+  "metrics": [
+   [
+    "Franchise development inquiries",
+    "+280% year-over-year"
+   ],
+   [
+    "Franchise agreements signed",
+    "42 new units (vs. 18 prior year)"
+   ],
+   [
+    "Broker dependency",
+    "Reduced from 80% to 35% of deals"
+   ],
+   [
+    "Media placements",
+    "30 across franchise and business outlets"
+   ]
+  ]
+ },
+ {
+  "industry": "HOME SERVICES & TRADES",
+  "title": "Building a Home Services CEO into a Trusted Local Authority",
+  "challenge": "The home services industry suffers from chronic trust deficits with consumers. The owner had built a successful operation but was invisible in the market, competing against national franchises with massive ad budgets and local operators who undercut on price. Technician recruitment was also a critical bottleneck.",
+  "metrics": [
+   [
+    "Inbound service calls",
+    "+165% in 12 months"
+   ],
+   [
+    "Technician applications",
+    "+200% year-over-year"
+   ],
+   [
+    "Average ticket size",
+    "+22% (trust premium)"
+   ],
+   [
+    "Google review volume",
+    "+340% with 4.9 average rating"
+   ]
+  ]
+ },
+ {
+  "industry": "BIOTECH & LIFE SCIENCES",
+  "title": "Positioning a Biotech CEO for IPO-Stage Visibility",
+  "challenge": "The company had a promising drug pipeline but the CEO was unknown to the investment community. Competing biotech IPOs from companies with higher-profile leadership were absorbing institutional investor attention. Without a visible, credible CEO, the IPO roadshow risked falling flat.",
+  "metrics": [
+   [
+    "IPO outcome",
+    "Priced above range, raised $220M"
+   ],
+   [
+    "Day-one stock performance",
+    "+18% above IPO price"
+   ],
+   [
+    "Analyst coverage initiated",
+    "8 firms within 30 days"
+   ],
+   [
+    "Media placements pre-IPO",
+    "20 in target financial/biotech outlets"
+   ]
+  ]
+ },
+ {
+  "industry": "ACCOUNTING & PROFESSIONAL FIRMS",
+  "title": "Transforming a Managing Partner into a Rainmaker Brand",
+  "challenge": "The firm was losing competitive pitches for mid-market audit and advisory engagements to Big Four and national firms that had stronger brand recognition. The managing partner was highly respected within the profession but invisible to the business community and C-suite decision-makers who select accounting firms.",
+  "metrics": [
+   [
+    "Competitive pitch win rate",
+    "Improved from 22% to 48%"
+   ],
+   [
+    "Revenue from new clients",
+    "+$8.2M in first year"
+   ],
+   [
+    "Media placements",
+    "22 across trade and business outlets"
+   ],
+   [
+    "Speaking engagements",
+    "14 CEO peer group events"
+   ]
+  ]
+ },
+ {
+  "industry": "DENTAL & MEDICAL PRACTICES",
+  "title": "Making a Dental Group Practice Owner a Recognized Expert",
+  "challenge": "DSO-backed competitors were entering the market with aggressive pricing and marketing, threatening the practice group's patient volume and associate recruitment. The owner had 25 years of clinical excellence but no media presence or public brand to differentiate his practices from corporate-backed competitors.",
+  "metrics": [
+   [
+    "New patient volume",
+    "+135% across all locations"
+   ],
+   [
+    "Associate dentist applications",
+    "+180% year-over-year"
+   ],
+   [
+    "New location launch success",
+    "2 locations profitable in 6 months"
+   ],
+   [
+    "Media appearances",
+    "16 in first year"
+   ]
+  ]
+ },
+ {
+  "industry": "E-COMMERCE & CONSUMER PRODUCTS",
+  "title": "Building a DTC Founder into a Lifestyle Brand Authority",
+  "challenge": "Rising digital ad costs were squeezing margins, and the brand had no organic awareness engine. Competitors with founder-led brands were generating significant free media coverage and social proof, while the client's founder was unknown despite building a superior product.",
+  "metrics": [
+   [
+    "Customer acquisition cost",
+    "Reduced 38% through organic channels"
+   ],
+   [
+    "Revenue growth",
+    "+52% year-over-year"
+   ],
+   [
+    "Retail partnerships secured",
+    "4 major retailers (Target, Whole Foods)"
+   ],
+   [
+    "Media placements",
+    "22 across wellness and business outlets"
+   ]
+  ]
+ },
+ {
+  "industry": "STAFFING & RECRUITING",
+  "title": "Positioning a Staffing CEO as the Voice of the Workforce Crisis",
+  "challenge": "The staffing industry is commoditized, with most firms competing on price and speed. The CEO had proprietary insights on labor market trends from the firm's placement data but no platform to share them. Enterprise buyers defaulted to brand-name staffing firms despite inferior service quality.",
+  "metrics": [
+   [
+    "Enterprise client wins",
+    "8 new Fortune 500 accounts"
+   ],
+   [
+    "Revenue from inbound",
+    "Grew from $12M to $48M"
+   ],
+   [
+    "Media placements",
+    "26 across business and HR outlets"
+   ],
+   [
+    "LinkedIn followers",
+    "+22,000 in 12 months"
+   ]
+  ]
+ },
+ {
+  "industry": "SENIOR LIVING & LONG-TERM CARE",
+  "title": "Building a Senior Living CEO's Brand During an Industry",
+  "challenge": "Public trust in senior living had plummeted industry-wide. The operator's communities had strong care outcomes, but negative industry sentiment was depressing occupancy rates, making family decision-makers hesitant, and creating recruiting challenges for nurses and caregivers.",
+  "metrics": [
+   [
+    "Occupancy rate",
+    "Improved from 78% to 92%"
+   ],
+   [
+    "Caregiver applications",
+    "+160% year-over-year"
+   ],
+   [
+    "Family inquiry volume",
+    "+210% in key markets"
+   ],
+   [
+    "Media placements",
+    "20 across healthcare and senior living"
+   ]
+  ]
+ },
+ {
+  "industry": "SAAS & B2B TECHNOLOGY",
+  "title": "Turning a B2B SaaS Founder into a Category Creator",
+  "challenge": "The company's product sat in a gray area between existing software categories, making it difficult for buyers to understand and budget for. Without a recognized authority evangelizing the category, the sales team spent most of every conversation educating rather than selling.",
+  "metrics": [
+   [
+    "Sales cycle reduction",
+    "Shortened from 120 to 68 days"
+   ],
+   [
+    "Category search volume",
+    "+420% for coined category term"
+   ],
+   [
+    "Inbound demo requests",
+    "+280% year-over-year"
+   ],
+   [
+    "Media placements",
+    "24 across SaaS and technology outlets"
+   ]
+  ]
+ },
+ {
+  "industry": "LOGISTICS & SUPPLY CHAIN",
+  "title": "Making a 3PL CEO the Trusted Voice in Supply Chain Strategy",
+  "challenge": "Enterprise buyers viewed the company as a commoditized freight broker despite significant technology investments and strategic capabilities. The CEO had deep supply chain expertise but no public profile, and the company was consistently being excluded from strategic RFPs in favor of firms with recognized thought leaders.",
+  "metrics": [
+   [
+    "Strategic RFP invitations",
+    "+240% year-over-year"
+   ],
+   [
+    "Average contract value",
+    "Grew from $1.2M to $3.8M"
+   ],
+   [
+    "Media placements",
+    "20 across supply chain and business outlets"
+   ],
+   [
+    "Webinar attendees",
+    "2,400 enterprise contacts in database"
+   ]
+  ]
+ },
+ {
+  "industry": "FITNESS & WELLNESS BRANDS",
+  "title": "Positioning a Fitness Brand Founder as a Wellness Authority",
+  "challenge": "The boutique fitness market was saturated with franchise concepts, and the founder was losing development deals to brands with higher-profile leadership. Media opportunities in the wellness space were going to influencers and competitors with established public platforms.",
+  "metrics": [
+   [
+    "Franchise inquiries",
+    "+320% in 12 months"
+   ],
+   [
+    "New franchise agreements",
+    "18 units (vs. 7 prior year)"
+   ],
+   [
+    "Instagram followers",
+    "+85,000 in first year"
+   ],
+   [
+    "Media placements",
+    "20 across wellness, business, and franchise"
+   ]
+  ]
+ },
+ {
+  "industry": "AEROSPACE & AVIATION",
+  "title": "Building an Aerospace CEO's Profile for Defense and Commercial",
+  "challenge": "The company had best-in-class manufacturing capabilities but was overshadowed by larger competitors with dedicated government affairs and PR teams. The CEO attended industry events but had no speaking roles, media relationships, or thought leadership presence.",
+  "metrics": [
+   [
+    "Defense contract wins",
+    "+$85M in new awards"
+   ],
+   [
+    "Commercial OEM partnerships",
+    "2 new Tier-1 supplier agreements"
+   ],
+   [
+    "Media placements",
+    "18 across aerospace and defense outlets"
+   ],
+   [
+    "Conference speaking invitations",
+    "6 major industry events"
+   ]
+  ]
+ },
+ {
+  "industry": "VETERINARY & ANIMAL HEALTH",
+  "title": "Making a Veterinary Group Owner the Voice of Independent",
+  "challenge": "Corporate veterinary consolidators were acquiring independent practices at record rates, creating recruitment challenges and pricing pressure. The owner wanted to grow but needed to differentiate his group from corporate-backed competitors and build a brand that would attract both clients and veterinary talent.",
+  "metrics": [
+   [
+    "Associate veterinarian hires",
+    "6 new DVMs (vs. 2 prior year)"
+   ],
+   [
+    "New client registrations",
+    "+140% across all locations"
+   ],
+   [
+    "Media appearances",
+    "16 in first year"
+   ],
+   [
+    "Social media followers",
+    "+24,000 across platforms"
+   ]
+  ]
+ }
+]
