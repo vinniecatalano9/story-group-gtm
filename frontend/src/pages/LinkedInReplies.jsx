@@ -59,19 +59,24 @@ function formatTime(created_at) {
  * theirs on the left, ours on the right, oldest first. Messages are never
  * truncated — the point of opening a thread is to read what was actually said.
  */
-function HeyreachThread({ conversationId, api }) {
+function HeyreachThread({ conversationId, api, leadName, accountId }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const scrollRef = useRef(null);
 
   useEffect(() => {
     let live = true;
-    fetch(`${api}/api/heyreach/thread/${encodeURIComponent(conversationId)}`)
+    // Name + account let the API find the thread in one call instead of crawling
+    // the whole inbox. See the route for why.
+    const qs = new URLSearchParams();
+    if (leadName) qs.set('name', leadName);
+    if (accountId) qs.set('accountId', accountId);
+    fetch(`${api}/api/heyreach/thread/${encodeURIComponent(conversationId)}${qs.toString() ? '?' + qs : ''}`)
       .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e.error || 'Failed')))
       .then(d => { if (live) setData(d); })
       .catch(e => { if (live) setError(String(e)); });
     return () => { live = false; };
-  }, [conversationId, api]);
+  }, [conversationId, api, leadName, accountId]);
 
   // Open on the newest message, the way a chat app does — the latest exchange is
   // what you're replying to. Scrolling up for the history is the deliberate act.
@@ -573,7 +578,12 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
 
       {showConvo && (
         reply.heyreach_conversation_id
-          ? <HeyreachThread conversationId={reply.heyreach_conversation_id} api={api} />
+          ? <HeyreachThread
+              conversationId={reply.heyreach_conversation_id}
+              api={api}
+              leadName={reply.full_name || ''}
+              accountId={reply.heyreach_account_id || null}
+            />
           : reply.ulinc_contact_id
             ? <ConversationThread contactId={reply.ulinc_contact_id} api={api} />
             : null

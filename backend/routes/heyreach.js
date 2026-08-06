@@ -337,7 +337,25 @@ router.get('/thread/:conversationId', async (req, res) => {
     const hit = threadCache.get(id);
     if (hit && Date.now() - hit.at < THREAD_TTL_MS) return res.json(hit.data);
 
+    // Fast path. HeyReach has no fetch-one-conversation endpoint (GetChatroom
+    // and GetConversation are both 404), but GetConversationsV2 honours a
+    // searchString filter — passing the lead's name turns a ~20-page crawl of
+    // the whole inbox into a single call, which is the difference between the
+    // thread opening instantly and taking ten seconds.
     let convo = null;
+    const name = (req.query.name || '').trim();
+    const accountId = Number(req.query.accountId) || null;
+    if (name) {
+      try {
+        const filters = { searchString: name };
+        if (accountId) filters.linkedInAccountIds = [accountId];
+        const r = await axios.post(`${HEYREACH_BASE}/inbox/GetConversationsV2`,
+          { filters, offset: 0, limit: 50 }, { headers: headers() });
+        convo = (r.data?.items || []).find(c => c.id === id) || null;
+      } catch (e) { /* fall through to the crawl */ }
+    }
+
+    // Fallback: no name given, or the search missed. Correct but slow.
     for (let offset = 0; offset < 20000 && !convo; offset += 100) {
       const r = await axios.post(`${HEYREACH_BASE}/inbox/GetConversationsV2`,
         { filters: {}, offset, limit: 100 }, { headers: headers() });
