@@ -64,7 +64,23 @@ function HeyreachThread({ conversationId, api, leadName, accountId }) {
   const [error, setError] = useState('');
   const scrollRef = useRef(null);
 
+  // Threads are open by default now, so a full queue would fire one request per
+  // card on load. Wait until the card is actually on screen before fetching.
+  const [visible, setVisible] = useState(false);
+  const rootRef = useRef(null);
   useEffect(() => {
+    const el = rootRef.current;
+    if (!el || visible) return;
+    if (typeof IntersectionObserver === 'undefined') { setVisible(true); return; }
+    const io = new IntersectionObserver(entries => {
+      if (entries.some(e => e.isIntersecting)) { setVisible(true); io.disconnect(); }
+    }, { rootMargin: '300px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [visible]);
+
+  useEffect(() => {
+    if (!visible) return;
     let live = true;
     // Name + account let the API find the thread in one call instead of crawling
     // the whole inbox. See the route for why.
@@ -76,7 +92,7 @@ function HeyreachThread({ conversationId, api, leadName, accountId }) {
       .then(d => { if (live) setData(d); })
       .catch(e => { if (live) setError(String(e)); });
     return () => { live = false; };
-  }, [conversationId, api, leadName, accountId]);
+  }, [visible, conversationId, api, leadName, accountId]);
 
   // Open on the newest message, the way a chat app does — the latest exchange is
   // what you're replying to. Scrolling up for the history is the deliberate act.
@@ -86,8 +102,8 @@ function HeyreachThread({ conversationId, api, leadName, accountId }) {
     el.scrollTop = el.scrollHeight;
   }, [data]);
 
-  if (error) return <p className="text-xs text-red-400/80 py-2">Couldn't load the thread: {error}</p>;
-  if (!data) return <p className="text-xs text-white/30 py-2">Loading conversation...</p>;
+  if (error) return <p ref={rootRef} className="text-xs text-red-400/80 py-2">Couldn't load the thread: {error}</p>;
+  if (!data) return <p ref={rootRef} className="text-xs text-white/30 py-2">Loading conversation...</p>;
   if (!data.messages.length) return <p className="text-xs text-white/30 py-2">No messages in this thread</p>;
 
   const stamp = (iso) => {
@@ -97,7 +113,7 @@ function HeyreachThread({ conversationId, api, leadName, accountId }) {
   };
 
   return (
-    <div className="mt-2 border-t border-white/10 pt-3">
+    <div ref={rootRef} className="mt-2 border-t border-white/10 pt-3">
       <p className="text-xs font-medium text-white/40 uppercase tracking-wide mb-2">
         Conversation · {data.totalMessages} message{data.totalMessages === 1 ? '' : 's'}
       </p>
@@ -227,7 +243,8 @@ function stripLabel(block) {
 
 function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
   const [marking, setMarking] = useState(false);
-  const [showConvo, setShowConvo] = useState(false);
+  // Open by default — the back and forth is the context you reply from.
+  const [showConvo, setShowConvo] = useState(true);
   const [showFullMsg, setShowFullMsg] = useState(false);
   const [showReply, setShowReply] = useState(false);
   const [replyText, setReplyText] = useState(reply.draft_response || '');
