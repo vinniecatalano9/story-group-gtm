@@ -54,6 +54,71 @@ function formatTime(created_at) {
   return new Date(created_at).toLocaleString();
 }
 
+/**
+ * The whole back-and-forth for a HeyReach conversation, laid out like a chat:
+ * theirs on the left, ours on the right, oldest first. Messages are never
+ * truncated — the point of opening a thread is to read what was actually said.
+ */
+function HeyreachThread({ conversationId, api }) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let live = true;
+    fetch(`${api}/api/heyreach/thread/${encodeURIComponent(conversationId)}`)
+      .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e.error || 'Failed')))
+      .then(d => { if (live) setData(d); })
+      .catch(e => { if (live) setError(String(e)); });
+    return () => { live = false; };
+  }, [conversationId, api]);
+
+  if (error) return <p className="text-xs text-red-400/80 py-2">Couldn't load the thread: {error}</p>;
+  if (!data) return <p className="text-xs text-white/30 py-2">Loading conversation...</p>;
+  if (!data.messages.length) return <p className="text-xs text-white/30 py-2">No messages in this thread</p>;
+
+  const stamp = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  };
+
+  return (
+    <div className="mt-2 border-t border-white/10 pt-3">
+      <p className="text-xs font-medium text-white/40 uppercase tracking-wide mb-2">
+        Conversation · {data.totalMessages} message{data.totalMessages === 1 ? '' : 's'}
+      </p>
+      <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-1">
+        {data.messages.map((m, i) => (
+          <div key={i} className={`flex ${m.outgoing ? 'justify-end' : 'justify-start'}`}>
+            <div
+              className={`max-w-[82%] rounded-2xl px-3 py-2 text-sm ${
+                m.outgoing
+                  ? 'bg-indigo-500/15 border border-indigo-400/20 rounded-br-sm'
+                  : 'bg-white/5 border border-white/10 rounded-bl-sm'
+              }`}
+            >
+              <div className="flex items-baseline gap-2 mb-0.5">
+                <span className={`text-[10px] font-semibold uppercase tracking-wide ${m.outgoing ? 'text-indigo-300/80' : 'text-white/40'}`}>
+                  {m.outgoing ? 'Us' : (data.correspondent.name || 'Them')}
+                </span>
+                {m.isInMail && <span className="text-[9px] px-1 py-0.5 rounded bg-amber-500/15 text-amber-300/90">InMail</span>}
+                <span className="text-[10px] text-white/25 ml-auto">{stamp(m.createdAt)}</span>
+              </div>
+              {m.subject && <p className="text-[11px] font-semibold text-white/50 mb-1">{m.subject}</p>}
+              <p className={`whitespace-pre-line leading-relaxed ${m.outgoing ? 'text-white/80' : 'text-white/70'}`}>
+                {m.body}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+      {data.lastMessageSender === 'CORRESPONDENT' && (
+        <p className="text-[11px] text-amber-400/80 mt-2">They spoke last. The ball is with us.</p>
+      )}
+    </div>
+  );
+}
+
 function ConversationThread({ contactId, api }) {
   const [messages, setMessages] = useState([]);
   const [source, setSource] = useState('');
@@ -149,6 +214,7 @@ function stripLabel(block) {
 function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
   const [marking, setMarking] = useState(false);
   const [showConvo, setShowConvo] = useState(false);
+  const [showFullMsg, setShowFullMsg] = useState(false);
   const [showReply, setShowReply] = useState(false);
   const [replyText, setReplyText] = useState(reply.draft_response || '');
   const [sending, setSending] = useState(false);
@@ -320,7 +386,9 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
               </span>
             );
           })()}
-          {reply.ulinc_contact_id && (
+          {/* Thread used to be Ulinc-only, so the whole HeyReach queue had no way
+              to see what had already been said. */}
+          {(reply.ulinc_contact_id || reply.heyreach_conversation_id) && (
             <button
               onClick={() => setShowConvo(!showConvo)}
               className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-xl border border-sky-500/20 text-sky-400 bg-sky-500/10 hover:bg-sky-500/20 transition-all"
@@ -346,9 +414,32 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
         </div>
       </div>
 
-      <p className="text-sm text-white/60 bg-white/5 rounded-xl p-3 italic border border-white/5">
-        "{reply.reply_text?.substring(0, 300)}{reply.reply_text?.length > 300 ? '...' : ''}"
-      </p>
+      {/* Their message. This used to hard-truncate at 300 characters, which quietly
+          hid the end of every long reply — and a long reply is usually the most
+          revealing one. Nothing is cut now; long messages collapse to a readable
+          height with the full text one click away, and line breaks are kept. */}
+      {(() => {
+        const full = reply.reply_text || '';
+        const long = full.length > 400;
+        return (
+          <div className="text-sm text-white/60 bg-white/5 rounded-xl p-3 border border-white/5">
+            <p
+              className={`italic whitespace-pre-line leading-relaxed ${long && !showFullMsg ? 'max-h-28 overflow-hidden' : ''}`}
+              style={long && !showFullMsg ? { maskImage: 'linear-gradient(to bottom, black 60%, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, black 60%, transparent)' } : undefined}
+            >
+              "{full}"
+            </p>
+            {long && (
+              <button
+                onClick={() => setShowFullMsg(v => !v)}
+                className="mt-1.5 text-xs font-medium text-indigo-400 hover:text-indigo-300"
+              >
+                {showFullMsg ? 'Show less' : `Show full message (${full.length.toLocaleString()} chars)`}
+              </button>
+            )}
+          </div>
+        );
+      })()}
 
       {reply.summary && reply.summary !== 'Classification failed' && (
         <p className="text-sm text-white/50">
@@ -471,8 +562,12 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
         ))}
       </div>
 
-      {showConvo && reply.ulinc_contact_id && (
-        <ConversationThread contactId={reply.ulinc_contact_id} api={api} />
+      {showConvo && (
+        reply.heyreach_conversation_id
+          ? <HeyreachThread conversationId={reply.heyreach_conversation_id} api={api} />
+          : reply.ulinc_contact_id
+            ? <ConversationThread contactId={reply.ulinc_contact_id} api={api} />
+            : null
       )}
     </div>
   );

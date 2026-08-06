@@ -317,6 +317,65 @@ router.post('/reply', express.json({ limit: '1mb' }), async (req, res) => {
 });
 
 /**
+ * GET /api/heyreach/thread/:conversationId
+ *
+ * The full back-and-forth for one conversation, oldest first, so the dashboard
+ * can show it as a chat instead of a single quoted line. GetConversationsV2
+ * already carries every message with its full body (verified: a 15-message
+ * thread returns all 15), so this filters that list rather than adding a
+ * per-conversation API call.
+ *
+ * Cached briefly — opening a thread, replying, and reopening it is a common
+ * loop and the upstream list call is not cheap.
+ */
+const threadCache = new Map(); // conversationId -> { at, data }
+const THREAD_TTL_MS = 60_000;
+
+router.get('/thread/:conversationId', async (req, res) => {
+  const id = req.params.conversationId;
+  try {
+    const hit = threadCache.get(id);
+    if (hit && Date.now() - hit.at < THREAD_TTL_MS) return res.json(hit.data);
+
+    let convo = null;
+    for (let offset = 0; offset < 20000 && !convo; offset += 100) {
+      const r = await axios.post(`${HEYREACH_BASE}/inbox/GetConversationsV2`,
+        { filters: {}, offset, limit: 100 }, { headers: headers() });
+      const items = r.data?.items || [];
+      convo = items.find(c => c.id === id) || null;
+      if (!items.length || offset + items.length >= (r.data?.totalCount || 0)) break;
+    }
+    if (!convo) return res.status(404).json({ error: 'Conversation not found in HeyReach' });
+
+    const p = convo.correspondentProfile || {};
+    const data = {
+      conversationId: id,
+      correspondent: {
+        name: [p.firstName, p.lastName].filter(Boolean).join(' '),
+        headline: p.headline || '',
+        company: p.companyName || '',
+        profileUrl: p.profileUrl || '',
+      },
+      lastMessageSender: convo.lastMessageSender,
+      totalMessages: convo.totalMessages || (convo.messages || []).length,
+      messages: (convo.messages || []).map(m => ({
+        body: m.body || '',
+        sender: m.sender,                 // 'ME' | 'CORRESPONDENT'
+        outgoing: m.sender === 'ME',
+        createdAt: m.createdAt || null,
+        isInMail: m.isInMail === true || m.isInMail === 'True',
+        subject: m.subject && m.subject !== 'None' ? m.subject : '',
+      })),
+    };
+    threadCache.set(id, { at: Date.now(), data });
+    res.json(data);
+  } catch (e) {
+    console.error('[heyreach thread] Error:', e.response?.data || e.message);
+    res.status(500).json({ error: e.response?.data?.detail || e.message });
+  }
+});
+
+/**
  * POST /api/heyreach/webhook
  *
  * Heyreach posts here on every Message/InMail reply received.
