@@ -351,6 +351,7 @@ router.post('/redraft', express.json(), async (req, res) => {
       feedback: String(feedback).trim(),
       previousDraft: d.draft_response || '',
     });
+
     if (cls.failed) return res.status(502).json({ error: 'Draft service unavailable, nothing was changed' });
 
     const update = {
@@ -671,8 +672,21 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
             `Message 1: Hey ${fn}, glad to hear it. We pitch founders' stories straight to reporters and producers who cover your space and earn the coverage, no paid placement.\n\n` +
             `Message 2: Does Tuesday at 10am EST or Wednesday at 2pm EST work?`;
         }
+        // A no never reaches the board. Classified, tagged and closed in one
+        // step, so nobody spends attention on a conversation that is over.
+        // Rejecting PAID placement is exempt — that is the earned-not-paid
+        // misread and it stays for a human.
+        const PAY = /\b(pay|paying|paid|pay for)\b/i;
+        const PLACEMENT = /\b(?:media|press|placement\w*|feature\w*|coverage|publicity|appearance\w*|article\w*|interview\w*|podcast\w*|magazine\w*|pay[- ]to[- ]play)/i;
+        const paidMisread = PAY.test(replyText) && PLACEMENT.test(replyText);
+        if (update.classification === 'not_interested' && !paidMisread) {
+          update.handled = true;
+          update.handled_reason = 'closed_hard_no_or_no_budget';
+          update.tag = 'Not Interested';
+          update.subsequence = '';
+        }
         await ref.update(update);
-        console.log(`[heyreach webhook] Classified ${ref.id} as ${cls.classification}`);
+        console.log(`[heyreach webhook] Classified ${ref.id} as ${cls.classification}${update.handled ? ' (auto-closed)' : ''}`);
       } catch (e) {
         console.error(`[heyreach webhook] Classify failed for ${ref.id}:`, e.message);
       }

@@ -152,7 +152,14 @@ async function syncQueue(opts = {}) {
     // Dead conversation: they said no, or said they won't pay. Only when the
     // lead spoke last, so we never close a thread mid-exchange on our side.
     const lastText = (c.lastMessageText || '').trim();
-    if (c.lastMessageSender === 'CORRESPONDENT' && HARD_NO_RE.test(lastText) && !isPaidMisread(lastText)) {
+    // Two ways a conversation is over: the wording is a flat no, or the
+    // classifier already decided it was. Trusting the classification catches the
+    // polite declines that no phrase list will ever cover ("I'm a low ego guy,
+    // I don't think what you do is for me"). Paid-placement objections are
+    // exempt from both — those are recoverable and go to a human.
+    const deadByWording = HARD_NO_RE.test(lastText);
+    const deadByClassifier = d.classification === 'not_interested';
+    if (c.lastMessageSender === 'CORRESPONDENT' && (deadByWording || deadByClassifier) && !isPaidMisread(lastText)) {
       update.handled = true;
       update.handled_reason = 'closed_hard_no_or_no_budget';
       update.classification = 'not_interested';
