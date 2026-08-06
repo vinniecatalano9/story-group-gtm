@@ -679,7 +679,7 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
         const PAY = /\b(pay|paying|paid|pay for)\b/i;
         const PLACEMENT = /\b(?:media|press|placement\w*|feature\w*|coverage|publicity|appearance\w*|article\w*|interview\w*|podcast\w*|magazine\w*|pay[- ]to[- ]play)/i;
         const paidMisread = PAY.test(replyText) && PLACEMENT.test(replyText);
-        if (update.classification === 'not_interested' && !paidMisread) {
+        if ((update.classification === 'not_interested' || update.tag === 'Not Interested') && !paidMisread) {
           update.handled = true;
           update.handled_reason = 'closed_hard_no_or_no_budget';
           update.tag = 'Not Interested';

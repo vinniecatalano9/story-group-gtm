@@ -158,7 +158,10 @@ async function syncQueue(opts = {}) {
     // I don't think what you do is for me"). Paid-placement objections are
     // exempt from both — those are recoverable and go to a human.
     const deadByWording = HARD_NO_RE.test(lastText);
-    const deadByClassifier = d.classification === 'not_interested';
+    // The classifier sometimes lands on 'other' while still tagging the lead Not
+    // Interested ("Retired recently", "pausing operations on my small business").
+    // The tag is the more reliable of the two, so either one ends it.
+    const deadByClassifier = d.classification === 'not_interested' || d.tag === 'Not Interested';
     if (c.lastMessageSender === 'CORRESPONDENT' && (deadByWording || deadByClassifier) && !isPaidMisread(lastText)) {
       update.handled = true;
       update.handled_reason = 'closed_hard_no_or_no_budget';
