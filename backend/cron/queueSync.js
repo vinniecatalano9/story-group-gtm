@@ -30,6 +30,21 @@ const CREATE_WINDOW_DAYS = Number(process.env.QUEUE_SYNC_CREATE_WINDOW_DAYS) || 
 // isn't cleared before it shows up in the list API.
 const ORPHAN_GRACE_DAYS = Number(process.env.QUEUE_SYNC_ORPHAN_GRACE_DAYS) || 2;
 
+// A flat no, or "I have no budget for this", ends the conversation. Those cards
+// were piling up in the queue looking like work: 45 of 206 open cards on
+// 2026-08-06. They close themselves now. Nothing is deleted, so they stay
+// visible under "Show done" and the decision is reversible.
+const HARD_NO_RE = new RegExp([
+  /\bnot interested\b/, /\bno thank(s| you)\b/, /\bthanks,? but no\b/,
+  /\bplease remove\b/, /\bremove me\b/, /\btake me off\b/, /\bunsubscribe\b/,
+  /\bstop (these )?(emails|messaging|contacting)\b/, /\bdo not contact\b/,
+  /\bnot a fit\b/, /\bwe.?ll pass\b/, /\bi.?m a pass\b/, /^\s*pass\b/,
+  /\bwe shall pass\b/,
+  // will not pay
+  /\bno budget\b/, /\bdon.?t have (the |a )?budget\b/, /\bcan.?t afford\b/,
+  /\bcannot afford\b/, /\bnot (looking|willing) to (pay|invest|spend)\b/,
+].map(r => r.source).join('|'), 'i');
+
 function hrHeaders() {
   const k = process.env.HEYREACH_API_KEY;
   if (!k) throw new Error('HEYREACH_API_KEY not set');
@@ -120,7 +135,16 @@ async function syncQueue(opts = {}) {
     if (isInterested(tags) && !d.auto_tag_interested) { update.auto_tag_interested = true; tagged++; }
     if (tags.length && JSON.stringify(tags) !== JSON.stringify(d.heyreach_tags || [])) update.heyreach_tags = tags;
 
-    if (c.lastMessageSender && c.lastMessageSender !== 'CORRESPONDENT') {
+    // Dead conversation: they said no, or said they won't pay. Only when the
+    // lead spoke last, so we never close a thread mid-exchange on our side.
+    if (c.lastMessageSender === 'CORRESPONDENT' && HARD_NO_RE.test((c.lastMessageText || '').trim())) {
+      update.handled = true;
+      update.handled_reason = 'closed_hard_no_or_no_budget';
+      update.classification = 'not_interested';
+      update.tag = 'Not Interested';
+      update.subsequence = '';
+      cleared++;
+    } else if (c.lastMessageSender && c.lastMessageSender !== 'CORRESPONDENT') {
       update.handled = true;
       update.handled_reason = 'answered_in_heyreach';
       cleared++;

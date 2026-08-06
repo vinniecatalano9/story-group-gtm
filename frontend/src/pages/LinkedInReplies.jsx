@@ -54,6 +54,26 @@ function formatTime(created_at) {
   return new Date(created_at).toLocaleString();
 }
 
+// Thread requests are capped globally. Before its data arrives each thread is a
+// one-line placeholder, so a full queue collapses to well under a screen and
+// every card reports itself visible at once — 78 simultaneous requests, which
+// the API serialises until nothing finishes. The observer decides WHICH threads
+// load; this decides HOW MANY at a time.
+const THREAD_CONCURRENCY = 3;
+let threadsInFlight = 0;
+const threadQueue = [];
+function runQueuedThreads() {
+  while (threadsInFlight < THREAD_CONCURRENCY && threadQueue.length) {
+    const job = threadQueue.shift();
+    threadsInFlight++;
+    job().finally(() => { threadsInFlight--; runQueuedThreads(); });
+  }
+}
+function queueThreadFetch(job) {
+  threadQueue.push(job);
+  runQueuedThreads();
+}
+
 /**
  * The whole back-and-forth for a HeyReach conversation, laid out like a chat:
  * theirs on the left, ours on the right, oldest first. Messages are never
@@ -64,35 +84,25 @@ function HeyreachThread({ conversationId, api, leadName, accountId }) {
   const [error, setError] = useState('');
   const scrollRef = useRef(null);
 
-  // Threads are open by default now, so a full queue would fire one request per
-  // card on load. Wait until the card is actually on screen before fetching.
-  const [visible, setVisible] = useState(false);
-  const rootRef = useRef(null);
+  // No visibility gate: before its data arrives a thread is a short placeholder,
+  // so a full queue collapses to under a screen and every card reports itself
+  // visible at once anyway. The concurrency cap above is what actually protects
+  // the API, and it drains in DOM order so the cards on screen resolve first.
   useEffect(() => {
-    const el = rootRef.current;
-    if (!el || visible) return;
-    if (typeof IntersectionObserver === 'undefined') { setVisible(true); return; }
-    const io = new IntersectionObserver(entries => {
-      if (entries.some(e => e.isIntersecting)) { setVisible(true); io.disconnect(); }
-    }, { rootMargin: '300px' });
-    io.observe(el);
-    return () => io.disconnect();
-  }, [visible]);
-
-  useEffect(() => {
-    if (!visible) return;
     let live = true;
     // Name + account let the API find the thread in one call instead of crawling
     // the whole inbox. See the route for why.
     const qs = new URLSearchParams();
     if (leadName) qs.set('name', leadName);
     if (accountId) qs.set('accountId', accountId);
-    fetch(`${api}/api/heyreach/thread/${encodeURIComponent(conversationId)}${qs.toString() ? '?' + qs : ''}`)
-      .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e.error || 'Failed')))
-      .then(d => { if (live) setData(d); })
-      .catch(e => { if (live) setError(String(e)); });
+    queueThreadFetch(() =>
+      fetch(`${api}/api/heyreach/thread/${encodeURIComponent(conversationId)}${qs.toString() ? '?' + qs : ''}`)
+        .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e.error || 'Failed')))
+        .then(d => { if (live) setData(d); })
+        .catch(e => { if (live) setError(String(e)); })
+    );
     return () => { live = false; };
-  }, [visible, conversationId, api, leadName, accountId]);
+  }, [conversationId, api, leadName, accountId]);
 
   // Open on the newest message, the way a chat app does — the latest exchange is
   // what you're replying to. Scrolling up for the history is the deliberate act.
@@ -102,8 +112,12 @@ function HeyreachThread({ conversationId, api, leadName, accountId }) {
     el.scrollTop = el.scrollHeight;
   }, [data]);
 
-  if (error) return <p ref={rootRef} className="text-xs text-red-400/80 py-2">Couldn't load the thread: {error}</p>;
-  if (!data) return <p ref={rootRef} className="text-xs text-white/30 py-2">Loading conversation...</p>;
+  if (error) return <p className="text-xs text-red-400/80 py-2">Couldn't load the thread: {error}</p>;
+  if (!data) return (
+    <div className="mt-2 border-t border-white/10 pt-3 min-h-[5rem]">
+      <p className="text-xs text-white/25">Loading conversation...</p>
+    </div>
+  );
   if (!data.messages.length) return <p className="text-xs text-white/30 py-2">No messages in this thread</p>;
 
   const stamp = (iso) => {
@@ -113,7 +127,7 @@ function HeyreachThread({ conversationId, api, leadName, accountId }) {
   };
 
   return (
-    <div ref={rootRef} className="mt-2 border-t border-white/10 pt-3">
+    <div className="mt-2 border-t border-white/10 pt-3">
       <p className="text-xs font-medium text-white/40 uppercase tracking-wide mb-2">
         Conversation · {data.totalMessages} message{data.totalMessages === 1 ? '' : 's'}
       </p>
