@@ -421,6 +421,13 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
               ⚡ HeyReach: Interested
             </span>
           )}
+          {/* Closed cards only surface through search, so say why they're closed
+              rather than leaving them looking like live work. */}
+          {reply.handled && (
+            <span className="ml-1.5 inline-block px-2.5 py-0.5 rounded-lg text-xs font-medium bg-white/10 text-white/60 border border-white/10">
+              closed{reply.handled_reason === 'answered_in_heyreach' ? ' · answered in HeyReach' : ''}
+            </span>
+          )}
           <div className="mt-1 flex items-center gap-3">
             {reply.profile_url && (
               <a
@@ -725,6 +732,12 @@ export default function LinkedInReplies({ api }) {
   // Name search. Client-side over what's already loaded — the queue is capped at
   // 150 per source, so there's nothing to fetch and it stays instant.
   const [search, setSearch] = useState('');
+  // Closed conversations, pulled once the first time you search. Without this a
+  // search misses anyone whose card was auto-closed — Spencer Simon booked a
+  // call through HeyReach, the outbound-send webhook cleared his three replies
+  // as 'answered_in_heyreach', and searching his name found nothing.
+  const [archive, setArchive] = useState([]);
+  const archiveState = useRef('idle');
   const [showHandled, setShowHandled] = useState(false);
   // Default ON — open straight to the leads worth time. Toggle off to see everything.
   const [interestedOnly, setInterestedOnly] = useState(true);
@@ -771,6 +784,21 @@ export default function LinkedInReplies({ api }) {
   ];
   const needsReply = (r) =>
     r.auto_tag_interested === true || NEEDS_REPLY.includes(r.classification);
+
+  const msOf = (r) => {
+    const md = r.message_date, ca = r.created_at;
+    if (md?._seconds) return md._seconds * 1000;
+    if (md) return new Date(md).getTime();
+    if (ca?._seconds) return ca._seconds * 1000;
+    if (ca) return new Date(ca).getTime();
+    return 0;
+  };
+
+  // Search runs over the open queue plus the closed conversations, newest first.
+  const searchPool = () => {
+    const seen = new Set(replies.map(r => r.id));
+    return [...replies, ...archive.filter(r => r?.id && !seen.has(r.id))].sort((a, b) => msOf(b) - msOf(a));
+  };
 
   // Name search matches the person, their company and their email.
   const matchesSearch = (r) => {
@@ -832,6 +860,23 @@ export default function LinkedInReplies({ api }) {
 
   useEffect(() => { fetchReplies(); }, [fetchReplies]);
 
+  // Load the closed conversations the first time a search is typed. Once only —
+  // it's a bigger pull than the live queue and it doesn't change while you type.
+  useEffect(() => {
+    if (!search.trim() || archiveState.current !== 'idle') return;
+    archiveState.current = 'loading';
+    const load = (source) => {
+      const p = new URLSearchParams({ source, show_handled: 'true', limit: '300' });
+      return fetch(`${api}/api/replies?${p}`).then(r => r.json()).catch(() => ({ replies: [] }));
+    };
+    Promise.all([load('heyreach'), load('ulinc')])
+      .then(([hr, ul]) => {
+        setArchive([...(hr.replies || []), ...(ul.replies || [])]);
+        archiveState.current = 'loaded';
+      })
+      .catch(() => { archiveState.current = 'idle'; });
+  }, [search, api]);
+
   const handleDone = (id) => {
     setReplies(prev => prev.filter(r => r.id !== id));
   };
@@ -843,7 +888,7 @@ export default function LinkedInReplies({ api }) {
           <h1 className="text-2xl font-bold text-white">LinkedIn Messages</h1>
           <span className="text-sm text-white/55">
             {search.trim()
-              ? `${replies.filter(matchesSearch).length} match${replies.filter(matchesSearch).length === 1 ? '' : 'es'}`
+              ? `${searchPool().filter(matchesSearch).length} match${searchPool().filter(matchesSearch).length === 1 ? '' : 'es'}`
               : `${replies.filter(r => (!interestedOnly || isHot(r)) && !hiddenSenders.has(senderOf(r))).length} pending`}
           </span>
           {(() => {
@@ -983,12 +1028,13 @@ export default function LinkedInReplies({ api }) {
       {loading ? (
         <p className="text-white/55 py-10 text-center">Loading...</p>
       ) : (() => {
-        // A name search looks past every hide toggle — if you're looking for a
-        // specific person, "no results" because they were filed as a no is a
-        // worse answer than showing them.
+        // A name search looks past every hide toggle and into closed threads —
+        // if you're looking for a specific person, "no results" because they
+        // were filed as a no, or auto-closed when we answered them in HeyReach,
+        // is a worse answer than showing them.
         const searching = search.trim().length > 0;
         const visible = searching
-          ? replies.filter(matchesSearch)
+          ? searchPool().filter(matchesSearch)
           : replies
             .filter(r => (!interestedOnly || isHot(r)) && !hiddenSenders.has(senderOf(r)))
             .filter(r => !needsReplyOnly || needsReply(r))
