@@ -722,6 +722,9 @@ export default function LinkedInReplies({ api }) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  // Name search. Client-side over what's already loaded — the queue is capped at
+  // 150 per source, so there's nothing to fetch and it stays instant.
+  const [search, setSearch] = useState('');
   const [showHandled, setShowHandled] = useState(false);
   // Default ON — open straight to the leads worth time. Toggle off to see everything.
   const [interestedOnly, setInterestedOnly] = useState(true);
@@ -768,6 +771,14 @@ export default function LinkedInReplies({ api }) {
   ];
   const needsReply = (r) =>
     r.auto_tag_interested === true || NEEDS_REPLY.includes(r.classification);
+
+  // Name search matches the person, their company and their email.
+  const matchesSearch = (r) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return [r.contact_name, r.full_name, r.lead_name, r.company_name, r.email]
+      .some(v => v && String(v).toLowerCase().includes(q));
+  };
 
   // How long they've been waiting on us.
   const waitedDays = (r) => {
@@ -831,7 +842,9 @@ export default function LinkedInReplies({ api }) {
         <div className="flex items-center gap-4">
           <h1 className="text-2xl font-bold text-white">LinkedIn Messages</h1>
           <span className="text-sm text-white/55">
-            {replies.filter(r => (!interestedOnly || isHot(r)) && !hiddenSenders.has(senderOf(r))).length} pending
+            {search.trim()
+              ? `${replies.filter(matchesSearch).length} match${replies.filter(matchesSearch).length === 1 ? '' : 'es'}`
+              : `${replies.filter(r => (!interestedOnly || isHot(r)) && !hiddenSenders.has(senderOf(r))).length} pending`}
           </span>
           {(() => {
             const owed = replies.filter(r => needsReply(r) && !hiddenSenders.has(senderOf(r)));
@@ -861,6 +874,25 @@ export default function LinkedInReplies({ api }) {
           })()}
         </div>
         <div className="flex items-center gap-3">
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-white/40 pointer-events-none">⌕</span>
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Escape') setSearch(''); }}
+              placeholder="Search name or company"
+              className="glass-input rounded-xl pl-8 pr-7 py-1.5 text-sm w-56"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                title="Clear"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 text-sm"
+              >
+                ×
+              </button>
+            )}
+          </div>
           <button
             onClick={() => setInterestedOnly(!interestedOnly)}
             className={`px-3 py-1.5 text-sm font-medium rounded-xl border transition-all ${
@@ -951,14 +983,22 @@ export default function LinkedInReplies({ api }) {
       {loading ? (
         <p className="text-white/55 py-10 text-center">Loading...</p>
       ) : (() => {
-        const visible = replies
-          .filter(r => (!interestedOnly || isHot(r)) && !hiddenSenders.has(senderOf(r)))
-          .filter(r => !needsReplyOnly || needsReply(r))
-          .filter(r => !hideNonIcp || r.icp?.verdict !== 'kill');
+        // A name search looks past every hide toggle — if you're looking for a
+        // specific person, "no results" because they were filed as a no is a
+        // worse answer than showing them.
+        const searching = search.trim().length > 0;
+        const visible = searching
+          ? replies.filter(matchesSearch)
+          : replies
+            .filter(r => (!interestedOnly || isHot(r)) && !hiddenSenders.has(senderOf(r)))
+            .filter(r => !needsReplyOnly || needsReply(r))
+            .filter(r => !hideNonIcp || r.icp?.verdict !== 'kill');
         if (visible.length === 0) {
           return (
             <p className="text-white/55 py-10 text-center">
-              {needsReplyOnly
+              {searching
+                ? `No LinkedIn messages matching "${search.trim()}"`
+                : needsReplyOnly
                 ? 'Nobody is waiting on a reply. Nice.'
                 : interestedOnly && replies.length > 0
                 ? `Nothing left to work — ${replies.length} message${replies.length === 1 ? '' : 's'} hidden as nos, out-of-office or bounces`

@@ -807,6 +807,22 @@ cron.schedule('0 7 * * *', async () => {
   }
 }, { timezone: 'America/New_York' });
 
+// Pre-call brief catch-up: every 30 min, 7:20am–5pm ET. Two jobs in one —
+// (1) on 2026-08-17 the 7am tick above never fired (no log line, no error) and
+// four prospect calls went unbriefed, so a single daily tick can't be trusted
+// on its own; (2) calls booked after 7am now get a brief on the next pass.
+// The Firestore ledger in precall-brief.js makes re-runs cheap: already-briefed
+// events are skipped, so a pass with nothing new does one calendar read.
+cron.schedule('20,50 7-16 * * *', async () => {
+  try {
+    const { runPrecallBrief } = require('./cron/precall-brief');
+    const r = await runPrecallBrief({ send: true });
+    if (r.calls) console.log(`[cron] Pre-call catch-up briefed ${r.calls} call(s)`);
+  } catch (e) {
+    console.error('[cron] Pre-call catch-up error:', e.message);
+  }
+}, { timezone: 'America/New_York' });
+
 // GTM reminders: every morning 8am ET — follow-ups gone quiet (with
 // suggested nudge text) + interested repliers who never booked.
 cron.schedule('0 8 * * *', async () => {

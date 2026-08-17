@@ -4,7 +4,7 @@ const { getTodaysEvents } = require('../services/calendar');
 const { scrapeWebsite, searchNews, searchGoogle } = require('../services/apify');
 const { claudePrompt } = require('../services/claude');
 const { sendMail, isConfigured } = require('../services/mailer');
-const { transcripts } = require('../services/db');
+const { transcripts, db } = require('../services/db');
 const fireflies = require('../services/fireflies');
 
 const TEAM_DOMAINS = ['storygroup.io', 'winningrepublicans.com', 'fireflies.ai', 'group.calendar.google.com', 'resource.calendar.google.com'];
@@ -13,6 +13,41 @@ const INTERNAL_TITLES = /l10|leadership|standup|team meeting|one on one|1:1|inte
 const DISCOVERY_TITLES = /discovery|intro|solutions call|strategy call|story ?group &/i;
 
 const RECIPIENTS = () => (process.env.BRIEF_RECIPIENTS || 'vincent@storygroup.io,mmoonan@storygroup.io').split(',').map(s => s.trim());
+
+// Which calls have already been briefed today, by calendar event id.
+//
+// On 2026-08-17 the 7am tick simply never fired — no log line, no error — and
+// four prospect calls went unbriefed. A single daily tick has no way to notice
+// that. The catch-up schedule in server.js re-runs this through the day; this
+// ledger is what keeps a re-run from re-sending briefs that already went out,
+// and it doubles as same-day coverage: a call booked at 10am gets its brief on
+// the next pass instead of never.
+const dayKey = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
+const briefLedger = () => db.collection('precall_briefs').doc(dayKey());
+
+async function alreadyBriefed() {
+  try {
+    const snap = await briefLedger().get();
+    return new Set(snap.exists ? (snap.data().event_ids || []) : []);
+  } catch (e) {
+    // A ledger read failure must not cost Vincent the brief — worst case a
+    // duplicate goes out, which is far cheaper than a missing one.
+    console.warn('[precall-brief] Ledger read failed:', e.message);
+    return new Set();
+  }
+}
+
+async function recordBriefed(eventIds) {
+  try {
+    const prior = await alreadyBriefed();
+    await briefLedger().set({
+      event_ids: [...new Set([...prior, ...eventIds])],
+      updated_at: new Date(),
+    }, { merge: true });
+  } catch (e) {
+    console.warn('[precall-brief] Ledger write failed:', e.message);
+  }
+}
 
 /** Condensed case-study library from the PR Mastery knowledge base. */
 function loadCaseStudies() {
@@ -178,17 +213,22 @@ The one case from the library that matches, with its exact numbers, and one sent
 Keep the whole brief under 350 words. Be specific — use their words from the website/news, never generic filler.`;
 }
 
-async function runPrecallBrief({ send = true } = {}) {
+async function runPrecallBrief({ send = true, force = false } = {}) {
   const events = await getTodaysEvents();
   const caseLibrary = loadCaseStudies();
 
   // Prospect calls only: external attendee + not obviously internal
-  const calls = events
+  const allCalls = events
     .map(e => ({ event: e, prospects: prospectsOf(e) }))
     .filter(c => c.prospects.length > 0 && !INTERNAL_TITLES.test(c.event.title));
 
-  console.log(`[precall-brief] ${events.length} events today, ${calls.length} prospect call(s)`);
-  if (calls.length === 0) return { calls: 0, sent: false };
+  // getTodaysEvents() starts at now, so calls already underway are out of scope.
+  const done = force ? new Set() : await alreadyBriefed();
+  const calls = allCalls.filter(c => !done.has(c.event.id));
+  const skipped = allCalls.length - calls.length;
+
+  console.log(`[precall-brief] ${events.length} events today, ${allCalls.length} prospect call(s), ${calls.length} to brief${skipped ? ` (${skipped} already briefed)` : ''}`);
+  if (calls.length === 0) return { calls: 0, sent: false, alreadyBriefed: skipped };
 
   const briefs = [];
   for (const { event, prospects } of calls) {
@@ -257,10 +297,13 @@ async function runPrecallBrief({ send = true } = {}) {
     } else {
       await sendMail({
         to: RECIPIENTS(),
-        subject: `Pre-Call Briefs: ${briefs.length} call${briefs.length > 1 ? 's' : ''} today (${dateStr})`,
+        subject: skipped
+          ? `Pre-Call Brief — newly booked: ${briefs.length} call${briefs.length > 1 ? 's' : ''} (${dateStr})`
+          : `Pre-Call Briefs: ${briefs.length} call${briefs.length > 1 ? 's' : ''} today (${dateStr})`,
         html,
       });
       result.sent = true;
+      await recordBriefed(briefs.map(b => b.event.id));
     }
   } else {
     result.html = html;
