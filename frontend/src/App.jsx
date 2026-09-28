@@ -79,6 +79,12 @@ function Nav() {
         PR Mastery
       </a>
       <a
+        href="/call-scorecard/"
+        className="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 text-white/50 hover:text-white/80 hover:bg-white/5"
+      >
+        Call Scorecard
+      </a>
+      <a
         href="/lead-filter/"
         className="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 text-white/50 hover:text-white/80 hover:bg-white/5"
       >

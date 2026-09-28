@@ -72,6 +72,9 @@ Three pages:
 - `Leads.jsx` — Lead table with status/tier filters.
 - `Replies.jsx` — Reply list with classification filters.
 
+Standalone tools in `frontend/public/` (plain HTML, no React, copied into the build as-is):
+- `call-scorecard/` — internal live-call panel for discovery and pitch calls. Readiness scorecard (placeholder categories until Michelle's Story Group questions land), v6 beat tracker, rules-based package suggestion from the 9/18/26 packages, case studies that pop up on what the rep clicks, and instant search over objections / Aaron's answers / packages / cases. No AI on the call, localStorage only. Prefill: each pre-call brief email (`backend/cron/precall-brief.js`) carries an "Open pre-filled scorecard" link — booking-form answers, ad campaign (read from the booking link's name: PR / crisis / video), and the brief's research ride in the URL fragment (`#prefill=<base64url JSON>`, never sent to a server; base URL from `SCORECARD_URL`). Reps can also paste any invite or form text via "Paste booking info". Its search index and case library are embedded: after PR Mastery, `tier_reference.md`, or `Aaron-Selling-System.md` changes, run `node frontend/scripts/build-call-scorecard-kb.mjs` (call node directly, npm scripts break on the colon in the path).
+
 ## Lead Data Model
 
 **Statuses**: `ingested` → `enriching` → `enriched` → `scored` → `emailed` → `replied` → `booked` → `dead` (also `enrichment_failed`, `manual_review`)

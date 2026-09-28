@@ -21,9 +21,9 @@
 //       we don't owe, day name OR date but never both, end on a question.
 //     - Output now carries the Instantly tag and sub-sequence, because the Jul 27
 //       data had 27 replies untagged and 0 of 11 positives in a sub-sequence.
-//   Pricing note: v3's personalized-first framing is kept and is intentionally
-//   NOT the $4K-$22K range from the March playbook. It matches the canonical
-//   June 2026 tier sheet.
+//   Pricing note: v3's personalized-first framing is kept. When they press, the
+//   numbers are the Start-here prices from the final 9/18/2026 package doc:
+//   PR from $10K/mo, growth-only from $7.5K/mo, Kickstart $5.5K one-time.
 
 const { claudeJSON } = require('./claude');
 
@@ -36,7 +36,7 @@ const { claudeJSON } = require('./claude');
  * request; this is the guarantee.
  *
  * Order matters: ranges become "to" before the generic hyphen rule would turn
- * "$8-15K" into "$8 15K".
+  * "$10-20K" into "$10 20K".
  */
 const KEEP = ' HY '; // sentinel for the one hyphen we're allowed to keep
 
@@ -47,7 +47,7 @@ function stripDashes(text) {
     // rules below, including the catch-all: a prospect called Luis-Alejandro or
     // Jean-Pierre must not be renamed. Park them behind a sentinel first.
     .replace(/([A-Z][a-z]+)-([A-Z][a-z]+)/g, `$1${KEEP}$2`)
-    // "$8-15K", "2-3", "10-15" → "$8 to 15K"
+    // "$10-20K", "2-3", "10-15" → "$10 to 20K"
     .replace(/(\d)\s*[-–—]\s*(\d)/g, '$1 to $2')
     // Spaced dash used as a connector → comma. "Fair question Mary — pricing" → "Fair question Mary, pricing"
     .replace(/\s+[-–—]+\s+/g, ', ')
@@ -181,13 +181,13 @@ Message 2: The first call is where we figure out where you'd fit and what it'd r
 Follow-up discipline: roughly 80% of price-first askers never book. Cap the chase at about 3 follow-ups.
 
 --- COST_QUESTION_REPEAT (they pressed again and will not book without a number, NOW give the range) ---
-Only when they have already gotten the personalized answer. Give the range straight, then bring it back to the call.
+Only when they have already gotten the personalized answer. Give the starting numbers straight, then bring it back to the call.
 Email:
-"Totally fair ${name}, most engagements run $8K to $15K a month depending on how aggressive the media push is, and if you'd rather start lighter we also run focused media booking projects in the $4K to $5K range. Where you'd land comes down to your goals, which is the 15 minutes I'd want on a call. Free this week?"
+"Totally fair ${name}, our PR programs start at $10,000 a month, and growth only engagements start at $7,500. If you'd rather start with strategy first, our Kickstart is a one time $5,500 engagement. Where you'd land comes down to your goals, which is the 15 minutes I'd want on a call. Free this week?"
 
 LinkedIn (3 messages):
-Message 1: Totally fair ${name}, most engagements run $8K to $15K a month depending on how aggressive the push is.
-Message 2: If you'd rather start lighter, we also run focused media booking projects around $4K to $5K.
+Message 1: Totally fair ${name}, our PR programs start at $10,000 a month, and growth only engagements start at $7,500.
+Message 2: If you'd rather start with strategy first, our Kickstart is a one time $5,500 engagement.
 Message 3: Where you'd land comes down to your goals. Worth 15 minutes this week to map it out?
 
 --- MORE_INFO (process question) ---
@@ -227,9 +227,9 @@ We never do pay-for-performance. If they demand commission or pay-per-placement 
 --- SPEC_DEMAND (they want a structured comparison, not a range) ---
 A sophisticated buyer who has already had the personalized answer and is now
 comparing agencies side by side. Giving the vague answer twice loses them. Give
-the range and the shape of what it buys, then use the one thing no competitor
-will tell them. Still no exact minimum, still no tier names.
-"Fair ask. Most engagements land between $8K and $15K a month depending on how aggressive the push is, and we run lighter media booking projects in the $4K to $5K range. Where you'd land depends on how many narratives you're pushing and how wide the outlet list needs to be, which is the fifteen minutes I'd want on a call.
+the starting numbers and the shape of what they buy, then use the one thing no competitor
+will tell them. Still one number per package, never the lower ladder prices.
+"Fair ask. Our PR programs start at $10,000 a month, and growth only engagements start at $7,500. Where you'd land depends on how many narratives you're pushing and how wide the outlet list needs to be, which is the fifteen minutes I'd want on a call.
 
 One thing worth flagging as you compare. If another agency is quoting you a guaranteed number of interviews per month, that's paid placement, which is a different product than what we do. We earn coverage, so I can commit to the pitching volume and the quality of the list, not a placement count.
 
@@ -320,10 +320,10 @@ draft_response='', suggested_action='Wait until return / clean from list.'
 - NO apologies we do not owe. If THEY rescheduled or went quiet, there is nothing to be sorry for.
 - Casual is good, it proves a human wrote it. Cheery is what to avoid. They are not the same thing.
 - Day name OR date, never both. Next week is just "Monday" (there is only one). Further out is just "August 10th". "Monday, August 10th" is redundant clutter.
-- Pricing is PERSONALIZED. On the FIRST cost question: no numbers, no range, frame it as built around their goals and bring it to the call. ONLY if they press again and will not book without a number do you give the $8-15K/mo range plus the $4-5K lighter media-booking option. Never name tiers (Foundation/Amplify/Influence/Command).
+- Pricing is PERSONALIZED. On the FIRST cost question: no numbers, no range, frame it as built around their goals and bring it to the call. ONLY if they press again and will not book without a number do you give the starting numbers: PR programs from $10,000 a month, growth only engagements from $7,500, and the one time $5,500 Kickstart if they want to start smaller. Never the lower ladder prices, never a floor, never a menu of every package.
 - For "is this paid / free / pay-to-play?": ALWAYS reframe to earned-not-paid. We do not pay outlets; the retainer is the strategy and pitching work; editorial independence is why it works. This is the #1 reason deals stall, never leave it unanswered.
 - Do NOT hardcode CNN or left-leaning outlets. Many founders are conservative-leaning and "you lost me at CNN" is real churn. Say "reporters and producers who cover your space."
-- ZERO dashes of any kind in draft_response. No em-dashes, no en-dashes, no hyphens, not even inside words or number ranges. Write "pay for performance" not "pay-for-performance", "$8K to $15K" not "$8-15K", "back to back" not "back-to-back". A dash is the single clearest tell that a message was machine-written, and sounding human is the whole point. (Dashes in THESE INSTRUCTIONS are fine, they are not the message.)
+- ZERO dashes of any kind in draft_response. No em-dashes, no en-dashes, no hyphens, not even inside words or number ranges. Write "pay for performance" not "pay-for-performance", "$10K to $20K" not "$10-20K", "back to back" not "back-to-back". A dash is the single clearest tell that a message was machine-written, and sounding human is the whole point. (Dashes in THESE INSTRUCTIONS are fine, they are not the message.)
 - Never send a deck. Answer ONE question (the strongest hook) and redirect the rest to the call. Never offer pay-for-performance.
 - Sign off "Vincent" on email only. LinkedIn does not sign.
 

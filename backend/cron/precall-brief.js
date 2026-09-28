@@ -13,6 +13,8 @@ const INTERNAL_TITLES = /l10|leadership|standup|team meeting|one on one|1:1|inte
 const DISCOVERY_TITLES = /discovery|intro|solutions call|strategy call|story ?group &/i;
 
 const RECIPIENTS = () => (process.env.BRIEF_RECIPIENTS || 'vincent@storygroup.io,mmoonan@storygroup.io').split(',').map(s => s.trim());
+// Where the call scorecard lives. Each brief links there with the booking + research pre-filled.
+const SCORECARD_URL = () => process.env.SCORECARD_URL || 'https://story-group-gtm.web.app/call-scorecard/';
 
 // Which calls have already been briefed today, by calendar event id.
 //
@@ -81,7 +83,7 @@ async function research(prospect, event) {
   const companyFromTitle = (event.title.match(/story ?group\s*[&x]\s*(.+?)(?:\s+(?:discovery|intro|solutions|strategy).*)?$/i) || [])[1];
   const company = companyFromTitle || (hasCompanySite ? domain.split('.')[0] : null);
 
-  const out = { domain: hasCompanySite ? domain : null, company, website: null, news: null, person: null };
+  const out = { domain: hasCompanySite ? domain : null, company, website: null, news: null, person: null, newsTitles: [], personTitles: [], linkedin: null };
 
   if (hasCompanySite) {
     try { out.website = await scrapeWebsite(domain); }
@@ -92,6 +94,7 @@ async function research(prospect, event) {
       const pages = await searchNews(company);
       const items = pages.flatMap(p => p.organicResults || []);
       out.news = items.map(n => `${n.title || ''}: ${n.description || n.snippet || ''}`).join('\n').substring(0, 3000) || null;
+      out.newsTitles = items.map(n => n.title).filter(Boolean).slice(0, 3);
     } catch (e) { console.warn(`[precall-brief] News search failed for ${company}:`, e.message); }
   }
   try {
@@ -99,6 +102,10 @@ async function research(prospect, event) {
     const pages = await searchGoogle(q);
     const items = pages.flatMap(p => p.organicResults || []);
     out.person = items.map(n => `${n.title || ''}: ${n.description || n.snippet || ''}`).join('\n').substring(0, 2000) || null;
+    out.personTitles = items.map(n => n.title).filter(Boolean).slice(0, 2);
+    // "Jane Doe - CEO - Acme | LinkedIn" -> "CEO"
+    const li = items.find(n => /linkedin\.com\/in\//i.test(n.url || ''));
+    if (li) out.linkedin = { url: li.url, title: ((li.title || '').split(' | ')[0].split(' - ')[1] || '').trim() || null };
   } catch (e) { console.warn('[precall-brief] Person search failed:', e.message); }
 
   return out;
@@ -118,12 +125,52 @@ async function findPriorCalls(prospectEmails) {
     .filter(t => (t.participants || []).some(p => wanted.includes(String(p).toLowerCase().trim())));
 }
 
-const TIER_FACTS = `STORY GROUP TIERS (canonical, June 2026):
-- Foundation $5K/mo — REACTIVE ONLY: responds to inbound journalist queries, newsjacking, up to 2 media advisories/mo. NO proactive pitching. 4-mo minimum.
-- Amplify $8.5K/mo — proactive outbound pitching starts here: 1-2 narratives, 50-75 outlet media list, persistent outreach. 4-mo minimum.
-- Influence $15K/mo — adds podcasts, up to 2 TV/radio + 2 speaking pitches/mo, rapid response, full intelligence suite. 4-mo minimum.
-- Command $25K/mo — by invitation only: dedicated senior strategist, uncapped placements, in-home broadcast studio, crisis counsel. 12-mo minimum.
-Never promise proactive pitching or placement counts at Foundation.`;
+const TIER_FACTS = `STORY GROUP PACKAGES (final 9/18/2026 package doc, the only valid pricing; Start-here prices):
+- Kickstart $5,500 one-time: audit, positioning, messaging, 30/60/90 roadmap. No PR outreach.
+- Business Growth Engagement $7,500/mo, 3 months: Google Ads, conversion, qualified leads. No PR.
+- Visibility $10,000/mo, 6 months: PR and earned media, proactive pitching, podcast bookings, newsjacking, monitoring. No digital growth.
+- Growth & Visibility: both engines. Not priced yet; never quote a number.
+- Influence & Growth $20,000/mo, 6 months: growth engine plus multiple narratives, top-tier outreach, broadcast and speaking pitching, executive positioning.
+- Command $30,000/mo, 12 months: senior strategist, premium and national media, reputation, crisis readiness and counsel.
+- Command & Digital Growth $33,500/mo, 12 months: Command plus digital growth.
+- Premium Cinema add-on $20,000/mo, 12 months ($12,500/mo with Influence & Growth or Command): TV spot, promo video, studio, weekly social clips.
+Recommend ONE package at its Start-here price. Never quote lower ladder prices or promise placement counts.`;
+
+/** Calendar invite text without links, dial-ins, and scheduler boilerplate: what's left is what they told us. */
+function cleanInvite(description) {
+  return String(description || '')
+    .replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"')
+    .split('\n').map(l => l.trim())
+    .filter(l => l && !/https?:\/\/|meet\.google|zoom\.us|calendly\.com|^(join|dial|passcode|meeting id|need to make changes|cancel|reschedule|powered by|phone|tel)\b/i.test(l))
+    .join('\n');
+}
+
+/**
+ * Link that opens the call scorecard pre-filled with the booking + research.
+ * The payload rides in the URL fragment, which browsers never send to a server.
+ */
+function scorecardLink(event, prospect, r, callType) {
+  const site = String(r.website || '').replace(/\s+/g, ' ').trim();
+  const payload = {
+    v: 1,
+    name: prospect.name || '',
+    email: prospect.email,
+    company: r.company || '',
+    title: (r.linkedin && r.linkedin.title) || '',
+    website: r.domain || '',
+    linkedin: (r.linkedin && r.linkedin.url) || '',
+    mode: callType.startsWith('solutions') ? 'c2' : 'c1',
+    event: { title: event.title, start: event.start },
+    booking: cleanInvite(event.description).slice(0, 1500),
+    research: {
+      site: site.length > 320 ? site.slice(0, 319) + '…' : site,
+      news: r.newsTitles || [],
+      person: r.personTitles || [],
+    },
+  };
+  return `${SCORECARD_URL()}#prefill=${Buffer.from(JSON.stringify(payload)).toString('base64url')}`;
+}
 
 function call2Prompt(event, prospect, priorCalls, priorSentences, r, caseLibrary) {
   const timeET = new Date(event.start).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
@@ -173,7 +220,7 @@ Keep it under 400 words. Use their exact words wherever possible.`;
 
 function briefPrompt(event, prospect, r, caseLibrary) {
   const timeET = new Date(event.start).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
-  return `You are prepping Vincent Catalano (VP of Growth, Story Group — earned media/PR for executives, $5K-$25K/mo retainers) for a sales call TODAY at ${timeET} ET.
+  return `You are prepping Vincent Catalano (VP of Growth, Story Group — earned media/PR for executives, packages from a $5.5K one-time Kickstart to $33.5K/mo) for a sales call TODAY at ${timeET} ET.
 
 CALL: "${event.title}"
 PROSPECT: ${prospect.name || prospect.email} <${prospect.email}>
@@ -188,7 +235,10 @@ ${r.news || 'None found'}
 ABOUT THE PERSON:
 ${r.person || 'Nothing found'}
 
-STORY GROUP ICP (for fit scoring): CEOs/founders/C-suite of real companies with teams (NOT solo operators, coaches, or self-employed consultants). Sweet spot: $8K-$14K/mo retainers. They need media visibility, thought leadership, or reputation defense. Red flags: no company website, "I help X do Y" positioning, single-person practice.
+BOOKING FORM / INVITE NOTES (their own words, if any):
+${cleanInvite(event.description).slice(0, 1200) || 'None'}
+
+STORY GROUP ICP (for fit scoring): CEOs/founders/C-suite of real companies with teams (NOT solo operators, coaches, or self-employed consultants). Sweet spot: Visibility ($10K/mo) through Command ($30K/mo); someone who balks at $5K/mo is not the target. They need media visibility, thought leadership, or reputation defense. Red flags: no company website, "I help X do Y" positioning, single-person practice.
 
 CASE STUDY LIBRARY (pick ONE — match on BOTH industry AND challenge pattern: launch, crisis, recovery, positioning, authority-building, regulatory, down-market, etc. If the exact industry isn't in the library, pick the closest ADJACENT industry and match on challenge pattern — with this 40-case library there is virtually always a match, so "no match" should be extremely rare. Cases are anonymized by design — cite as industry + descriptor, never invent a client name, never fabricate numbers):
 ${caseLibrary || 'Not available'}
@@ -241,7 +291,7 @@ async function runPrecallBrief({ send = true, force = false } = {}) {
       if (priorCalls.length > 0) callType = 'solutions';
       else if (titleSaysSolutions) callType = 'solutions (no Call 1 transcript on file)';
 
-      let brief;
+      let brief, link;
       if (priorCalls.length > 0) {
         console.log(`[precall-brief] "${event.title}" is a CALL 2 (${priorCalls.length} prior call(s)) — prepping the close...`);
         let priorSentences = null;
@@ -258,19 +308,23 @@ async function runPrecallBrief({ send = true, force = false } = {}) {
             const pages = await searchNews(company);
             const items = pages.flatMap(p => p.organicResults || []);
             r.news = items.map(n => `${n.title || ''}: ${n.description || n.snippet || ''}`).join('\n').substring(0, 3000) || null;
+            r.newsTitles = items.map(n => n.title).filter(Boolean).slice(0, 3);
+            r.company = company;
           }
         } catch (e) { console.warn('[precall-brief] News search failed:', e.message); }
         brief = await claudePrompt(call2Prompt(event, prospect, priorCalls, priorSentences, r, caseLibrary), { timeout: 180000 });
+        link = scorecardLink(event, prospect, r, callType);
       } else {
         console.log(`[precall-brief] Researching ${prospect.email} for "${event.title}"...`);
         const r = await research(prospect, event);
         brief = await claudePrompt(briefPrompt(event, prospect, r, caseLibrary), { timeout: 180000 });
+        link = scorecardLink(event, prospect, r, callType);
       }
-      briefs.push({ event, prospect, callType, brief });
+      briefs.push({ event, prospect, callType, brief, link });
       console.log(`[precall-brief] Brief ready for "${event.title}"`);
     } catch (e) {
       console.error(`[precall-brief] Failed for "${event.title}":`, e.message);
-      briefs.push({ event, prospect, callType, brief: `Brief generation failed: ${e.message}\nProspect: ${prospect.email}` });
+      briefs.push({ event, prospect, callType, brief: `Brief generation failed: ${e.message}\nProspect: ${prospect.email}`, link: scorecardLink(event, prospect, {}, callType) });
     }
   }
 
@@ -283,6 +337,7 @@ async function runPrecallBrief({ send = true, force = false } = {}) {
   <div style="border:1px solid #e0e0e8;border-radius:8px;padding:20px;margin:16px 0">
     <div style="font-size:16px;font-weight:bold">${new Date(b.event.start).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' })} ET — ${b.event.title}</div>
     <div style="color:#666;font-size:13px;margin:4px 0 12px">${b.prospect.name ? b.prospect.name + ' · ' : ''}${b.prospect.email} · <span style="color:${b.callType.startsWith('solutions') ? '#FF743F' : '#FF2257'};font-weight:bold">${b.callType.toUpperCase()}</span></div>
+    ${b.link ? `<a href="${b.link}" style="display:inline-block;background:#FF2257;color:#fff;padding:8px 14px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:13px;margin:0 0 12px">Open pre-filled scorecard →</a>` : ''}
     <pre style="white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.5;margin:0">${b.brief.replace(/</g, '&lt;')}</pre>
   </div>`).join('')}
 </div>`;

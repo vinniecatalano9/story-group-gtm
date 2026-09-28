@@ -28,6 +28,7 @@ app.use('/api/fireflies', require('./routes/fireflies'));
 app.use('/api/heyreach', require('./routes/heyreach'));
 app.use('/api/instantly', require('./routes/instantly'));
 app.use('/api/calendar', require('./routes/calendar'));
+app.use('/api/nutshell', require('./routes/nutshell'));
 
 // Health check
 app.get('/api/health', (req, res) => {

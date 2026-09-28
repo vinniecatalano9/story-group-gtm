@@ -86,7 +86,7 @@ function buildPrompt(responders, last) {
     ? `YOUR NOTES FROM LAST RUN (${last.date}):\n${JSON.stringify({ noticing: last.noticing, icp: last.icp, objections: last.objections }).slice(0, 3000)}\n`
     : `(No prior run — this is the first weekly analysis.)\n`;
 
-  return `You are the GTM analyst for Story Group, a PR / earned-media agency selling $8-15K/mo retainers to the FOUNDER / CEO / OWNER who signs the check. Every week you read the REAL outbound responses and tell Vincent what you notice and how to sharpen his ICP. Be specific, evidence-based, and honest — no generic advice.
+  return `You are the GTM analyst for Story Group, a PR / earned-media agency selling $7.5K-$33.5K/mo packages (core: Visibility $10K, Influence & Growth $20K) to the FOUNDER / CEO / OWNER who signs the check. Every week you read the REAL outbound responses and tell Vincent what you notice and how to sharpen his ICP. Be specific, evidence-based, and honest — no generic advice.
 
 ESTABLISHED FINDINGS (your baseline — confirm, refine, or challenge with this week's data):
 - The buyer signature is BEHAVIORAL, not demographic: score on REPLY INTENT (proposes/accepts a time, asks for logistics, wants a call = HOT), NOT title or vertical. Perfect-title founders pass; oddball titles book.

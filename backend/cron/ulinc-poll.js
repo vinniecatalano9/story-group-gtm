@@ -46,7 +46,7 @@ Message 1: "Hey ${firstName || 'there'}, in terms of costs it really depends… 
 Message 2: "Would you be open to a quick call where we go over those factors so I can give you an exact price?"
 
 COST QUESTION (second time — give ballpark):
-Message 1: "Totally understand. Most of our clients invest somewhere between $4K-$22K/month depending on scope — media booking, full PR campaigns, digital, etc."
+Message 1: "Totally understand. Our PR programs start at $10K a month, and growth-only engagements start at $7.5K, depending on scope."
 Message 2: "Happy to put together something specific for you after a quick call. Want to grab 15 minutes this week?"
 
 MORE INFO / WHAT'S THE PROCESS (CASE_STUDY):
