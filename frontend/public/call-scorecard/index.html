@@ -240,7 +240,7 @@
     <div>
       <h1>Discovery <em>Scorecard</em></h1>
       <div class="sub">Internal only. The prospect never sees the right-hand panel. Autosaves in this browser. Press <b>/</b> to search.
-        · You are <select id="rep" style="width:auto;display:inline-block;padding:2px 6px;font-size:13px">
+        · Your name: <select id="rep" style="width:auto;display:inline-block;padding:2px 6px;font-size:13px">
           <option value="">pick your name</option>
           <option value="vincent@storygroup.io">Vincent</option>
           <option value="mmoonan@storygroup.io">McKenna</option>
@@ -358,7 +358,7 @@
     <li>When they say something, click the matching button under <b>What they said</b>. Click again to undo.</li>
     <li>Jot what they say in <b>Call notes</b>, in any order. Skip anything that doesn't come up. Each topic has a suggested question tucked under it if you want one.</li>
     <li>Score the business 1–5 in <b>Readiness scorecard</b> (1 = not set up, 5 = running great).</li>
-    <li>Watch the right side: the <b>recommended package and price</b>, <b>Watch for</b> warnings, <b>Ask next</b> questions, and a <b>case study</b> you can mention. Case studies also pop up when you click something.</li>
+    <li>Watch the right side: the <b>recommended package and price</b>, <b>Watch for</b> warnings, <b>Ideas for what to ask</b>, and a <b>case study</b> you can mention. Case studies also pop up when you click something.</li>
     <li>Tough question? Press <b>/</b> and type a word ("guarantee", "too expensive", "podcast"). Answers come from our playbook.</li>
   </ol>
   <h3>After the call</h3>
@@ -400,24 +400,34 @@
 // question doc. Swap `ask`/`probe` text freely; keep the `id`s, the rules use them.
 const CATEGORIES = [
   { id: 'rev',   group: 'growth',     name: 'Revenue & Growth',        ask: 'Do you know current revenue, target revenue, and what it takes to get there?',
+    client: 'Know your numbers: current revenue, your target, and what it takes to get there.',
     probe: ['What does next year look like in revenue, and what has to be true to hit it?', 'Where has growth stalled, and when did it start?'] },
   { id: 'icp',   group: 'foundation', name: 'Ideal Client & Market',   ask: 'Can they clearly name who they sell to and why those people buy?',
+    client: 'Get precise about who you sell to and why they buy.',
     probe: ['Who is your best client, and how many more of them could you handle?', 'If you lost your top 3 clients, where does the next one come from?'] },
   { id: 'msg',   group: 'foundation', name: 'Messaging & Positioning', ask: 'Is there one clear message for what they do and why they are different?',
+    client: 'One clear message for what you do and why you\'re different.',
     probe: ['In one sentence, why do clients pick you over the next option?', 'Does your team describe the company the same way you do?'] },
   { id: 'brand', group: 'foundation', name: 'Brand, Content & Social', ask: 'Is content consistent and on-message, or scattered?',
+    client: 'Consistent, on-message content your market sees regularly.',
     probe: ['Who owns content today, and how often does it go out?', 'What has actually driven a conversation or lead from social?'] },
   { id: 'web',   group: 'growth',     name: 'Website & Funnel',        ask: 'Is there a website, funnel, or lead magnet actually generating leads?',
+    client: 'A website and funnel that turn visitors into leads.',
     probe: ['When someone lands on your site, what are they supposed to do next?', 'How many leads came from the website last month?'] },
   { id: 'mkt',   group: 'growth',     name: 'Marketing System',        ask: 'Are ads, email, and SEO connected and measured, or one-off attempts?',
+    client: 'Connected, measured marketing (ads, email, SEO) instead of one-off efforts.',
     probe: ['What have you tried in marketing, and what happened?', 'Do you know your cost per lead or cost per client?'] },
   { id: 'sales', group: 'growth',     name: 'Sales Team & Process',    ask: 'Could they handle 2× the inbound tomorrow? Who sells?',
+    client: 'A sales process that can handle more demand.',
     probe: ['How many people sell today, and what is your close rate?', 'If we doubled your leads next month, who would take those calls?'] },
   { id: 'vis',   group: 'visibility', name: 'Market Visibility & Media', ask: 'Does their market know they exist? Any earned media, podcasts, press?',
+    client: 'Get in front of your market: press, podcasts, and search.',
     probe: ['Where have you been featured in the last year?', 'When prospects Google you, what do they find?'] },
   { id: 'auth',  group: 'authority',  name: 'Executive Authority',     ask: 'Is the leader seen as the go-to voice in their space?',
+    client: 'Position your leader as the go-to voice in your space.',
     probe: ['What do you want to be known for that you are not known for today?', 'Have you been asked to speak or comment as an expert?'] },
   { id: 'rep',   group: 'reputation', name: 'Reputation & Risk',       ask: 'Any exposure: bad press, reviews, legal, industry risk? Plan in place?',
+    client: 'Protect your reputation with a plan before you need one.',
     probe: ['If a reporter called tomorrow about a problem, who handles it?', 'Is there anything online you would rather a prospect not find?'] },
 ];
 const SCALE = { 1: 'Not established', 2: 'In progress', 3: 'Established', 4: 'Scalable', 5: 'Optimized' };
@@ -445,10 +455,10 @@ const AUDIENCE = [['au_b2b', 'B2B buyers'], ['au_consumer', 'Consumers'], ['au_i
 
 const OPTS = {
   dm: [['', 'Who decides?'], ['solo', 'Just them'], ['partner', '+ partner / co-founder'], ['board', '+ board / leadership'], ['notdm', 'Not the decision maker']],
-  budget: [['', 'Budget band?'], ['u5', 'Under $5K/mo'], ['b5', '$5–10K/mo'], ['b10', '$10–20K/mo'], ['b20', '$20–30K/mo'], ['b30', '$30–33K/mo'], ['b33', '$33.5K+/mo']],
+  budget: [['', 'Monthly budget?'], ['u5', 'Under $5K/mo'], ['b5', '$5–10K/mo'], ['b10', '$10–20K/mo'], ['b20', '$20–30K/mo'], ['b30', '$30–33K/mo'], ['b33', '$33.5K+/mo']],
   revenue: [['', 'Annual revenue?'], ['r1', 'Under $500K'], ['r2', '$500K – $2M'], ['r3', '$2M – $10M'], ['r4', '$10M+']],
-  commit: [['', 'Trial commit?'], ['yes', 'Yes: decides within 2 weeks'], ['hedge', 'Hedged'], ['no', 'No']],
-  dmCall2: [['', 'DM on Call 2?'], ['self', 'They are the DM'], ['on', 'DM joins Call 2'], ['48h', 'Loops DM in within 48h'], ['no', "Won't bring the DM"]],
+  commit: [['', 'Ready to decide within 2 weeks?'], ['yes', 'Yes'], ['hedge', 'Maybe / unsure'], ['no', 'No']],
+  dmCall2: [['', 'Decision maker on the next call?'], ['self', 'They are the decision maker'], ['on', 'Yes, joining'], ['48h', 'Will loop them in within 48 hrs'], ['no', "Won't bring them"]],
   spokes: [['', 'Unknown'], ['natural', 'Natural on camera / mic'], ['train', 'Willing, needs media training'], ['no', "Won't do interviews"]],
   time: [['', 'Unknown'], ['ok', 'Can give ~2 hrs/month'], ['thin', 'Stretched thin']],
   reach: [['', 'Unknown'], ['local', 'Local'], ['regional', 'Regional'], ['national', 'National'], ['intl', 'International']],
@@ -458,9 +468,9 @@ const OPTS = {
 const FLOW = [
   { id: 'b1', name: 'Pain / background', end: 420, say: '"Walk me through what brought you to this call. What\'s going on right now that made you want to have this conversation?" Then: "Anything else?"',
     fields: [['pain', 'textarea', 'In their words: what brought them here']], done: f => !!f.pain },
-  { id: 'b2', name: 'Specific example', end: 660, say: '"Give me a specific example. Not generic, the most recent time." Then chunk down: "Is that the number you have, or the number you want?"',
+  { id: 'b2', name: 'Specific example', end: 660, say: '"Give me a specific example. Not generic, the most recent time." If they give a number: "Is that the number you have, or the number you want?"',
     fields: [['example', 'textarea', 'The most recent time, with the number (leads, revenue, deals)']], done: f => !!f.example },
-  { id: 'b3', name: 'Money / decision maker', end: 840, say: '"Besides yourself, who else weighs in on a decision like this?" Then: "Roughly what range: $5–10k a month, $10–20k, or higher?"',
+  { id: 'b3', name: 'Budget + who decides', end: 840, say: '"Besides yourself, who else weighs in on a decision like this?" Then: "Roughly what range: $5–10k a month, $10–20k, or higher?"',
     fields: [['dm', 'select'], ['budget', 'select'], ['revenue', 'select']], done: f => !!f.dm && !!f.budget },
   { id: 'b4', name: 'What they tried', end: 1020, say: '"What have you tried? What happened?" Then the big one: "What\'s your own theory of why it didn\'t work?"',
     fields: [['tried', 'chips', '', TRIED], ['theory', 'textarea', 'Their theory of why it didn\'t work (verbatim, shapes Call 2)']], done: (f, c) => !!f.theory || TRIED.some(([k]) => c[k]) },
@@ -468,21 +478,21 @@ const FLOW = [
     fields: [['trigger', 'textarea', 'What changed in the last 30–60 days'], ['cost', 'textarea', 'What 6–12 more months of this costs them'], ['reason2', 'textarea', '"Any other reason?" The second answer (usually the emotional one)']], done: f => !!f.trigger && !!f.cost },
   { id: 'b6', name: 'Goal + what it means to them', end: 1440, say: '"12 months from now you say \'that worked.\' What\'s specifically different?" Then: "What does that mean for YOU personally?"',
     fields: [['goal', 'textarea', 'What\'s different in 12 months, in numbers'], ['nmg', 'textarea', 'What it means for them personally']], done: f => !!f.goal && !!f.nmg },
-  { id: 'b7', name: 'Close', end: 1800, say: 'Tie-down, then: "If we bring you a plan that hits [their goal], are you ready to make a real decision in the next two weeks?" Partner on Call 2, named outlet, Loom.',
-    fields: [['commit', 'select'], ['dmCall2', 'select'], ['outlet', 'text', 'The one outlet you\'ll come back with a view on'], ['call2', 'text', 'Call 2 booked for (day / time)']], done: f => !!f.commit && !!f.outlet },
+  { id: 'b7', name: 'Next steps', end: 1800, say: 'Recap what you heard in their words, then: "If we bring you a plan that hits [their goal], are you ready to make a real decision in the next two weeks?" Get the decision maker on the next call, name one outlet you think is realistic for them, and say you\'ll send a short video recap.',
+    fields: [['commit', 'select'], ['dmCall2', 'select'], ['outlet', 'text', 'One outlet you said you\'d look into (e.g. Forbes)'], ['call2', 'text', 'Next call booked for (day / time)']], done: f => !!f.commit && !!f.outlet },
 ];
 
 // Story Group fit: what Michelle's business questions don't cover. Each `hint` is why we ask.
 const FIT = [
-  ['spokes', 'select', 'Spokesperson on camera / mic', 'PR runs on the leader\'s voice. No voice, no coverage.', '"Are you comfortable being the face of this: interviews, podcasts, on camera?"'],
-  ['time', 'select', 'Exec time for PR', 'About 2 hrs a month for interviews and approvals.', '"PR takes about two hours a month of your time for interviews and approvals. Realistic?"'],
-  ['reach', 'select', 'Where they need to be known', 'Local and trade vs national changes the outlets and the package.', '"Where do you most need to be known: locally, in your industry, or nationally?"'],
-  ['aud', 'chips', 'Who needs to see them', 'Decides trade vs business vs consumer outlets.', '"Who most needs to see you: buyers, investors, recruits, partners?"', AUDIENCE],
-  ['assets', 'chips', 'Story assets (news hooks)', 'No hooks = the first month is story-mining. Set expectations.', '"What\'s coming up in the next 90 days: launches, data, milestones, big client wins?"', ASSETS],
-  ['competitors', 'text', 'Competitors getting the press they want', 'The best urgency lever, and the outlet list writes itself.', '"Who in your space is getting the coverage you want?"'],
-  ['vendor', 'text', 'Current PR / marketing help (contract end?)', 'Timing for Call 2, and what to contrast against.', '"Who\'s helping with PR or marketing today, and when does that wrap up?"'],
-  ['acv', 'number', 'Average client worth ($)', 'Powers the Call 2 ROI math: one client pays for X months.', '"What\'s an average client worth to you, first year?"'],
-  ['clientsGoal', 'number', 'New clients they want per year', 'Aaron: "How many clients would you need for this to pay off?"', '"How many new clients a year would make this a no-brainer?"'],
+  ['spokes', 'select', 'Will the leader do interviews?', 'PR runs on the leader\'s voice. No interviews, no coverage.', '"Are you comfortable being the face of this: interviews, podcasts, on camera?"'],
+  ['time', 'select', 'Time they can give PR', 'About 2 hours a month for interviews and approvals.', '"PR takes about two hours a month of your time for interviews and approvals. Realistic?"'],
+  ['reach', 'select', 'Where they need to be known', 'Local, industry, or national changes which outlets and which package.', '"Where do you most need to be known: locally, in your industry, or nationally?"'],
+  ['aud', 'chips', 'Who needs to see them', 'Decides whether we go after industry, business, or consumer outlets.', '"Who most needs to see you: buyers, investors, recruits, partners?"', AUDIENCE],
+  ['assets', 'chips', 'Things worth pitching (news hooks)', 'If none of these, the first month goes to finding their story. Set expectations.', '"What\'s coming up in the next 90 days: launches, data, milestones, big client wins?"', ASSETS],
+  ['competitors', 'text', 'Competitors getting the press they want', 'Great for urgency, and it tells us which outlets to go after.', '"Who in your space is getting the coverage you want?"'],
+  ['vendor', 'text', 'Who helps with PR / marketing now (and when that ends)', 'Tells you their timing and who we\'re being compared to.', '"Who\'s helping with PR or marketing today, and when does that wrap up?"'],
+  ['acv', 'number', 'What an average client is worth to them ($)', 'Used for the money math on the pitch call.', '"What\'s an average client worth to you, first year?"'],
+  ['clientsGoal', 'number', 'New clients they want per year', 'What would make this a clear win for them.', '"How many new clients a year would make this a no-brainer?"'],
 ];
 
 // Final 9/18/26 Sales Packages doc (tier_reference.md). Lead with `price`; `alt` only on a legit objection.
@@ -686,11 +696,11 @@ function analyze() {
   const needRep = !!(c.crisis || c.repRisk) || (R !== null && R <= 1);
   const needVideo = !!c.wantVideo;
 
-  if (needFoundation) why.push(F !== null && F <= 2 ? `Foundation is weak (messaging / ICP / brand avg ${F.toFixed(1)}). Growth or PR on top of that leaks.` : 'They don\'t know where to start. Clarity comes before scale.');
-  if (needGrowth) why.push(G !== null && G <= 2.5 ? `Growth system is thin (avg ${G.toFixed(1)}).` : 'They want more pipeline.');
-  if (needVis) why.push(V !== null && V <= 2 ? `The market doesn't see them (visibility ${V}).` : 'They asked for media, podcasts, or a launch moment.');
+  if (needFoundation) why.push(F !== null && F <= 2 ? `Their basics are weak (messaging, target client, brand: ${F.toFixed(1)}/5 average). Fix those before spending on growth or PR.` : 'They don\'t know where to start. Clarity comes before growth.');
+  if (needGrowth) why.push(G !== null && G <= 2.5 ? `Their lead-generation setup is weak (${G.toFixed(1)}/5 average).` : 'They want more leads.');
+  if (needVis) why.push(V !== null && V <= 2 ? `Their market doesn't know them (visibility ${V}/5).` : 'They asked for press, podcasts, or a launch moment.');
   if (needAuth) why.push('They want authority: TV, stages, being the expert, or investor credibility.');
-  if (needRep) why.push(c.crisis ? 'Active crisis: this needs Command-level counsel.' : 'Reputation exposure to protect.');
+  if (needRep) why.push(c.crisis ? 'Active crisis: this needs Command-level counsel.' : 'They have a reputation risk to protect.');
   if (c.multiEntity) why.push('Multiple brands / executives / markets don\'t fit a standard package.');
   if (needVideo) why.push('They want video or ongoing content.');
 
@@ -717,9 +727,9 @@ function analyze() {
     let i = LADDER.indexOf(pick);
     while (i > 0 && (PACKAGES[LADDER[i]].floor === null || PACKAGES[LADDER[i]].floor > max)) i--;
     pick = LADDER[i];
-    budgetNote = `Ideal fit is ${pkgName(ideal)}, but their budget is below its floor. Stepped down to ${pkgName(pick)}.`;
+    budgetNote = `Best fit is ${pkgName(ideal)}, but that's above their budget, so this shows ${pkgName(pick)} instead.`;
   } else if (pick && min !== undefined && PACKAGES[pick].floor > min) {
-    budgetNote = `Their band starts at ${money(min)}, below the ${money(PACKAGES[pick].floor)} floor. Confirm they're at the top of the range.`;
+    budgetNote = `Their budget range starts at ${money(min)}, below this package's lowest price (${money(PACKAGES[pick].floor)}). Check they're at the top of their range.`;
   }
 
   let next = null;
@@ -745,26 +755,26 @@ const anyOf = list => list.some(([k]) => S.chips[k]);
 function flags(a) {
   const c = S.chips, f = S.fields, out = [];
   const add = (cls, text, script) => out.push({ cls, text, script });
-  if (f.budget === 'u5') add('bad', 'Under $5K/mo is not our target client (Aaron, 9/28). If it\'s a real business that needs a foundation, Kickstart is the on-ramp. Otherwise disqualify.', SCRIPTS.d11);
-  if (f.dm === 'notdm' || f.dmCall2 === 'no') add('bad', 'Not the decision maker. Don\'t build a plan until the DM is on Call 2.', SCRIPTS.d12);
-  if (f.commit === 'hedge') add('', 'They hedged on deciding in 2 weeks. Pin a specific decision criterion or disqualify.', SCRIPTS.d10);
-  if (f.commit === 'no') add('bad', 'Not ready to decide. Don\'t build a custom plan (Aaron: no free work before contract).');
-  if (f.spokes === 'no') add('bad', 'The leader won\'t do interviews. Earned media will underdeliver. Find another spokesperson or it\'s not a PR fit.');
+  if (f.budget === 'u5') add('bad', 'Under $5K a month isn\'t our target client. If it\'s a real business that needs a foundation, offer Kickstart. Otherwise, let them go kindly:', SCRIPTS.d11);
+  if (f.dm === 'notdm' || f.dmCall2 === 'no') add('bad', 'They\'re not the decision maker. Don\'t build a plan until the decision maker is on the next call.', SCRIPTS.d12);
+  if (f.commit === 'hedge') add('', 'They weren\'t sure about deciding within 2 weeks. Find out exactly what they\'d need to decide, or let it go.', SCRIPTS.d10);
+  if (f.commit === 'no') add('bad', 'Not ready to decide. Don\'t build a custom plan yet (no free work before a contract).');
+  if (f.spokes === 'no') add('bad', 'The leader won\'t do interviews, so PR won\'t deliver much. Find another spokesperson, or it\'s not a PR fit.');
   if (f.spokes === 'train') add('', 'Needs media training first. It\'s required before any TV booking.');
-  if (f.time === 'thin') add('', 'Exec is stretched thin. Set the expectation now: about 2 hrs a month for interviews and approvals.');
-  if (c.regulated) add('', 'Regulated: legal / compliance review slows approvals. Build it into the timeline.');
-  if (c.wantsGuarantee) add('', 'They want guarantees. We never guarantee placements. Search "guarantee" for the answer.');
-  if (c.payToPlay) add('', 'Paid placements: "Yes, we CAN, but anybody can. Under retainer you get it at reduced rates. Our job is finding stories you don\'t pay for." Never a flat no, never "yes" then walk it back.');
-  if (c.balked) add('', 'Price objection: reframe, don\'t defend. Only move to the next approved price for a qualified prospect, and check whether scope drops too.');
+  if (f.time === 'thin') add('', 'They\'re stretched thin. Set the expectation now: about 2 hours a month for interviews and approvals.');
+  if (c.regulated) add('', 'Regulated industry: legal reviews slow down approvals. Plan for that in the timeline.');
+  if (c.wantsGuarantee) add('', 'They want guarantees. We never guarantee placements. Press / and search "guarantee" for what to say.');
+  if (c.payToPlay) add('', 'They want paid placements. Say: "We can, but anyone can buy those, and as a client you\'d get better rates. Our job is getting you coverage you don\'t pay for." Don\'t say a flat no, and don\'t say yes and walk it back later.');
+  if (c.balked) add('', 'They pushed back on price. Don\'t defend the number; compare it to what it\'s worth to them. Only offer a lower price if they\'re a real fit, and check whether the scope should drop too.');
   if (c.noTimeline) add('', 'No timeline. Worth asking what waiting another 6–12 months would cost them.');
-  if (c.wantsFree) add('', 'They want the big idea before signing. Show proof, not the strategy. The idea is what the contract buys.');
-  if (c.soloSeller && (f.revenue === 'r3' || f.revenue === 'r4')) add('', 'Claims $2M+ but the founder is the only seller. Probe: who handles 2× the leads?');
-  if (c.soloSeller && a.needGrowth && !a.needFoundation) add('', 'More leads with no sales capacity will stall. Raise sales capacity before selling lead gen.');
-  if (c.techScope) add('', 'Custom web / CRM / AI: scope before quoting. Not in any package price.');
-  if (c.multiEntity) add('', 'Multiple entities: Custom Enterprise, or Aaron\'s move of a separate contract per entity (minimum held on the first).');
-  if (c.tried_pr) add('', 'Tried PR before. Ask what they were promised vs. what they got, then contrast: pitching as the CEO, and earned media value reported against the retainer.');
-  if (S.chips.as_none && a.needVis) add('', 'No news hooks yet. The first month is story-mining; first placements usually land weeks 4–12.');
-  if (f.competitors) add('', `Use the competitor: "${clip(f.competitors, 40)} is getting the coverage you want." Urgency, and it seeds the outlet list.`);
+  if (c.wantsFree) add('', 'They want our ideas before signing. Show proof (similar clients), not the strategy. The strategy is what they pay for.');
+  if (c.soloSeller && (f.revenue === 'r3' || f.revenue === 'r4')) add('', 'Says $2M+ in revenue, but the founder is the only salesperson. Ask who would handle twice the leads.');
+  if (c.soloSeller && a.needGrowth && !a.needFoundation) add('', 'More leads won\'t help if nobody can take the calls. Bring up sales capacity before selling lead generation.');
+  if (c.techScope) add('', 'Custom website / CRM / AI work isn\'t in any package price. Get the details and quote it separately.');
+  if (c.multiEntity) add('', 'Several brands or companies: either Custom Enterprise, or a separate contract for each company (Aaron\'s usual move).');
+  if (c.tried_pr) add('', 'They tried PR before. Ask what they were promised and what they actually got. Then explain the difference: we pitch as their CEO, and we report what the coverage is worth next to what they pay us.');
+  if (S.chips.as_none && a.needVis) add('', 'Nothing newsworthy yet. The first month goes to finding their story; first placements usually land in weeks 4–12.');
+  if (f.competitors) add('', `Use the competitor: "${clip(f.competitors, 40)} is getting the coverage you want." It creates urgency and tells us which outlets to go after.`);
   if (a.pick && PACKAGES[a.pick].note) add('', PACKAGES[a.pick].note);
 
   const sec = elapsed();
@@ -801,9 +811,9 @@ function pickMetric(c, focus, skip = new Set()) {
   return c.m.find(([k]) => !skip.has(k) && !/media placements/i.test(k)) || c.m.find(([k]) => !skip.has(k)) || null;
 }
 function fitLabel(r) {
-  if (r.sameInd && r.hits.length) return ['Strong: same industry, same situation', ''];
+  if (r.sameInd && r.hits.length) return ['Strong match: same industry and situation', ''];
   if (r.sameInd) return ['Same industry', ''];
-  if (r.hits.length) return [`Same situation${r.adjInd ? ', adjacent industry' : ', different industry'}`, 'weak'];
+  if (r.hits.length) return [`Same situation${r.adjInd ? ', similar industry' : ', different industry'}`, 'weak'];
   return ['Loose match: pick another if it doesn\'t fit', 'weak'];
 }
 function sayLine(r, m) {
@@ -840,7 +850,7 @@ function popCase(trigger, freshCase = false) {
   const others = r.c.m.filter(x => x !== m).slice(0, 2);
   const el = $('#pop');
   el.innerHTML = `
-    <div class="ptop"><div><p class="eyebrow">Proof you can drop in</p><div class="because">Because you clicked: ${esc(because)}</div></div><button class="x" id="popX" aria-label="Close">×</button></div>
+    <div class="ptop"><div><p class="eyebrow">Similar client you can mention</p><div class="because">Because you clicked: ${esc(because)}</div></div><button class="x" id="popX" aria-label="Close">×</button></div>
     <div class="case" style="margin-top:8px">
       <div class="ind">${esc(r.c.i)}</div>
       <h4>${esc(r.c.t)}</h4>
@@ -851,7 +861,7 @@ function popCase(trigger, freshCase = false) {
     <div class="pact"><button class="btn" id="popPin">Keep this one</button><button class="btn" id="popNext">Another match</button></div>`;
   el.hidden = false;
   $('#popX').onclick = hidePop;
-  $('#popPin').onclick = () => { S.caseIdx = r.idx; save(); render(); hidePop(); toast('Case pinned to the panel'); };
+  $('#popPin').onclick = () => { S.caseIdx = r.idx; save(); render(); hidePop(); toast('Pinned to the side panel'); };
   $('#popNext').onclick = () => popCase(trigger, true);
   armPopTimer();
 }
@@ -1032,7 +1042,7 @@ function render() {
       <button class="btn" id="timerBtn">${sec === null ? 'Start call' : 'Stop'}</button>
       <span class="where">Call timer</span>
     </div>
-    <div class="cov"><span class="meta" style="margin:0">Notes ${FLOW.filter(beatDone).length}/${FLOW.length} topics · Readiness ${a.n}/10 · SG fit ${fitDone}/${FIT.length}</span></div>
+    <div class="cov"><span class="meta" style="margin:0">Covered: ${FLOW.filter(beatDone).length} of ${FLOW.length} note topics · ${a.n} of 10 scores · ${fitDone} of ${FIT.length} fit questions</span></div>
     <div class="total"><span class="n">${a.total}</span><span class="of">/ ${a.n ? a.n * 5 : 50} readiness</span></div>
     <details><summary>Score by category</summary><div class="bars">${CATEGORIES.map(x => {
       const v = S.scores[x.id] || 0;
@@ -1046,14 +1056,14 @@ function render() {
     const p = PACKAGES[a.pick];
     const head = `<div class="rec-name">${esc(p.name)} ${p.em ? `<em>${esc(p.em)}</em>` : ''}</div>`;
     const why = `<ul class="why">${a.why.map(w => `<li>${esc(w)}</li>`).join('')}</ul>`;
-    const next = a.next ? `<div style="margin-top:10px" class="muted">After the roadmap: <b style="color:var(--text)">${esc(pkgName(a.next))}</b> (${esc(PACKAGES[a.next].price)})</div>` : '';
+    const next = a.next ? `<div style="margin-top:10px" class="muted">After Kickstart, the next step would be <b style="color:var(--text)">${esc(pkgName(a.next))}</b> (${esc(PACKAGES[a.next].price)})</div>` : '';
     const budget = a.budgetNote ? `<div class="flag">${esc(a.budgetNote)}</div>` : '';
     const addon = a.addon ? `<div class="rule" style="color:var(--text)"><b>+ ${esc(a.addon)}</b></div>` : '';
     $('#recCard').innerHTML = `<p class="eyebrow">Recommended package</p>${head}
       <div class="rec-price">Lead with <b>${esc(p.price)}</b> · <span class="muted">${esc(p.term)}</span></div>
       <div class="muted" style="margin-top:6px">${esc(p.purpose)}</div>${budget}${addon}${roiHtml(p)}${why}${next}
-      ${S.mode === 'c2' && specialtyLine() ? `<div class="rule"><b style="color:var(--text)">Specialty line:</b> ${esc(specialtyLine())}</div>` : ''}
-      ${p.alt.length ? `<details><summary>Legit objection from a qualified prospect only</summary><ul class="why">${p.alt.map(x => `<li>${esc(x)}</li>`).join('')}</ul><div class="muted" style="font-size:12px;margin-top:6px">Never show the range upfront. Lower price → check whether scope drops too.</div></details>` : ''}`;
+      ${S.mode === 'c2' && specialtyLine() ? `<div class="rule"><b style="color:var(--text)">Say it back to them:</b> ${esc(specialtyLine())}</div>` : ''}
+      ${p.alt.length ? `<details><summary>Lower prices (only if a good-fit prospect pushes back on price)</summary><ul class="why">${p.alt.map(x => `<li>${esc(x)}</li>`).join('')}</ul><div class="muted" style="font-size:12px;margin-top:6px">Don't mention these unless they push back. If the price comes down, check whether the scope should come down too.</div></details>` : ''}`;
   }
 
   // Flags
@@ -1062,14 +1072,14 @@ function render() {
   $('#flagsCard').innerHTML = '<p class="eyebrow">Watch for</p>' + fl.map(x => `<div class="flag ${x.cls}">${esc(x.text)}${x.script ? `<div class="script">${esc(x.script)}</div>` : ''}</div>`).join('');
 
   // Ask next
-  $('#askCard').innerHTML = '<p class="eyebrow">Ask next</p>' + (S.mode === 'c1' ? askNextC1(a) : askNextC2());
+  $('#askCard').innerHTML = '<p class="eyebrow">Ideas for what to ask</p>' + (S.mode === 'c1' ? askNextC1(a) : askNextC2());
 
   // Proof
   const ranked = rankCases(a, null);
   const chosen = S.caseIdx !== null && CASES[S.caseIdx] ? ranked.find(r => r.idx === S.caseIdx) : ranked[0];
   const m = pickMetric(chosen.c, null), [fit, weak] = fitLabel(chosen);
   $('#caseCard').innerHTML = `
-    <p class="eyebrow">Proof to drop in${S.caseIdx !== null ? ' · pinned' : ''}</p>
+    <p class="eyebrow">Similar client you can mention${S.caseIdx !== null ? ' · pinned' : ''}</p>
     <div class="case">
       <div class="ind">${esc(chosen.c.i)}${chosen.c.p ? ' · ' + esc(chosen.c.p) : ''}</div>
       <h4>${esc(chosen.c.t)}</h4>
@@ -1086,27 +1096,27 @@ function askNextC1(a) {
   const f = S.fields, out = [];
   const beat = FLOW.find(b => !beatDone(b));
   const booked = S.prefill && (S.prefill.answers || []).find(([, v]) => v && v.length > 12);
-  if (beat && beat.id === 'b1' && booked) out.push(`<div class="q"><small>Easy opener · their booking answer</small>"When you booked, you wrote: '${esc(clip(booked[1], 110))}'. Walk me through what's going on there."</div>`);
-  else if (beat) out.push(`<div class="q"><small>If it fits · ${esc(beat.name)}</small>${esc(beat.say)}</div>`);
+  if (beat && beat.id === 'b1' && booked) out.push(`<div class="q"><small>Easy opener, from their booking form</small>"When you booked, you wrote: '${esc(clip(booked[1], 110))}'. Walk me through what's going on there."</div>`);
+  else if (beat) out.push(`<div class="q"><small>You could ask · ${esc(beat.name)}</small>${esc(beat.say)}</div>`);
   const notYet = FLOW.filter(b => !beatDone(b) && b !== beat);
-  if (notYet.length && FLOW.filter(beatDone).length >= 3) out.push(`<div class="muted" style="font-size:12px">Hasn't come up yet: ${notYet.map(b => esc(b.name.toLowerCase())).join(', ')}</div>`);
+  if (notYet.length && FLOW.filter(beatDone).length >= 3) out.push(`<div class="muted" style="font-size:12px">Not covered in your notes yet: ${notYet.map(b => esc(b.name.toLowerCase())).join(', ')}</div>`);
   const weak = CATEGORIES.filter(x => S.scores[x.id] && S.scores[x.id] <= 3).sort((x, y) => S.scores[x.id] - S.scores[y.id]).slice(0, 2);
-  weak.forEach(x => out.push(`<div class="q"><small>${esc(x.name)} · scored ${S.scores[x.id]}</small>${esc(x.probe[0])}</div>`));
+  weak.forEach(x => out.push(`<div class="q"><small>${esc(x.name)} scored ${S.scores[x.id]}/5, so you could ask</small>${esc(x.probe[0])}</div>`));
   const gap = FIT.find(([k, type, , , , list]) => !(type === 'chips' ? anyOf(list) : f[k]));
-  if (gap && (!beat || FLOW.indexOf(beat) >= 3)) out.push(`<div class="q"><small>Story Group fit · ${esc(gap[2])}</small>${esc(gap[4])}</div>`);
+  if (gap && (!beat || FLOW.indexOf(beat) >= 3)) out.push(`<div class="q"><small>You could ask · ${esc(gap[2])}</small>${esc(gap[4])}</div>`);
   const open = CATEGORIES.filter(x => !S.scores[x.id]);
-  if (open.length) out.push(`<div class="muted" style="font-size:12px">Readiness not scored yet: ${open.map(x => esc(x.name)).join(', ')}</div>`);
-  return out.join('') || '<div class="empty">Everything is covered. Tie it down and book Call 2.</div>';
+  if (open.length) out.push(`<div class="muted" style="font-size:12px">Readiness scorecard: ${10 - open.length} of 10 scored.</div>`);
+  return out.join('') || '<div class="empty">Everything\'s covered. Recap what you heard and book the next call.</div>';
 }
 
 function askNextC2() {
   const f = S.fields;
   const goal = f.goal ? `"${clip(f.goal, 90)}"` : 'their goal';
-  return '<div class="rule" style="margin:0 0 8px">Aaron\'s order: recap in their words → ROI math → one matched case → cost of waiting → how we work → first 90 days → price last → trial close.</div>' + [
-    ['1 · Temp check on the plan, not the price', `"Looking at all of this, do you feel this would set you up to hit ${goal}?"`],
-    ['2 · If they stall: decision criteria', '"When you\'re making the final decision, what are the top two or three things that will drive it?"'],
-    ['3 · DM not in the room', '"Would it help to have us walk your team through this directly? Reading a deck loses things in translation."'],
-    ['4 · Concrete next touch', '"Let\'s put a check-in on the calendar for next week so we don\'t lose the press opportunities we should already be chasing."'],
+  return '<div class="rule" style="margin:0 0 8px">Order that works on pitch calls: recap what you heard → the money math → one similar client → what waiting costs → how we work → first 90 days → price last → ask if the plan fits.</div>' + [
+    ['1 · Check the plan fits (before talking price)', `"Looking at all of this, do you feel this would set you up to hit ${goal}?"`],
+    ['2 · If they stall', '"When you\'re making the final decision, what are the top two or three things that will drive it?"'],
+    ['3 · If the decision maker isn\'t on the call', '"Would it help to have us walk your team through this directly? Reading a deck loses things in translation."'],
+    ['4 · Book the next step', '"Let\'s put a check-in on the calendar for next week so we don\'t lose the press opportunities we should already be chasing."'],
   ].map(([k, v]) => `<div class="q"><small>${esc(k)}</small>${esc(v)}</div>`).join('');
 }
 
@@ -1119,7 +1129,7 @@ function roiHtml(p) {
   let h = `<div class="roi">One client at <b>${money(acv)}</b> is <b>${mult.toFixed(1)}×</b> the full ${p.months > 1 ? p.months + '-month ' : ''}investment (${money(total)}).`;
   h += need > 1 ? ` It takes <b>${need} clients</b> to cover it.` : ' One client covers it.';
   if (goal) h += `<br>Their goal of <b>${goal} clients/yr</b> is worth <b>${money(goal * acv)}</b>.`;
-  h += `<div class="muted" style="font-size:12px;margin-top:4px">Pair it with the honesty line: no silver bullet, but our goal is to help you make more money.</div></div>`;
+  h += `<div class="muted" style="font-size:12px;margin-top:4px">Follow it with: "There's no silver bullet, but our goal is to help you make more money."</div></div>`;
   return h;
 }
 
@@ -1155,17 +1165,17 @@ function crmNote() {
   return [
     `DISCOVERY: ${f.name || '?'}${f.title ? ', ' + f.title : ''} @ ${f.company || '?'}`,
     [f.email, f.website].filter(Boolean).join(' · '),
-    `Industry: ${f.industry || '?'} | Revenue: ${optText('revenue', f.revenue) || '?'} | Budget: ${optText('budget', f.budget) || '?'} | DM: ${optText('dm', f.dm) || '?'} | Source: ${f.source || '?'}`,
+    `Industry: ${f.industry || '?'} | Revenue: ${optText('revenue', f.revenue) || '?'} | Budget: ${optText('budget', f.budget) || '?'} | Decision maker: ${optText('dm', f.dm) || '?'} | Source: ${f.source || '?'}`,
     line('Pain', f.pain), line('Example', f.example), line('Tried', labels(TRIED).join(', ')), line('Their theory', f.theory),
-    line('Why now', f.trigger), line('Cost of waiting', f.cost), line('Other reason', f.reason2), line('Goal', f.goal), line('Personal', f.nmg),
-    line('Trial commit', optText('commit', f.commit)), line('DM on Call 2', optText('dmCall2', f.dmCall2)), line('Named outlet', f.outlet), line('Call 2', f.call2),
+    line('Why now', f.trigger), line('Cost of waiting', f.cost), line('Other reason', f.reason2), line('Goal', f.goal), line('What it means to them', f.nmg),
+    line('Ready to decide within 2 weeks', optText('commit', f.commit)), line('Decision maker on next call', optText('dmCall2', f.dmCall2)), line('Outlet we said we\'d look into', f.outlet), line('Next call', f.call2),
     `Readiness: ${a.total}/${a.n * 5 || 50} (${a.n}/10 scored)`,
     ...CATEGORIES.filter(x => S.scores[x.id]).map(x => `  ${x.name}: ${S.scores[x.id]}${S.notes[x.id] ? ' | ' + S.notes[x.id] : ''}`),
-    line('Spokesperson', optText('spokes', f.spokes)), line('Exec time', optText('time', f.time)), line('Reach', optText('reach', f.reach)),
-    line('Audience', labels(AUDIENCE).join(', ')), line('Story assets', labels(ASSETS).join(', ')), line('Competitors in press', f.competitors), line('Current vendor', f.vendor),
+    line('Will do interviews', optText('spokes', f.spokes)), line('Time for PR', optText('time', f.time)), line('Reach', optText('reach', f.reach)),
+    line('Audience', labels(AUDIENCE).join(', ')), line('News hooks', labels(ASSETS).join(', ')), line('Competitors in press', f.competitors), line('Current PR/marketing help', f.vendor),
     line('Avg client value', f.acv && money(f.acv)), line('Clients wanted/yr', f.clientsGoal),
-    line('Signals', activeChips().join(', ')),
-    `Likely fit: ${a.pick ? pkgName(a.pick) + ' @ ' + PACKAGES[a.pick].price : 'n/a'}${a.next ? ' → then ' + pkgName(a.next) : ''}`,
+    line('What they said', activeChips().join(', ')),
+    `Recommended: ${a.pick ? pkgName(a.pick) + ' @ ' + PACKAGES[a.pick].price : 'n/a'}${a.next ? ' → then ' + pkgName(a.next) : ''}`,
     line('Budget note', a.budgetNote), line('Add-on', a.addon), line('Internal', f.internal),
     ...(S.prefill && S.prefill.answers || []).map(([q, v]) => `Booking form: ${q} ${v}`),
   ].filter(Boolean).join('\n');
@@ -1226,7 +1236,7 @@ function buildReport() {
           <td>${esc(S.notes[x.id] || '')}</td></tr>`).join('')}
       </table>
       <div class="focus"><p class="eyebrow">W H E R E &nbsp; T O &nbsp; F O C U S &nbsp; F I R S T</p>
-        <ul>${focusAreas().map(x => `<li><b>${esc(x.name)}</b>: ${esc(x.ask)}</li>`).join('')}</ul></div>
+        <ul>${focusAreas().map(x => `<li><b>${esc(x.name)}</b>: ${esc(x.client)}</li>`).join('')}</ul></div>
       <div class="tag">Your story unleashed.</div>
       <div class="foot"><span>${esc((f.company || 'Prospect').toUpperCase())} X STORY GROUP &nbsp;|&nbsp; ${date.toUpperCase()} &nbsp;|&nbsp; CONFIDENTIAL</span><span>storygroup.io</span></div>
     </div>`;
