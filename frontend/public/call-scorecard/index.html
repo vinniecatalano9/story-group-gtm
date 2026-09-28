@@ -111,6 +111,11 @@
   .res .h { font-weight: 600; margin: 2px 0; }
   .res .b { font-size: 13px; color: var(--muted); white-space: pre-line; }
   .res.open .b { color: var(--text); }
+  .answer { background: var(--panel-2); border: 1px solid var(--pink); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
+  .answer .k { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--pink); margin-bottom: 4px; }
+  .answer ul { margin: 0; padding-left: 18px; font-size: 14px; }
+  .answer li { margin: 4px 0; }
+  .answer .muted { font-size: 11.5px; margin-top: 6px; }
   mark { background: rgba(255,34,87,.28); color: inherit; border-radius: 2px; padding: 0 1px; }
 
   .cov { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
@@ -327,7 +332,7 @@
 
     <aside class="side" id="side">
       <section class="card" id="searchCard">
-        <div class="searchbox"><input type="search" id="q" placeholder="Search objections, answers, packages, cases…" autocomplete="off" /></div>
+        <div class="searchbox"><input type="search" id="q" placeholder="Search the playbook, or type a question and press Enter" autocomplete="off" /><button class="btn primary" id="askBtn" title="Get a short answer from our playbook">Ask</button></div>
         <div class="quick" id="quick"></div>
         <div id="results" hidden></div>
       </section>
@@ -359,7 +364,7 @@
     <li>Jot what they say in <b>Call notes</b>, in any order. Skip anything that doesn't come up. Each topic has a suggested question tucked under it if you want one.</li>
     <li>Score the business 1–5 in <b>Readiness scorecard</b> (1 = not set up, 5 = running great).</li>
     <li>Watch the right side: the <b>recommended package and price</b>, <b>Watch for</b> warnings, <b>Ideas for what to ask</b>, and a <b>case study</b> you can mention. Case studies also pop up when you click something.</li>
-    <li>Tough question? Press <b>/</b> and type a word ("guarantee", "too expensive", "podcast"). Answers come from our playbook.</li>
+    <li>Tough question? Press <b>/</b> and type it, like "can you guarantee Forbes?" You'll see matching playbook entries right away. Press <b>Enter</b> (or <b>Ask</b>) and a short answer you can say comes back in a few seconds. It only uses our playbook and your notes, so double-check anything that sounds off.</li>
   </ol>
   <h3>After the call</h3>
   <ul>
@@ -982,27 +987,56 @@ function snippet(body, q) {
 }
 
 let sel = -1;
+let answer = null;  // { q, status: 'loading' | 'done' | 'error', text }
+function answerHtml(q) {
+  if (!answer || answer.q !== q.trim()) return '';
+  if (answer.status === 'loading') return '<div class="answer"><div class="k">Answer</div><div class="muted" style="margin:0">Thinking… (a few seconds)</div></div>';
+  if (answer.status === 'error') return `<div class="answer"><div class="k">Answer</div><div>${esc(answer.text)}</div></div>`;
+  const items = answer.text.split('\n').map(l => l.replace(/^\s*[-•*]\s*/, '').trim()).filter(Boolean);
+  return `<div class="answer"><div class="k">Answer · from our playbook</div><ul>${items.map(l => `<li>${esc(l)}</li>`).join('')}</ul><div class="muted">Say it in your own words. If it doesn't sound right, don't use it.</div></div>`;
+}
 function runSearch() {
   const q = $('#q').value;
   const box = $('#results'), panel = $('#panel');
   document.querySelectorAll('#quick button').forEach(b => b.classList.toggle('on', b.dataset.quick === q.trim()));
-  if (!q.trim()) { box.hidden = true; panel.hidden = false; sel = -1; return; }
+  if (!q.trim()) { box.hidden = true; panel.hidden = false; sel = -1; answer = null; return; }
   const hits = search(q);
   panel.hidden = true; box.hidden = false; sel = -1;
-  box.innerHTML = hits.length ? hits.map(({ d }) => {
+  box.innerHTML = answerHtml(q) + (hits.length ? hits.map(({ d }) => {
     const snip = hl(snippet(d.b, q), q), full = hl(d.b, q);
     return `<div class="res" data-snip="${esc(snip)}" data-full="${esc(full)}">
       <div class="k">${esc(KIND_LABEL[d.k] || d.k)}${d.g ? ` <span>· ${esc(d.g)}</span>` : ''}</div>
       <div class="h">${hl(d.h, q)}</div>
       <div class="b">${snip}</div>
     </div>`;
-  }).join('') + '<div class="empty" style="margin-top:8px">Click a result to expand. Esc to go back.</div>'
-    : '<div class="empty">Nothing matches. Try one word ("guarantee", "podcast", "in-house").</div>';
+  }).join('') + '<div class="empty" style="margin-top:8px">Click a result to expand. Press Enter or Ask for a short answer. Esc to go back.</div>'
+    : '<div class="empty">No playbook entries match. Press Enter or Ask to get an answer anyway.</div>');
 }
+
+async function askQuestion() {
+  const q = $('#q').value.trim();
+  if (q.length < 3) { toast('Type a question first'); $('#q').focus(); return; }
+  if (answer && answer.q === q && answer.status !== 'error') return;
+  const sources = search(q).slice(0, 8).map(({ d }) => ({ k: d.k, g: d.g, h: d.h, b: d.b }));
+  const packages = Object.keys(PACKAGES).map(k => `${pkgName(k)}: ${PACKAGES[k].price}, ${PACKAGES[k].term}. ${PACKAGES[k].purpose}`).join('\n');
+  answer = { q, status: 'loading' };
+  runSearch();
+  try {
+    const r = await fetch(`${API}/api/assist/ask`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q, sources, packages, prospect: crmNote() }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || `Server said ${r.status}`);
+    answer = { q, status: 'done', text: j.answer || '' };
+  } catch (e) {
+    answer = { q, status: 'error', text: e.message.includes('fetch') ? 'Couldn\'t reach the server. Use the search results below.' : e.message };
+  }
+  if ($('#q').value.trim() === q) runSearch();
+}
+$('#askBtn').onclick = askQuestion;
 $('#q').addEventListener('input', runSearch);
 $('#q').addEventListener('keydown', e => {
   const items = [...document.querySelectorAll('#results .res')];
   if (e.key === 'Escape') { $('#q').value = ''; runSearch(); $('#q').blur(); return; }
+  if (e.key === 'Enter' && sel < 0) { e.preventDefault(); askQuestion(); return; }
   if (!items.length) return;
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
     e.preventDefault();

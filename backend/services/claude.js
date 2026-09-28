@@ -6,11 +6,11 @@ const CLAUDE_PATH = process.env.CLAUDE_PATH || '/root/.local/bin/claude';
  * Run a prompt through Claude Code CLI (claude -p).
  * Returns the raw text output.
  */
-function claudePrompt(prompt, { maxTokens = 4096, timeout = 120000 } = {}) {
+function claudePrompt(prompt, { maxTokens = 4096, timeout = 120000, model = null } = {}) {
   return new Promise((resolve, reject) => {
     const child = execFile(
       CLAUDE_PATH,
-      ['-p', '--output-format', 'text'],
+      ['-p', '--output-format', 'text', ...(model ? ['--model', model] : [])],
       { timeout, maxBuffer: 1024 * 1024, env: { ...process.env, HOME: process.env.CLAUDE_HOME || '/root' } },
       (error, stdout, stderr) => {
         if (error) {
