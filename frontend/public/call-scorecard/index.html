@@ -68,10 +68,12 @@
   .chipgroup > .lbl { font-size: 11px; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .06em; }
 
   /* call flow */
-  .beat { border-top: 1px solid var(--line); padding: 12px 0; display: grid; grid-template-columns: 34px 1fr; gap: 0 12px; }
+  .beat { border-top: 1px solid var(--line); padding: 12px 0; display: grid; grid-template-columns: 14px 1fr; gap: 0 10px; }
   .beat:first-of-type { border-top: 0; padding-top: 0; }
-  .beat .num { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; font-weight: 700; font-size: 13px; color: var(--muted); }
-  .beat.done .num { background: var(--good); border-color: var(--good); color: #fff; }
+  .beat .num { width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--line); margin-top: 6px; }
+  .beat.done .num { background: var(--good); border-color: var(--good); }
+  .beat details { margin: 2px 0 8px; border: 0; padding: 0; }
+  .beat details summary { font-size: 12px; }
   .beat .bname { font-weight: 600; }
   .beat .say { color: var(--muted); font-size: 12.5px; font-style: italic; margin: 2px 0 8px; }
   .beat .inputs { display: grid; gap: 8px; }
@@ -298,8 +300,8 @@
       </section>
 
       <section class="card">
-        <p class="eyebrow">Call flow (v6 beats)</p>
-        <p class="card-sub">Type their words, not yours. Verbatim lines feed the proposal's "What We Heard."</p>
+        <p class="eyebrow">Call notes</p>
+        <p class="card-sub">Jot what they say, in any order, in their words. Skip what doesn't come up. The suggested questions are only there if you want them.</p>
         <div id="flow"></div>
       </section>
 
@@ -352,9 +354,9 @@
   </ol>
   <h3>During the call</h3>
   <ol>
-    <li>Click <b>Start call</b>. The timer shows which part of the call you should be in.</li>
+    <li>Click <b>Start call</b> if you want a timer. It's just a clock.</li>
     <li>When they say something, click the matching button under <b>What they said</b>. Click again to undo.</li>
-    <li>Type their words in <b>Call flow</b>, one step at a time. Each step turns green when it's done.</li>
+    <li>Jot what they say in <b>Call notes</b>, in any order. Skip anything that doesn't come up. Each topic has a suggested question tucked under it if you want one.</li>
     <li>Score the business 1–5 in <b>Readiness scorecard</b> (1 = not set up, 5 = running great).</li>
     <li>Watch the right side: the <b>recommended package and price</b>, <b>Watch for</b> warnings, <b>Ask next</b> questions, and a <b>case study</b> you can mention. Case studies also pop up when you click something.</li>
     <li>Tough question? Press <b>/</b> and type a word ("guarantee", "too expensive", "podcast"). Answers come from our playbook.</li>
@@ -452,7 +454,7 @@ const OPTS = {
   reach: [['', 'Unknown'], ['local', 'Local'], ['regional', 'Regional'], ['national', 'National'], ['intl', 'International']],
 };
 
-// v6 Call 1 beats (story-group-discovery-brief skill). `done` drives the coverage strip.
+// Call note topics (from the v6 Call 1 beats), suggestions only. `done` just marks a topic as covered.
 const FLOW = [
   { id: 'b1', name: 'Pain / background', end: 420, say: '"Walk me through what brought you to this call. What\'s going on right now that made you want to have this conversation?" Then: "Anything else?"',
     fields: [['pain', 'textarea', 'In their words: what brought them here']], done: f => !!f.pain },
@@ -582,10 +584,10 @@ $('#industry').innerHTML = '<option value="">Unknown / other</option>' + INDUSTR
 $('#chips').innerHTML = CHIP_GROUPS.map(g => `<div class="chipgroup"><div class="lbl">${g.label}</div>${chipHtml(g.chips)}</div>`).join('');
 $('#flow').innerHTML = FLOW.map((b, i) => `
   <div class="beat" data-beat="${b.id}">
-    <div class="num">${i + 1}</div>
+    <div class="num"></div>
     <div>
       <div class="bname">${esc(b.name)}</div>
-      <div class="say">${esc(b.say)}</div>
+      <details><summary>Suggested question</summary><div class="say">${esc(b.say)}</div></details>
       <div class="inputs ${b.fields.length > 2 && b.fields.every(f => f[1] !== 'textarea') ? 'three' : ''}">${b.fields.map(fieldHtml).join('')}</div>
     </div>
   </div>`).join('');
@@ -754,7 +756,7 @@ function flags(a) {
   if (c.wantsGuarantee) add('', 'They want guarantees. We never guarantee placements. Search "guarantee" for the answer.');
   if (c.payToPlay) add('', 'Paid placements: "Yes, we CAN, but anybody can. Under retainer you get it at reduced rates. Our job is finding stories you don\'t pay for." Never a flat no, never "yes" then walk it back.');
   if (c.balked) add('', 'Price objection: reframe, don\'t defend. Only move to the next approved price for a qualified prospect, and check whether scope drops too.');
-  if (c.noTimeline) add('', 'No timeline. Get the cost of waiting (Beat 5) before anything else.');
+  if (c.noTimeline) add('', 'No timeline. Worth asking what waiting another 6–12 months would cost them.');
   if (c.wantsFree) add('', 'They want the big idea before signing. Show proof, not the strategy. The idea is what the contract buys.');
   if (c.soloSeller && (f.revenue === 'r3' || f.revenue === 'r4')) add('', 'Claims $2M+ but the founder is the only seller. Probe: who handles 2× the leads?');
   if (c.soloSeller && a.needGrowth && !a.needFoundation) add('', 'More leads with no sales capacity will stall. Raise sales capacity before selling lead gen.');
@@ -768,8 +770,7 @@ function flags(a) {
   const sec = elapsed();
   if (S.mode === 'c1' && sec !== null) {
     const b3 = FLOW.find(b => b.id === 'b3');
-    if (sec > 840 && !beatDone(b3)) add('bad', 'Past 14:00 with no budget / decision maker yet. Get Beat 3 now.');
-    if (sec > 1800) add('', 'Over 30 minutes. Go to the close.');
+    if (sec > 1800 && !beatDone(b3)) add('', 'Heads up: 30+ minutes in and budget / decision maker haven\'t come up yet.');
   }
   return out;
 }
@@ -1029,10 +1030,9 @@ function render() {
     <div class="timer">
       <span class="t" id="clock">${sec === null ? '0:00' : fmt(sec)}</span>
       <button class="btn" id="timerBtn">${sec === null ? 'Start call' : 'Stop'}</button>
-      <span class="where" id="where">${S.mode === 'c1' ? (now ? `Should be in: ${esc(now.name)}` : sec !== null ? 'Past 30:00' : 'Open + case study first (0–3:30)') : 'Call 2'}</span>
+      <span class="where">Call timer</span>
     </div>
-    <div class="cov">${FLOW.map((b, i) => `<i class="${beatDone(b) ? 'on' : ''} ${now && now.id === b.id ? 'now' : ''}" title="${esc(b.name)}">${i + 1}</i>`).join('')}
-      <span class="meta">Readiness ${a.n}/10 · SG fit ${fitDone}/${FIT.length}</span></div>
+    <div class="cov"><span class="meta" style="margin:0">Notes ${FLOW.filter(beatDone).length}/${FLOW.length} topics · Readiness ${a.n}/10 · SG fit ${fitDone}/${FIT.length}</span></div>
     <div class="total"><span class="n">${a.total}</span><span class="of">/ ${a.n ? a.n * 5 : 50} readiness</span></div>
     <details><summary>Score by category</summary><div class="bars">${CATEGORIES.map(x => {
       const v = S.scores[x.id] || 0;
@@ -1086,8 +1086,10 @@ function askNextC1(a) {
   const f = S.fields, out = [];
   const beat = FLOW.find(b => !beatDone(b));
   const booked = S.prefill && (S.prefill.answers || []).find(([, v]) => v && v.length > 12);
-  if (beat && beat.id === 'b1' && booked) out.push(`<div class="q"><small>Beat 1 · use their booking answer</small>"When you booked, you wrote: '${esc(clip(booked[1], 110))}'. Walk me through what's going on there."</div>`);
-  else if (beat) out.push(`<div class="q"><small>Beat ${FLOW.indexOf(beat) + 1} · ${esc(beat.name)}</small>${esc(beat.say)}</div>`);
+  if (beat && beat.id === 'b1' && booked) out.push(`<div class="q"><small>Easy opener · their booking answer</small>"When you booked, you wrote: '${esc(clip(booked[1], 110))}'. Walk me through what's going on there."</div>`);
+  else if (beat) out.push(`<div class="q"><small>If it fits · ${esc(beat.name)}</small>${esc(beat.say)}</div>`);
+  const notYet = FLOW.filter(b => !beatDone(b) && b !== beat);
+  if (notYet.length && FLOW.filter(beatDone).length >= 3) out.push(`<div class="muted" style="font-size:12px">Hasn't come up yet: ${notYet.map(b => esc(b.name.toLowerCase())).join(', ')}</div>`);
   const weak = CATEGORIES.filter(x => S.scores[x.id] && S.scores[x.id] <= 3).sort((x, y) => S.scores[x.id] - S.scores[y.id]).slice(0, 2);
   weak.forEach(x => out.push(`<div class="q"><small>${esc(x.name)} · scored ${S.scores[x.id]}</small>${esc(x.probe[0])}</div>`));
   const gap = FIT.find(([k, type, , , , list]) => !(type === 'chips' ? anyOf(list) : f[k]));
