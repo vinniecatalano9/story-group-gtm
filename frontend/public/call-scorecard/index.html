@@ -468,8 +468,8 @@ const OPTS = {
 const FLOW = [
   { id: 'b1', name: 'Pain / background', end: 420, say: '"Walk me through what brought you to this call. What\'s going on right now that made you want to have this conversation?" Then: "Anything else?"',
     fields: [['pain', 'textarea', 'In their words: what brought them here']], done: f => !!f.pain },
-  { id: 'b2', name: 'Specific example', end: 660, say: '"Give me a specific example. Not generic, the most recent time." If they give a number: "Is that the number you have, or the number you want?"',
-    fields: [['example', 'textarea', 'The most recent time, with the number (leads, revenue, deals)']], done: f => !!f.example },
+  { id: 'b2', name: 'Specific example', end: 660, say: '"Can you give me a recent example of when that happened?" Then: "What did that cost you? A deal, revenue, a missed opportunity?"',
+    fields: [['example', 'textarea', 'A real recent example, and what it cost them']], done: f => !!f.example },
   { id: 'b3', name: 'Budget + who decides', end: 840, say: '"Besides yourself, who else weighs in on a decision like this?" Then: "Roughly what range: $5–10k a month, $10–20k, or higher?"',
     fields: [['dm', 'select'], ['budget', 'select'], ['revenue', 'select']], done: f => !!f.dm && !!f.budget },
   { id: 'b4', name: 'What they tried', end: 1020, say: '"What have you tried? What happened?" Then the big one: "What\'s your own theory of why it didn\'t work?"',
