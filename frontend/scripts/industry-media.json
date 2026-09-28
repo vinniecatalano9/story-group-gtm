@@ -1,0 +1,4175 @@
+{
+ "_about": "Industry media map for the call scorecard: publications, podcasts, conferences per industry. Researched and web-verified 2026-09-28. `map` ties each scorecard industry to a list; `extra` adds industries that have no case study yet. Edit freely, then run build-call-scorecard-kb.mjs.",
+ "map": {
+  "CONSTRUCTION & TRADES": "Construction & Trades",
+  "HOME SERVICES & TRADES": "Home Services & Trades",
+  "ARCHITECTURE & DESIGN": "Architecture & Design",
+  "MANUFACTURING & INDUSTRIAL": "Manufacturing & Industrial",
+  "ENERGY & UTILITIES": "Energy & Utilities",
+  "AGRICULTURE & FOOD PRODUCTION": "Agriculture & Food Production",
+  "AUTOMOTIVE": "Automotive",
+  "HEALTHCARE & PHARMACEUTICALS": "Healthcare & Pharmaceuticals",
+  "HEALTHCARE LEADERSHIP": "Healthcare Leadership",
+  "BIOTECH & LIFE SCIENCES": "Biotech & Life Sciences",
+  "DENTAL & MEDICAL PRACTICES": "Dental & Medical Practices",
+  "SENIOR LIVING & LONG-TERM CARE": "Senior Living & Long-Term Care",
+  "VETERINARY & ANIMAL HEALTH": "Veterinary & Animal Health",
+  "FITNESS & WELLNESS BRANDS": "Fitness & Wellness Brands",
+  "FINANCIAL SERVICES & BANKING": "Financial Services & Banking",
+  "WEALTH MANAGEMENT & FINANCIAL ADVISORY": "Wealth Management & Financial Advisory",
+  "PRIVATE EQUITY & VENTURE CAPITAL": "Private Equity & Venture Capital",
+  "INSURANCE": "Insurance",
+  "ACCOUNTING & PROFESSIONAL FIRMS": "Accounting & Professional Firms",
+  "CANNABIS & EMERGING INDUSTRIES": "Cannabis & Emerging Industries",
+  "CRYPTO & BLOCKCHAIN": "Crypto & Blockchain",
+  "TECHNOLOGY & SAAS": "Technology & SaaS",
+  "SAAS & B2B TECHNOLOGY": "Technology & SaaS",
+  "CYBERSECURITY & IT SERVICES": "Cybersecurity & IT Services",
+  "AEROSPACE & AVIATION": "Aerospace & Aviation",
+  "DEFENSE & GOVERNMENT CONTRACTING": "Defense & Government Contracting",
+  "TRANSPORTATION & LOGISTICS": "Logistics, Supply Chain & Transportation",
+  "LOGISTICS & SUPPLY CHAIN": "Logistics, Supply Chain & Transportation",
+  "TELECOMMUNICATIONS & MEDIA TECH": "Telecommunications & Media Technology",
+  "REAL ESTATE & DEVELOPMENT": "Real Estate",
+  "COMMERCIAL REAL ESTATE BROKERAGE": "Real Estate",
+  "LEGAL & LAW FIRMS": "Legal & Law Firms",
+  "PROFESSIONAL SERVICES & CONSULTING": "Professional Services & Consulting",
+  "STAFFING & RECRUITING": "Staffing & Recruiting",
+  "FRANCHISE & MULTI-UNIT OPERATIONS": "Franchise & Multi-Unit Operations",
+  "EDUCATION & HIGHER LEARNING": "Education & Higher Learning",
+  "HOSPITALITY & TOURISM": "Travel & Hospitality",
+  "RESTAURANTS & FOOD SERVICE": "Restaurants & Food Service",
+  "RETAIL & E-COMMERCE": "Retail & E-Commerce",
+  "E-COMMERCE & CONSUMER PRODUCTS": "Retail & E-Commerce",
+  "SPORTS & ENTERTAINMENT": "Sports & Entertainment",
+  "NONPROFIT & ADVOCACY": "Nonprofit & Advocacy",
+  "FAITH-BASED & RELIGIOUS ORGANIZATIONS": "Faith-Based Organizations",
+  "POLITICS & PUBLIC AFFAIRS": "Politics & Public Affairs"
+ },
+ "extra": [
+  "CRYPTO & BLOCKCHAIN",
+  "TELECOMMUNICATIONS & MEDIA TECH",
+  "RESTAURANTS & FOOD SERVICE",
+  "POLITICS & PUBLIC AFFAIRS"
+ ],
+ "labels": {
+  "HOSPITALITY & TOURISM": "HOSPITALITY, TRAVEL & TOURISM"
+ },
+ "data": {
+  "Construction & Trades": {
+   "publications": [
+    {
+     "name": "ENR (Engineering News-Record)",
+     "url": "https://www.enr.com",
+     "note": "The construction industry's paper of record; GC, owner and engineering execs read its rankings and project news"
+    },
+    {
+     "name": "Construction Dive",
+     "url": "https://www.constructiondive.com",
+     "note": "Daily business news for commercial contractors and developers; widely read by construction C-suites"
+    },
+    {
+     "name": "Construction Executive",
+     "url": "https://constructionexec.com",
+     "note": "ABC's business magazine for contractor owners and executives: finance, risk, leadership"
+    },
+    {
+     "name": "Constructor (AGC)",
+     "url": "https://news.agc.org/category/constructor-magazine/",
+     "note": "AGC of America's magazine reaching general contractor leadership nationwide"
+    },
+    {
+     "name": "Building Design+Construction",
+     "url": "https://www.bdcnetwork.com",
+     "note": "Commercial building teams (AEC, owners); known for its Giants 400 rankings"
+    },
+    {
+     "name": "For Construction Pros",
+     "url": "https://www.forconstructionpros.com",
+     "note": "Contractor-focused trade covering equipment, concrete, paving and business operations"
+    },
+    {
+     "name": "The Wall Street Journal",
+     "url": "https://www.wsj.com/business",
+     "note": "National business outlet covering construction costs, labor, infrastructure spending and builder earnings"
+    },
+    {
+     "name": "Bloomberg",
+     "url": "https://www.bloomberg.com/industries",
+     "note": "National business outlet covering construction, infrastructure deals and data-center building boom"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "ENR Critical Path Podcast",
+     "url": "https://www.enr.com/media/podcasts/781",
+     "note": "ENR editors interview construction CEOs and project leaders; new episodes Sept 2026"
+    },
+    {
+     "name": "The ConTechCrew",
+     "url": "https://thecontechcrew.com/",
+     "note": "Construction technology show (Jeff Sample, Nathan Wood); guests include contractor and vendor execs"
+    },
+    {
+     "name": "Construction Genius",
+     "url": "https://www.constructiongenius.com/podcast/",
+     "note": "Eric Anderton interviews construction company owners and executives on leadership and growth"
+    },
+    {
+     "name": "Construction Brothers",
+     "url": "https://www.brospodcast.com/",
+     "note": "Eddie and Tyler Campbell, 6th-gen builders; multiple episodes weekly on the business of construction"
+    },
+    {
+     "name": "Digital Builder (Autodesk)",
+     "url": "https://www.autodesk.com/blogs/construction/digital-builder-podcast/",
+     "note": "Host Eric Thomas talks with construction leaders about the future of building"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "Procore Groundbreak",
+     "url": "https://www.procore.com/groundbreak",
+     "when": "October 2026 (Oct 21-22)",
+     "where": "Orlando, FL"
+    },
+    {
+     "name": "World of Concrete",
+     "url": "https://www.worldofconcrete.com/",
+     "when": "January 2027 (Jan 19-21)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "ABC Convention",
+     "url": "https://abcconvention.abc.org/",
+     "when": "March 2027 (Mar 9-11)",
+     "where": "Aurora (Denver), CO"
+    },
+    {
+     "name": "AGC Annual Convention",
+     "url": "https://convention.agc.org/",
+     "when": "April 2027 (Apr 6-8)",
+     "where": "Phoenix, AZ"
+    },
+    {
+     "name": "ENR FutureTech",
+     "url": "https://www.enr.com/future-tech",
+     "when": "May 2027 (May 4-5)",
+     "where": "San Francisco, CA"
+    }
+   ]
+  },
+  "Home Services & Trades": {
+   "publications": [
+    {
+     "name": "ACHR News",
+     "url": "https://www.achrnews.com",
+     "note": "The HVACR contractor's weekly; owners and managers read it for business and industry news"
+    },
+    {
+     "name": "Contracting Business",
+     "url": "https://www.contractingbusiness.com",
+     "note": "Business management for residential and commercial HVAC contractors"
+    },
+    {
+     "name": "Plumbing & Mechanical",
+     "url": "https://www.pmmag.com",
+     "note": "Business and technical trade for plumbing and mechanical contractors"
+    },
+    {
+     "name": "Roofing Contractor",
+     "url": "https://www.roofingcontractor.com",
+     "note": "Leading roofing trade; owners read it for industry news and its Top 100 contractor rankings"
+    },
+    {
+     "name": "Electrical Contractor (NECA)",
+     "url": "https://www.ecmag.com",
+     "note": "NECA's magazine for electrical contracting firm owners and managers"
+    },
+    {
+     "name": "Qualified Remodeler",
+     "url": "https://www.qualifiedremodeler.com",
+     "note": "Trade for remodeling and home-improvement company owners; Top 500 remodelers list"
+    },
+    {
+     "name": "The Wall Street Journal",
+     "url": "https://www.wsj.com/business",
+     "note": "National coverage of private-equity roll-ups of HVAC, plumbing and roofing companies"
+    },
+    {
+     "name": "Inc.",
+     "url": "https://www.inc.com",
+     "note": "National business outlet that regularly profiles fast-growing home-service and trades founders"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "The Home Service Expert Podcast",
+     "url": "https://podcasts.apple.com/us/podcast/the-home-service-expert-podcast/id1341478446",
+     "note": "Tommy Mello (A1 Garage) interviews home-service owners scaling HVAC, plumbing, roofing firms"
+    },
+    {
+     "name": "Toolbox for the Trades (ServiceTitan)",
+     "url": "https://www.servicetitan.com/podcasts/toolbox-for-the-trades",
+     "note": "ServiceTitan show featuring trades owners/CEOs on growth and operations"
+    },
+    {
+     "name": "Service Business Mastery",
+     "url": "https://servicebusinessmastery.com/",
+     "note": "Tersh Blissett and Joshua Crouch on leadership, marketing and AI for HVAC/plumbing/electrical owners"
+    },
+    {
+     "name": "Blue Collar Nation",
+     "url": "https://podcast.morningtechmeeting.com/",
+     "note": "Eric and Larry (Super Tech University) on leadership and team-building for home-service owners"
+    },
+    {
+     "name": "Remodelers On The Rise",
+     "url": "https://podcast.remodelersontherise.com/",
+     "note": "Kyle Hunt interviews remodeling company owners on growth, sales and operations"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "NECA Convention & Trade Show",
+     "url": "https://www.necaconvention.org/",
+     "when": "October 2026 (Oct 4-7)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "ServiceTitan Pantheon",
+     "url": "https://pantheon.servicetitan.com/",
+     "when": "October 2026 (Oct 5-7)",
+     "where": "Orlando, FL"
+    },
+    {
+     "name": "AHR Expo",
+     "url": "https://www.ahrexpo.com/",
+     "when": "January 2027 (Jan 25-27)",
+     "where": "Chicago, IL"
+    },
+    {
+     "name": "KBIS (Kitchen & Bath Industry Show)",
+     "url": "https://kbis.com/",
+     "when": "February 2027 (Feb 2-4)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "International Roofing Expo",
+     "url": "https://www.theroofingexpo.com/",
+     "when": "February 2027 (Feb 16-18)",
+     "where": "Las Vegas, NV"
+    }
+   ]
+  },
+  "Architecture & Design": {
+   "publications": [
+    {
+     "name": "Architectural Record",
+     "url": "https://www.architecturalrecord.com",
+     "note": "The profession's most established journal; read by principals and firm leaders"
+    },
+    {
+     "name": "Architect Magazine",
+     "url": "https://www.architectmagazine.com",
+     "note": "Official magazine of the AIA; practice, business and design coverage"
+    },
+    {
+     "name": "The Architect's Newspaper",
+     "url": "https://www.archpaper.com",
+     "note": "News-driven coverage of US architecture, firms and projects"
+    },
+    {
+     "name": "Dezeen",
+     "url": "https://www.dezeen.com",
+     "note": "The world's most-read architecture and design outlet; global reach with designers and brands"
+    },
+    {
+     "name": "ArchDaily",
+     "url": "https://www.archdaily.com",
+     "note": "Massive global audience of architects; project and firm features"
+    },
+    {
+     "name": "Metropolis",
+     "url": "https://metropolismag.com",
+     "note": "Architecture, interiors and sustainability; read by A&D decision-makers"
+    },
+    {
+     "name": "Fast Company (Co.Design)",
+     "url": "https://www.fastcompany.com/co-design",
+     "note": "National business outlet with a dedicated design section; runs Innovation by Design awards"
+    },
+    {
+     "name": "Bloomberg CityLab",
+     "url": "https://www.bloomberg.com/citylab",
+     "note": "Bloomberg's cities vertical covering architecture, urban design and development"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "Business of Architecture",
+     "url": "https://www.businessofarchitecture.com/",
+     "note": "Enoch Sears interviews firm owners and principals on running architecture businesses"
+    },
+    {
+     "name": "EntreArchitect Podcast",
+     "url": "https://entrearchitect.com/podcast/",
+     "note": "Mark R. LePage on building and leading small-to-mid architecture firms"
+    },
+    {
+     "name": "Life of an Architect",
+     "url": "https://www.lifeofanarchitect.com/podcasts/",
+     "note": "Bob Borson FAIA and Andrew Hawkins AIA on practice; bi-weekly, distributed via BD+C"
+    },
+    {
+     "name": "Archispeak",
+     "url": "https://www.archispeakpodcast.com/",
+     "note": "Evan Troxel and Cormac Phalen on design, firm culture and practice"
+    },
+    {
+     "name": "Design Matters with Debbie Millman",
+     "url": "https://designmattersmedia.com/",
+     "note": "Flagship design interview show; guests include founders and design leaders"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "Greenbuild International Conference + Expo",
+     "url": "https://informaconnect.com/greenbuild/",
+     "when": "October 2026 (Oct 20-23)",
+     "where": "New York, NY"
+    },
+    {
+     "name": "Salone del Mobile.Milano",
+     "url": "https://www.salonemilano.it/en",
+     "when": "April 2027 (Apr 13-18)",
+     "where": "Milan, Italy"
+    },
+    {
+     "name": "HD Expo + Conference",
+     "url": "https://hdexpo.hospitalitydesign.com/",
+     "when": "May 2027 (May 4-5)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "AIA Conference on Architecture & Design (AIA27)",
+     "url": "https://conferenceonarchitecture.com/",
+     "when": "May 2027 (May 19-22)",
+     "where": "Philadelphia, PA"
+    },
+    {
+     "name": "NeoCon",
+     "url": "https://neocon.com/",
+     "when": "June 2027 (Jun 13-16)",
+     "where": "Chicago, IL"
+    }
+   ]
+  },
+  "Manufacturing & Industrial": {
+   "publications": [
+    {
+     "name": "IndustryWeek",
+     "url": "https://www.industryweek.com",
+     "note": "Leadership and strategy for manufacturing executives; IW 500 rankings"
+    },
+    {
+     "name": "Manufacturing Dive",
+     "url": "https://www.manufacturingdive.com",
+     "note": "Daily business news on operations, supply chain and reshoring for manufacturing leaders"
+    },
+    {
+     "name": "Assembly Magazine",
+     "url": "https://www.assemblymag.com",
+     "note": "Read by plant and engineering managers in discrete manufacturing"
+    },
+    {
+     "name": "Automation World",
+     "url": "https://www.automationworld.com",
+     "note": "Automation, AI and smart-factory coverage for manufacturing decision-makers"
+    },
+    {
+     "name": "Modern Machine Shop",
+     "url": "https://www.mmsonline.com",
+     "note": "Leading metalworking/CNC trade; read by job-shop owners and operators"
+    },
+    {
+     "name": "Plant Engineering",
+     "url": "https://www.plantengineering.com",
+     "note": "Plant operations, maintenance and facility leadership audience"
+    },
+    {
+     "name": "The Wall Street Journal",
+     "url": "https://www.wsj.com/business",
+     "note": "National coverage of reshoring, tariffs, industrial earnings and factory investment"
+    },
+    {
+     "name": "Bloomberg",
+     "url": "https://www.bloomberg.com/industries",
+     "note": "National business outlet covering industrials, supply chains and manufacturing data"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "MakingChips",
+     "url": "https://makingchips.com/",
+     "note": "Podcast for manufacturing leaders (Nick Goellner, Paul Van Metre); metalworking owners and execs"
+    },
+    {
+     "name": "Manufacturing Happy Hour",
+     "url": "https://manufacturinghappyhour.com/podcast/",
+     "note": "Chris Luecke interviews manufacturing execs and innovators; weekly, often live at events"
+    },
+    {
+     "name": "The Manufacturing Executive",
+     "url": "https://www.gorilla76.com/the-manufacturing-executive-podcast/",
+     "note": "Joe Sullivan (Gorilla 76) with leaders of midsized manufacturers on growth and sales"
+    },
+    {
+     "name": "Industrial Talk",
+     "url": "https://industrialtalk.com/",
+     "note": "Scott MacKenzie's daily show with industrial and manufacturing leaders; 1,000+ episodes"
+    },
+    {
+     "name": "Manufacturing Hub",
+     "url": "https://podcasts.apple.com/us/podcast/manufacturing-hub/id1546805573",
+     "note": "Vlad Romanov and Dave Griffith on automation, AI and plant operations; weekly"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "PACK EXPO International",
+     "url": "https://www.packexpointernational.com/",
+     "when": "October 2026 (Oct 18-21)",
+     "where": "Chicago, IL"
+    },
+    {
+     "name": "FABTECH",
+     "url": "https://www.fabtechexpo.com/",
+     "when": "October 2026 (Oct 21-23)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "Hannover Messe",
+     "url": "https://www.hannovermesse.de/en/",
+     "when": "April 2027 (Apr 5-8)",
+     "where": "Hannover, Germany"
+    },
+    {
+     "name": "ProMat",
+     "url": "https://www.promatshow.com/",
+     "when": "April 2027 (Apr 19-21)",
+     "where": "Chicago, IL"
+    },
+    {
+     "name": "Automate",
+     "url": "https://www.automateshow.com/",
+     "when": "May 2027 (May 10-13)",
+     "where": "Las Vegas, NV"
+    }
+   ]
+  },
+  "Energy & Utilities": {
+   "publications": [
+    {
+     "name": "Utility Dive",
+     "url": "https://www.utilitydive.com",
+     "note": "Daily news for utility and power-sector executives: grid, regulation, generation"
+    },
+    {
+     "name": "POWER Magazine",
+     "url": "https://www.powermag.com",
+     "note": "Long-running trade for power generation leaders and plant operators"
+    },
+    {
+     "name": "T&D World",
+     "url": "https://www.tdworld.com",
+     "note": "Transmission and distribution utility engineers and executives"
+    },
+    {
+     "name": "E&E News (POLITICO)",
+     "url": "https://www.eenews.net",
+     "note": "Energy and environment policy news read by utility, regulatory and D.C. decision-makers"
+    },
+    {
+     "name": "Hart Energy",
+     "url": "https://www.hartenergy.com",
+     "note": "Oil and gas executive audience; upstream, midstream and energy finance coverage"
+    },
+    {
+     "name": "Canary Media",
+     "url": "https://www.canarymedia.com",
+     "note": "Clean-energy transition newsroom read by developers, investors and utility leaders"
+    },
+    {
+     "name": "Bloomberg (Energy / Bloomberg Green)",
+     "url": "https://www.bloomberg.com/industries",
+     "note": "National business outlet with deep energy, commodities and climate-tech coverage"
+    },
+    {
+     "name": "Reuters Energy",
+     "url": "https://www.reuters.com/business/energy/",
+     "note": "Global wire coverage of oil, gas, power and utilities; heavily read by energy execs"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "Catalyst with Shayle Kann",
+     "url": "https://www.latitudemedia.com/podcasts/catalyst/",
+     "note": "Latitude Media; deep dives with energy investors, founders and executives, weekly"
+    },
+    {
+     "name": "Open Circuit",
+     "url": "https://www.latitudemedia.com/podcasts/open-circuit/",
+     "note": "Jigar Shah, Stephen Lacey, Caroline Golin on clean-energy business and policy (successor to The Energy Gang)"
+    },
+    {
+     "name": "Columbia Energy Exchange",
+     "url": "https://www.energypolicy.columbia.edu/series/columbia-energy-exchange/",
+     "note": "Columbia CGEP interviews with top energy leaders across oil, power and markets"
+    },
+    {
+     "name": "Volts",
+     "url": "https://www.volts.wtf/",
+     "note": "David Roberts interviews analysts, executives and innovators on the clean-energy transition"
+    },
+    {
+     "name": "Oil and Gas This Week",
+     "url": "https://oggn.com/ogtw/",
+     "note": "Mark LaCour and Paige Wilson (OGGN); weekly oil and gas industry news and guests"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "RE+",
+     "url": "https://www.re-plus.com/",
+     "when": "November 2026 (Nov 16-19)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "DISTRIBUTECH (DTECH)",
+     "url": "https://www.distributech.com/",
+     "when": "March 2027 (Mar 2-4)",
+     "where": "Atlanta, GA"
+    },
+    {
+     "name": "CERAWeek by S&P Global",
+     "url": "https://www.ceraweek.com/en",
+     "when": "March 2027 (Mar 8-12)",
+     "where": "Houston, TX"
+    },
+    {
+     "name": "Offshore Technology Conference (OTC)",
+     "url": "https://www.otcnet.org/",
+     "when": "May 2027 (May 3-5)",
+     "where": "Houston, TX"
+    },
+    {
+     "name": "EEI 2027 (Edison Electric Institute)",
+     "url": "https://www.eei.org/",
+     "when": "June 2027 (Jun 14-16)",
+     "where": "Orlando, FL"
+    }
+   ]
+  },
+  "Agriculture & Food Production": {
+   "publications": [
+    {
+     "name": "Agri-Pulse",
+     "url": "https://www.agri-pulse.com",
+     "note": "Ag policy and business news read by agribusiness leaders and D.C. decision-makers"
+    },
+    {
+     "name": "Successful Farming",
+     "url": "https://www.agriculture.com",
+     "note": "One of the largest-circulation farm business magazines in the US"
+    },
+    {
+     "name": "Farm Journal / AgWeb",
+     "url": "https://www.agweb.com",
+     "note": "Farm Journal's news hub for large-scale growers and agribusiness"
+    },
+    {
+     "name": "Food Business News",
+     "url": "https://www.foodbusinessnews.net",
+     "note": "Food and beverage manufacturing executives; M&A, ingredients, operations"
+    },
+    {
+     "name": "Food Dive",
+     "url": "https://www.fooddive.com",
+     "note": "Daily business news for food and beverage manufacturer executives"
+    },
+    {
+     "name": "AgFunderNews",
+     "url": "https://agfundernews.com",
+     "note": "Agrifood-tech investment and startup news; read by investors and founders"
+    },
+    {
+     "name": "The Wall Street Journal",
+     "url": "https://www.wsj.com/business",
+     "note": "National coverage of food companies, farm economy, commodity prices and agribusiness deals"
+    },
+    {
+     "name": "Reuters Commodities",
+     "url": "https://www.reuters.com/markets/commodities/",
+     "note": "Global wire coverage of grain, livestock and food-supply markets"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "Future of Agriculture",
+     "url": "https://futureofagriculture.com/",
+     "note": "Tim Hammerich interviews farmers, founders and investors shaping ag and food"
+    },
+    {
+     "name": "AgriTalk",
+     "url": "https://www.farmjournal.com/brands/agritalk/",
+     "note": "Farm Journal's daily ag talk show (Chip Flory); guests include commodity group and agribusiness CEOs"
+    },
+    {
+     "name": "The Modern Acre",
+     "url": "https://www.themodernacre.com/",
+     "note": "Tim and Tyler interview agtech and agribusiness founders/CEOs (announced a break Aug 2026)"
+    },
+    {
+     "name": "Taste Radio",
+     "url": "https://www.tasteradio.com/",
+     "note": "BevNET's podcast for food and beverage brand founders and executives"
+    },
+    {
+     "name": "The Food Institute Podcast",
+     "url": "https://foodinstitute.com/category/podcast/",
+     "note": "Food industry leaders on trends, retail, foodservice and CPG strategy"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "IPPE (International Production & Processing Expo)",
+     "url": "https://www.ippexpo.org/",
+     "when": "January 2027 (Jan 26-28)",
+     "where": "Atlanta, GA"
+    },
+    {
+     "name": "World Ag Expo",
+     "url": "https://www.worldagexpo.com/",
+     "when": "February 2027 (Feb 9-11)",
+     "where": "Tulare, CA"
+    },
+    {
+     "name": "Commodity Classic",
+     "url": "https://commodityclassic.com/",
+     "when": "March 2027 (Mar 3-5)",
+     "where": "New Orleans, LA"
+    },
+    {
+     "name": "World Agri-Tech Innovation Summit",
+     "url": "https://worldagritechusa.com/",
+     "when": "March 2027 (Mar 9-10)",
+     "where": "San Francisco, CA"
+    },
+    {
+     "name": "IFT FIRST",
+     "url": "https://www.ift.org/ift-first-event",
+     "when": "July 2027 (Jul 11-14)",
+     "where": "Chicago, IL"
+    }
+   ]
+  },
+  "Automotive": {
+   "publications": [
+    {
+     "name": "Automotive News",
+     "url": "https://www.autonews.com",
+     "note": "The auto industry's paper of record; dealers, OEM and supplier execs"
+    },
+    {
+     "name": "WardsAuto",
+     "url": "https://www.wardsauto.com",
+     "note": "Industry Dive's auto trade (merged with Automotive Dive); OEM, supplier and dealer leaders"
+    },
+    {
+     "name": "CBT News",
+     "url": "https://www.cbtnews.com",
+     "note": "Video-first news network for dealership owners and managers"
+    },
+    {
+     "name": "Car Dealership Guy",
+     "url": "https://news.dealershipguy.com/",
+     "note": "Hugely popular dealer-industry newsletter and media brand read by dealer principals"
+    },
+    {
+     "name": "Auto Remarketing",
+     "url": "https://www.autoremarketing.com",
+     "note": "Used-car, wholesale and dealer-finance leaders"
+    },
+    {
+     "name": "Automotive World",
+     "url": "https://www.automotiveworld.com",
+     "note": "Global OEM and supplier executive audience; industry analysis and interviews"
+    },
+    {
+     "name": "The Wall Street Journal",
+     "url": "https://www.wsj.com/business",
+     "note": "National coverage of automakers, dealers, tariffs and EV strategy"
+    },
+    {
+     "name": "Bloomberg",
+     "url": "https://www.bloomberg.com/industries",
+     "note": "National business outlet with a dedicated autos beat (Hyperdrive)"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "Car Dealership Guy Podcast",
+     "url": "https://www.dealershipguy.com/episodes/",
+     "note": "Interviews dealer group CEOs and industry execs; multiple episodes weekly"
+    },
+    {
+     "name": "Automotive News Daily Drive",
+     "url": "https://www.autonews.com/podcasts/daily-drive/",
+     "note": "Daily show (host Kellen Walker) with auto execs and Automotive News reporters"
+    },
+    {
+     "name": "The Dealer Playbook",
+     "url": "https://thedealerplaybook.com/",
+     "note": "Michael Cirillo interviews dealers and dealership leaders; 12th year, weekly"
+    },
+    {
+     "name": "The Auto Market Brief (Cox Automotive)",
+     "url": "https://www.coxautoinc.com/the-auto-market-brief/",
+     "note": "Cox Automotive's Erin Keating with industry guests on market data; new episodes Sept 2026"
+    },
+    {
+     "name": "Autonocast",
+     "url": "https://podcasts.apple.com/us/podcast/autonocast/id1168333433",
+     "note": "Alex Roy, Ed Niedermeyer, Kirsten Korosec on AVs and auto tech; guests from OEMs and startups"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "SEMA Show",
+     "url": "https://semashow.com/",
+     "when": "November 2026 (Nov 3-6)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "Used Car Week",
+     "url": "https://usedcarweek.biz/",
+     "when": "November 2026 (Nov 16-19)",
+     "where": "San Diego, CA"
+    },
+    {
+     "name": "J.D. Power Auto Summit",
+     "url": "https://www.jdpowerautosummit.com/",
+     "when": "February 2027 (Feb 17)",
+     "where": "Orlando, FL"
+    },
+    {
+     "name": "NADA Show",
+     "url": "https://www.nada.org/nada-show",
+     "when": "February 2027 (Feb 17-20)",
+     "where": "Orlando, FL"
+    },
+    {
+     "name": "Automotive Forum (J.D. Power / NADA / NY Auto Show)",
+     "url": "https://www.autoforumny.com/",
+     "when": "March 2027 (Mar 23)",
+     "where": "New York, NY"
+    }
+   ]
+  },
+  "Healthcare & Pharmaceuticals": {
+   "publications": [
+    {
+     "name": "Fierce Pharma",
+     "url": "https://www.fiercepharma.com/",
+     "note": "Daily must-read for pharma commercial, marketing and manufacturing leaders"
+    },
+    {
+     "name": "STAT",
+     "url": "https://www.statnews.com/",
+     "note": "Leading health/life-sciences newsroom; read by pharma C-suites, investors and policymakers"
+    },
+    {
+     "name": "Pharmaceutical Executive",
+     "url": "https://www.pharmexec.com/",
+     "note": "Strategy, leadership and market-access coverage aimed at pharma C-suite"
+    },
+    {
+     "name": "PharmaVoice",
+     "url": "https://www.pharmavoice.com/",
+     "note": "Industry Dive pub on pharma leadership, commercialization and exec perspectives"
+    },
+    {
+     "name": "MM+M (Medical Marketing & Media)",
+     "url": "https://www.mmm-online.com/",
+     "note": "Bible of pharma/health marketing and comms leaders; runs Agency 100 and exec profiles"
+    },
+    {
+     "name": "Healthcare Dive",
+     "url": "https://www.healthcaredive.com/",
+     "note": "Industry Dive daily on provider, payer and health-business trends"
+    },
+    {
+     "name": "Reuters – Healthcare & Pharmaceuticals",
+     "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/",
+     "note": "National/global business wire covering drugmakers, deals and policy"
+    },
+    {
+     "name": "The Wall Street Journal – Health",
+     "url": "https://www.wsj.com/health",
+     "note": "National business outlet with regular pharma, pricing and health-industry coverage"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "Pharmaceutical Executive Podcast",
+     "url": "https://www.pharmexec.com/podcasts",
+     "note": "C-suite interviews on commercial strategy, market access and industry news"
+    },
+    {
+     "name": "The MM+M Podcast",
+     "url": "https://www.mmm-online.com/the-mmm-podcast/",
+     "note": "MM+M editors with health/pharma marketing leaders; weekly"
+    },
+    {
+     "name": "The Top Line (Fierce Pharma)",
+     "url": "https://www.fiercepharma.com/podcasts",
+     "note": "Fierce Pharma/Biotech journalists on the week's biggest business news; interviews execs"
+    },
+    {
+     "name": "Raising Health (a16z Bio + Health)",
+     "url": "https://a16z.com/podcasts/raising-health/",
+     "note": "a16z's Julie Yoo, Vineeta Agarwala, Jorge Conde with healthcare and biotech founders"
+    },
+    {
+     "name": "Tradeoffs",
+     "url": "https://tradeoffs.org/category/podcast/",
+     "note": "Dan Gorenstein's health-policy show on drug pricing, costs and coverage"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "HLTH USA",
+     "url": "https://hlth.com/events/usa/",
+     "when": "November 2026 (Nov 15-18)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "J.P. Morgan Healthcare Conference",
+     "url": "https://www.jpmorgan.com/about-us/events-conferences/health-care-conference",
+     "when": "January 2027 (Jan 11-14)",
+     "where": "San Francisco, CA"
+    },
+    {
+     "name": "Reuters Events: Pharma USA",
+     "url": "https://events.reutersevents.com/pharma/pharma-usa",
+     "when": "March 2027 (Mar 10-11)",
+     "where": "Philadelphia, PA"
+    },
+    {
+     "name": "DIA Global Annual Meeting",
+     "url": "https://www.diaglobal.org/en/flagship/dia-2027/about/conference",
+     "when": "June-July 2027 (Jun 28-Jul 1)",
+     "where": "San Diego, CA"
+    },
+    {
+     "name": "Fierce Pharma Week",
+     "url": "https://www.fiercepharmaweek.com/",
+     "when": "September 2027 (Sep 20-23)",
+     "where": "Philadelphia, PA"
+    }
+   ]
+  },
+  "Healthcare Leadership": {
+   "publications": [
+    {
+     "name": "Modern Healthcare",
+     "url": "https://www.modernhealthcare.com/",
+     "note": "Flagship business weekly for hospital and health-system executives"
+    },
+    {
+     "name": "Becker's Hospital Review",
+     "url": "https://www.beckershospitalreview.com/",
+     "note": "High-volume daily read by hospital CEOs, CFOs and C-suite; heavy on exec Q&As"
+    },
+    {
+     "name": "Fierce Healthcare",
+     "url": "https://www.fiercehealthcare.com/",
+     "note": "Provider, payer and health-tech business news for system leaders"
+    },
+    {
+     "name": "Chief Healthcare Executive",
+     "url": "https://www.chiefhealthcareexecutive.com/",
+     "note": "Insights for hospital and health-system leaders; runs exec prediction roundups"
+    },
+    {
+     "name": "hfm Magazine (HFMA)",
+     "url": "https://www.hfma.org/2026-hfm-magazine/",
+     "note": "HFMA's magazine for health-system CFOs and finance/revenue-cycle leaders"
+    },
+    {
+     "name": "Healthcare Executive (ACHE)",
+     "url": "https://www.ache.org/Publishing/Periodicals/Healthcare-Executive-Magazine",
+     "note": "ACHE's bimonthly magazine for its 50K+ healthcare-leader members"
+    },
+    {
+     "name": "Axios Vitals",
+     "url": "https://www.axios.com/signup/vitals",
+     "note": "Daily national newsletter on health-care politics, policy and business"
+    },
+    {
+     "name": "Fortune – Health",
+     "url": "https://fortune.com/section/health/",
+     "note": "National business outlet covering health-system strategy, AI and industry leaders"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "Becker's Healthcare Podcast",
+     "url": "https://www.beckershospitalreview.com/podcasts/podcasts-beckers-hospital-review/",
+     "note": "Near-daily interviews with hospital CEOs and C-suite leaders"
+    },
+    {
+     "name": "Advancing Health (AHA)",
+     "url": "https://www.aha.org/advancinghealth",
+     "note": "American Hospital Association's podcast featuring hospital and system leaders"
+    },
+    {
+     "name": "The Gist Healthcare Podcast",
+     "url": "https://www.kaufmanhall.com/healthcare-consulting/gist-resources-kaufman-hall/gist-healthcare-podcast-kaufman-hall",
+     "note": "Kaufman Hall's 10-minute health business/policy briefing, 3x weekly"
+    },
+    {
+     "name": "Relentless Health Value",
+     "url": "https://relentlesshealthvalue.com/",
+     "note": "Stacey Richter's weekly interviews for leaders across providers, payers and pharma"
+    },
+    {
+     "name": "HFMA's Voices in Healthcare Finance",
+     "url": "https://podcasts.apple.com/us/podcast/hfmas-voices-in-healthcare-finance/id1102859089",
+     "note": "HFMA show for health-system finance leaders on policy, payment and leadership"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "ACHE Congress on Healthcare Leadership",
+     "url": "https://congress.ache.org/",
+     "when": "March 2027 (Mar 22-24)",
+     "where": "Nashville, TN"
+    },
+    {
+     "name": "HIMSS Global Health Conference & Exhibition (HIMSS27)",
+     "url": "https://www.himssconference.com/",
+     "when": "April 2027 (Apr 5-8)",
+     "where": "Chicago, IL"
+    },
+    {
+     "name": "Becker's Hospital Review Annual Meeting",
+     "url": "https://conferences.beckershospitalreview.com/upcoming-events",
+     "when": "April 2027 (Apr 19-22)",
+     "where": "Chicago, IL"
+    },
+    {
+     "name": "HFMA Annual Conference",
+     "url": "https://www.hfma.org/annual-conference-2027/",
+     "when": "June 2027 (Jun 27-30)",
+     "where": "Denver, CO"
+    },
+    {
+     "name": "AHA Leadership Summit",
+     "url": "https://leadershipsummit.aha.org/",
+     "when": "July 2027 (Jul 18-20)",
+     "where": "San Diego, CA"
+    }
+   ]
+  },
+  "Biotech & Life Sciences": {
+   "publications": [
+    {
+     "name": "Endpoints News",
+     "url": "https://endpoints.news/",
+     "note": "Biotech/pharma business daily focused on the science, people and money"
+    },
+    {
+     "name": "BioPharma Dive",
+     "url": "https://www.biopharmadive.com/",
+     "note": "Industry Dive coverage of biotech funding, IPOs, M&A and pipelines"
+    },
+    {
+     "name": "Fierce Biotech",
+     "url": "https://www.fiercebiotech.com/",
+     "note": "Daily on biotech R&D, fundraising (tracker) and exec moves"
+    },
+    {
+     "name": "BioSpace",
+     "url": "https://www.biospace.com/",
+     "note": "Biotech/pharma news and careers; NextGen startup lists and IPO tracking"
+    },
+    {
+     "name": "BioCentury",
+     "url": "https://www.biocentury.com/",
+     "note": "Premium analysis read by biotech CEOs, BD teams and investors"
+    },
+    {
+     "name": "GEN (Genetic Engineering & Biotechnology News)",
+     "url": "https://www.genengnews.com/",
+     "note": "Long-running biotech trade covering science, tools and industry trends"
+    },
+    {
+     "name": "CNBC – Health & Science",
+     "url": "https://www.cnbc.com/health-and-science/",
+     "note": "National business TV/online; frequent biotech exec interviews and market coverage"
+    },
+    {
+     "name": "Bloomberg – Health",
+     "url": "https://www.bloomberg.com/industries/health",
+     "note": "National business outlet covering biotech deals, markets and drug development"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "The Readout LOUD (STAT)",
+     "url": "https://www.statnews.com/readout-loud/",
+     "note": "STAT's weekly biotech show with Adam Feuerstein, Elaine Chen, Allison DeAngelis"
+    },
+    {
+     "name": "The Long Run with Luke Timmerman",
+     "url": "https://timmermanreport.com/the-long-run/",
+     "note": "Long-form interviews with biotech CEOs and founders"
+    },
+    {
+     "name": "Business of Biotech",
+     "url": "https://www.lifescienceleader.com/solution/the-business-of-biotech-podcast-lsl",
+     "note": "Life Science Leader's Ben Comer with emerging-biopharma founders and CEOs"
+    },
+    {
+     "name": "Biotech Hangout",
+     "url": "https://podcasts.apple.com/us/podcast/biotech-hangout/id1568911820",
+     "note": "Weekly news/deals/FDA roundup by Daphne Zohar, Brad Loncar, Chris Garabedian"
+    },
+    {
+     "name": "BioCentury This Week",
+     "url": "https://www.biocentury.com/analysis/biocentury-this-week-podcast",
+     "note": "BioCentury analysts on biotech markets, policy and KOL interviews"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "Cell & Gene Meeting on the Mesa (ARM)",
+     "url": "https://meetingonthemesa.com/",
+     "when": "October 2026 (Oct 5-7)",
+     "where": "Phoenix, AZ"
+    },
+    {
+     "name": "STAT Summit",
+     "url": "https://www.statnews.com/stat-summit-boston/",
+     "when": "October 2026 (Oct 14-15)",
+     "where": "Boston, MA"
+    },
+    {
+     "name": "BIO-Europe",
+     "url": "https://informaconnect.com/bioeurope/",
+     "when": "November 2026 (Nov 9-11)",
+     "where": "Cologne, Germany"
+    },
+    {
+     "name": "Biotech Showcase",
+     "url": "https://informaconnect.com/biotech-showcase/",
+     "when": "January 2027 (Jan 11-13)",
+     "where": "San Francisco, CA"
+    },
+    {
+     "name": "BIO International Convention",
+     "url": "https://convention.bio.org/future-dates",
+     "when": "June 2027 (Jun 7-10)",
+     "where": "Philadelphia, PA"
+    }
+   ]
+  },
+  "Dental & Medical Practices": {
+   "publications": [
+    {
+     "name": "Dental Economics",
+     "url": "https://www.dentaleconomics.com/",
+     "note": "Leading practice-management/business magazine for dentists and owners"
+    },
+    {
+     "name": "Dentistry Today",
+     "url": "https://www.dentistrytoday.com/",
+     "note": "45-year-old national news magazine for GPs and specialists"
+    },
+    {
+     "name": "Group Dentistry Now",
+     "url": "https://www.groupdentistrynow.com/",
+     "note": "Dedicated DSO/group-practice news and exec interviews"
+    },
+    {
+     "name": "Becker's Dental + DSO Review",
+     "url": "https://www.beckersdental.com/",
+     "note": "DSO leadership, M&A and growth coverage; '50+ DSOs to know' lists"
+    },
+    {
+     "name": "Dental Products Report",
+     "url": "https://www.dentalproductsreport.com/",
+     "note": "Technology and business trends read by practice owners and buyers"
+    },
+    {
+     "name": "ADA News",
+     "url": "https://adanews.ada.org/",
+     "note": "American Dental Association's news outlet reaching its member dentists"
+    },
+    {
+     "name": "Medical Economics",
+     "url": "https://www.medicaleconomics.com/",
+     "note": "Business-of-medicine publication for physicians and practice owners"
+    },
+    {
+     "name": "Physicians Practice",
+     "url": "https://www.physicianspractice.com/",
+     "note": "Practice-management insights for independent and group medical practices"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "Dentistry Uncensored with Howard Farran",
+     "url": "https://podcasts.apple.com/us/podcast/dentistry-uncensored-with-howard-farran/id916907356",
+     "note": "Dentaltown founder's weekday interviews incl. DSO and dental-company CEOs"
+    },
+    {
+     "name": "Group Dentistry Now Show",
+     "url": "https://www.groupdentistrynow.com/dso-group-blog/category/dso-group-podcasts/",
+     "note": "'The voice of the DSO industry' — DSO executives and investors"
+    },
+    {
+     "name": "The Best Practices Show with Kirk Behrendt",
+     "url": "https://the-best-practices-show.captivate.fm/",
+     "note": "ACT Dental founder with top practice owners and industry leaders, twice weekly"
+    },
+    {
+     "name": "MGMA Insights",
+     "url": "https://www.mgma.com/podcasts",
+     "note": "MGMA's flagship show for medical-group administrators and physician leaders"
+    },
+    {
+     "name": "Off the Chart: A Business of Medicine Podcast",
+     "url": "https://www.medicaleconomics.com/podcasts",
+     "note": "Medical Economics/Physicians Practice show on practice economics and policy"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "ADA 2026 Scientific Session (final SmileCon)",
+     "url": "https://www.ada.org/education/scientific-session",
+     "when": "October 2026 (Oct 8-10)",
+     "where": "Indianapolis, IN"
+    },
+    {
+     "name": "Greater New York Dental Meeting",
+     "url": "https://www.gnydm.com/",
+     "when": "November-December 2026 (Nov 27-Dec 1)",
+     "where": "New York, NY"
+    },
+    {
+     "name": "Chicago Dental Society Midwinter Meeting",
+     "url": "https://www.cds.org/event/midwinter-meeting-2027/",
+     "when": "February 2027 (Feb 25-27)",
+     "where": "Chicago, IL"
+    },
+    {
+     "name": "MGMA Financial Conference",
+     "url": "https://www.mgma.com/conferences",
+     "when": "March 2027 (Mar 4-6)",
+     "where": "Atlanta, GA"
+    },
+    {
+     "name": "Thomas P. Hinman Dental Meeting",
+     "url": "https://www.hinman.org/",
+     "when": "March 2027 (Mar 18-20)",
+     "where": "Atlanta, GA"
+    }
+   ]
+  },
+  "Senior Living & Long-Term Care": {
+   "publications": [
+    {
+     "name": "Senior Housing News",
+     "url": "https://seniorhousingnews.com/",
+     "note": "Top business news source for senior living operators, investors and developers"
+    },
+    {
+     "name": "McKnight's Senior Living",
+     "url": "https://www.mcknightsseniorliving.com/",
+     "note": "Assisted/independent living and CCRC leadership news"
+    },
+    {
+     "name": "McKnight's Long-Term Care News",
+     "url": "https://www.mcknights.com/",
+     "note": "Skilled nursing and post-acute leadership coverage"
+    },
+    {
+     "name": "Skilled Nursing News",
+     "url": "https://skillednursingnews.com/",
+     "note": "SNF operator, reimbursement and capital coverage"
+    },
+    {
+     "name": "Provider Magazine (AHCA/NCAL)",
+     "url": "https://www.providermagazine.com/",
+     "note": "AHCA/NCAL flagship magazine for long-term and post-acute care leaders"
+    },
+    {
+     "name": "Senior Living Foresight",
+     "url": "https://www.seniorlivingforesight.net/",
+     "note": "Leadership/innovation voice widely read by senior living executives"
+    },
+    {
+     "name": "Home Health Care News",
+     "url": "https://homehealthcarenews.com/",
+     "note": "Business news for home health, home care and hospice leaders"
+    },
+    {
+     "name": "Fortune – Aging Well",
+     "url": "https://fortune.com/section/aging-well/",
+     "note": "National business outlet's dedicated section on aging, longevity and senior care"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "Transform (Senior Housing News)",
+     "url": "https://seniorhousingnews.com/podcast/",
+     "note": "SHN's monthly show with senior living CEOs and operators"
+    },
+    {
+     "name": "Rethink (Skilled Nursing News)",
+     "url": "https://skillednursingnews.com/podcast/",
+     "note": "SNN's monthly show featuring SNF operator CEOs"
+    },
+    {
+     "name": "McKnight's Podcast",
+     "url": "https://www.mcknights.com/podcasts/",
+     "note": "Newsmakers and Market Leaders episodes with LTC and senior living execs"
+    },
+    {
+     "name": "Bridge the Gap: The Senior Living Podcast",
+     "url": "https://www.btgvoice.com/shows-series/bridge-the-gap",
+     "note": "Lucas McCurdy and Josh Crisp interview senior living operators and CEOs"
+    },
+    {
+     "name": "Foresight Radio",
+     "url": "https://www.seniorlivingforesight.net/podcasts/",
+     "note": "Senior Living Foresight's podcast on leadership and innovation"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "AHCA/NCAL Convention & Expo (Delivering Solutions 26)",
+     "url": "https://www.ahcancal.org/",
+     "when": "October 2026 (Oct 11-14)",
+     "where": "Boston, MA"
+    },
+    {
+     "name": "NIC Fall Conference",
+     "url": "https://www.nic.org/events/2026-nic-fall-conference/",
+     "when": "October 2026 (Oct 21-23)",
+     "where": "Chicago, IL"
+    },
+    {
+     "name": "LeadingAge Annual Meeting",
+     "url": "https://annualmeeting.leadingage.org/",
+     "when": "October 2026 (Oct 25-28)",
+     "where": "Philadelphia, PA"
+    },
+    {
+     "name": "SHN Sales & Marketing Conference",
+     "url": "https://shnsalesandmarketingconference.com/",
+     "when": "March 2027 (Mar 17-19)",
+     "where": "Tampa, FL"
+    },
+    {
+     "name": "Argentum Senior Living Executive Conference",
+     "url": "https://www.argentum.org/event/2027-senior-living-executive-conference/",
+     "when": "May 2027 (May 24-26)",
+     "where": "New Orleans, LA"
+    }
+   ]
+  },
+  "Veterinary & Animal Health": {
+   "publications": [
+    {
+     "name": "Today's Veterinary Business",
+     "url": "https://todaysveterinarybusiness.com/",
+     "note": "NAVC journal for practice owners, managers and industry leaders"
+    },
+    {
+     "name": "dvm360",
+     "url": "https://www.dvm360.com/",
+     "note": "Largest veterinary news/business platform (formerly DVM Newsmagazine)"
+    },
+    {
+     "name": "Veterinary Practice News",
+     "url": "https://www.veterinarypracticenews.com/",
+     "note": "Industry and practice news for veterinarians and clinic owners"
+    },
+    {
+     "name": "AVMA News / JAVMA News",
+     "url": "https://www.avma.org/news",
+     "note": "American Veterinary Medical Association's news arm, reaching its member vets"
+    },
+    {
+     "name": "Today's Veterinary Practice",
+     "url": "https://todaysveterinarypractice.com/",
+     "note": "NAVC clinical journal for companion-animal practitioners"
+    },
+    {
+     "name": "PetfoodIndustry",
+     "url": "https://www.petfoodindustry.com/",
+     "note": "Trade coverage of pet food/nutrition business, M&A and innovation"
+    },
+    {
+     "name": "Pet Age",
+     "url": "https://www.petage.com/",
+     "note": "B2B pet industry brand for manufacturers, retailers and service businesses"
+    },
+    {
+     "name": "Pets+ (PETS+)",
+     "url": "https://petsplusmag.com/",
+     "note": "Pet industry business magazine for independent pet retailers and brands"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "Veterinary Innovation Podcast",
+     "url": "https://veterinaryinnovationpodcast.com/",
+     "note": "Shawn Wilkie and Dr. Ivan Zakharenkov with vet-tech founders and animal-health execs"
+    },
+    {
+     "name": "The Vet Blast Podcast (dvm360)",
+     "url": "https://www.dvm360.com/podcasts",
+     "note": "Dr. Adam Christman hosts veterinary leaders and industry voices"
+    },
+    {
+     "name": "Veterinary Business Podcast",
+     "url": "https://www.veterinarybusinessinstitute.com/podcast",
+     "note": "Weekly show for independent practice owners on growth, valuation and marketing"
+    },
+    {
+     "name": "Animal Health Insider",
+     "url": "https://animalhealthinsider.podbean.com/",
+     "note": "Julie Lawless interviews animal-health company executives (e.g., Phibro, HealthforAnimals)"
+    },
+    {
+     "name": "The People of Animal Health Podcast",
+     "url": "https://thepeopleofanimalhealthpodcast.com/",
+     "note": "Recruiter Stacy Pursell profiles animal-health executives and leaders"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "VMX (NAVC Veterinary Meeting & Expo)",
+     "url": "https://navc.com/vmx-event/",
+     "when": "January 2027 (Jan 16-20)",
+     "where": "Orlando, FL"
+    },
+    {
+     "name": "WVC Annual Conference",
+     "url": "https://www.viticusgroup.org/wvc-conference",
+     "when": "February-March 2027 (Feb 28-Mar 3)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "Global Pet Expo",
+     "url": "https://globalpetexpo.org/",
+     "when": "March 2027 (Mar 17-19)",
+     "where": "Orlando, FL"
+    },
+    {
+     "name": "AVMA Convention",
+     "url": "https://www.avma.org/events/avma-convention",
+     "when": "July 2027 (Jul 16-20)",
+     "where": "Minneapolis, MN"
+    },
+    {
+     "name": "AAHA Con",
+     "url": "https://www.aaha.org/events/",
+     "when": "September 2027 (Sep 16-18)",
+     "where": "National Harbor, MD"
+    }
+   ]
+  },
+  "Fitness & Wellness Brands": {
+   "publications": [
+    {
+     "name": "Athletech News",
+     "url": "https://athletechnews.com/",
+     "note": "'Homepage of the fitness & wellness industry' — operator, brand and investor news"
+    },
+    {
+     "name": "Fitt Insider",
+     "url": "https://insider.fitt.co/",
+     "note": "Newsletter/analysis on the business of fitness and wellness (now incl. Welltodo)"
+    },
+    {
+     "name": "Club Solutions Magazine",
+     "url": "https://clubsolutionsmagazine.com/",
+     "note": "Trade resource for health-club owners and operators"
+    },
+    {
+     "name": "Health & Fitness Business (HFB, formerly CBI)",
+     "url": "https://www.healthandfitnessbusiness.org/",
+     "note": "Health & Fitness Association's monthly magazine for club executives"
+    },
+    {
+     "name": "Athletic Business",
+     "url": "https://www.athleticbusiness.com/",
+     "note": "Reaches 35K+ athletics, fitness and recreation decision-makers"
+    },
+    {
+     "name": "Health Club Management (HCM)",
+     "url": "https://www.healthclubmanagement.co.uk/",
+     "note": "Global fitness-operator trade magazine; strong international exec reach"
+    },
+    {
+     "name": "Glossy – Wellness",
+     "url": "https://www.glossy.co/beauty/wellness/",
+     "note": "Business coverage of wellness brands via its weekly Wellness Briefing"
+    },
+    {
+     "name": "Fortune Well",
+     "url": "https://fortune.com/section/well/",
+     "note": "National business outlet's health and wellness section"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "Fitt Insider Podcast",
+     "url": "https://insider.fitt.co/podcast/",
+     "note": "Interviews with fitness/wellness CEOs and investors (AG1, Noom, etc.)"
+    },
+    {
+     "name": "DISRUPT by Athletech News",
+     "url": "https://athletechnews.com/tag/podcast/",
+     "note": "ATN CEO Edward Hertzman with fitness and wellness brand leaders"
+    },
+    {
+     "name": "All Things Fitness and Wellness (ATFW)",
+     "url": "https://www.atfw.ca/podcast",
+     "note": "Krissy Vann's B2B show with fitness, wellness and longevity CEOs and investors"
+    },
+    {
+     "name": "Wellness Founders Podcast",
+     "url": "https://podcasts.apple.com/us/podcast/wellness-founders-podcast/id1842965990",
+     "note": "Founders of wellness hospitality, product and tech brands on building the business"
+    },
+    {
+     "name": "Behind Gym Doors",
+     "url": "https://open.spotify.com/episode/1py3GVmMV9Uv7ih2ASvyiJ",
+     "note": "Mike Arce's fitness-business podcast for gym and studio operators"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "Global Wellness Summit",
+     "url": "https://www.globalwellnesssummit.com/2026-global-wellness-summit/",
+     "when": "November 2026 (Nov 10-13)",
+     "where": "Phuket, Thailand"
+    },
+    {
+     "name": "NIRSA + IDEA World Conference & Expo",
+     "url": "https://www.ideafit.com/fitness-conferences/",
+     "when": "March 2027 (Mar 1-4)",
+     "where": "Kansas City, MO"
+    },
+    {
+     "name": "Natural Products Expo West",
+     "url": "https://www.expowest.com/",
+     "when": "March 2027 (Mar 2-5)",
+     "where": "Anaheim, CA"
+    },
+    {
+     "name": "The HFA Show",
+     "url": "https://www.healthandfitness.org/events/",
+     "when": "March 2027 (Mar 10-12)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "FIBO",
+     "url": "https://www.fibo.com/germany/en-gb.html",
+     "when": "April 2027 (Apr 8-11)",
+     "where": "Cologne, Germany"
+    }
+   ]
+  },
+  "Financial Services & Banking": {
+   "publications": [
+    {
+     "name": "American Banker",
+     "url": "https://www.americanbanker.com",
+     "note": "The daily of record for bank CEOs, boards and regulators"
+    },
+    {
+     "name": "The Financial Brand",
+     "url": "https://thefinancialbrand.com",
+     "note": "Strategy, marketing and digital-banking reads for bank and credit union executives"
+    },
+    {
+     "name": "Banking Dive",
+     "url": "https://www.bankingdive.com",
+     "note": "Fast news briefs on bank deals, regulation and fintech partnerships"
+    },
+    {
+     "name": "ABA Banking Journal",
+     "url": "https://bankingjournal.aba.com",
+     "note": "American Bankers Association outlet read across US banks of every size"
+    },
+    {
+     "name": "Bank Director",
+     "url": "https://www.bankdirector.com",
+     "note": "Written for bank directors and the CEOs who report to them"
+    },
+    {
+     "name": "Finextra",
+     "url": "https://www.finextra.com",
+     "note": "Global fintech and banking-technology news for bank innovation leaders"
+    },
+    {
+     "name": "The Wall Street Journal",
+     "url": "https://www.wsj.com/finance/banking",
+     "note": "National business outlet with dedicated banking coverage"
+    },
+    {
+     "name": "Financial Times",
+     "url": "https://www.ft.com",
+     "note": "Global business outlet with deep banking and financial-services coverage"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "Banking Transformed with Jim Marous",
+     "url": "https://jimmarous.com/podcast",
+     "note": "Jim Marous interviews bank and credit union leaders on strategy and transformation"
+    },
+    {
+     "name": "Breaking Banks",
+     "url": "https://provoke.fm/show/breaking-banks",
+     "note": "Brett King and Jason Henrichs; long-running global fintech and banking show"
+    },
+    {
+     "name": "Fintech Takes",
+     "url": "https://fintechtakes.com/podcast/",
+     "note": "Alex Johnson on fintech and banking with industry operators"
+    },
+    {
+     "name": "American Banker Podcast",
+     "url": "https://www.americanbanker.com/podcasts",
+     "note": "American Banker editors interview bank and fintech executives"
+    },
+    {
+     "name": "Banking with Interest",
+     "url": "https://www.intrafi.com/press-insights/podcasts",
+     "note": "Rob Blackwell (IntraFi) with bank CEOs, regulators and policymakers, weekly"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "Money20/20 USA",
+     "url": "https://us.money2020.com",
+     "when": "October 2026 (Oct 18-21)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "ABA Annual Convention",
+     "url": "https://www.aba.com/training-events/conferences/annual-convention",
+     "when": "October 2026 (Oct 25-27)",
+     "where": "Salt Lake City, UT"
+    },
+    {
+     "name": "Sibos",
+     "url": "https://www.sibos.com",
+     "when": "Annual. 2026 edition is this week, so aim for 2027",
+     "where": "Miami Beach, FL"
+    },
+    {
+     "name": "Fintech Meetup",
+     "url": "https://www.fintechmeetup.com",
+     "when": "February 2027 (Feb 22-24)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "ICBA LIVE",
+     "url": "https://www.icba.org/icba-live",
+     "when": "March 2027 (Mar 1-4)",
+     "where": "Las Vegas, NV"
+    }
+   ]
+  },
+  "Wealth Management & Financial Advisory": {
+   "publications": [
+    {
+     "name": "InvestmentNews",
+     "url": "https://www.investmentnews.com",
+     "note": "Core news source for advisors, RIAs and broker-dealer leaders"
+    },
+    {
+     "name": "Financial Planning",
+     "url": "https://www.financial-planning.com",
+     "note": "Practice-management and planning news for CFPs and firm owners"
+    },
+    {
+     "name": "ThinkAdvisor",
+     "url": "https://www.thinkadvisor.com",
+     "note": "Advisor-focused news on regulation, practice and investing"
+    },
+    {
+     "name": "WealthManagement.com",
+     "url": "https://www.wealthmanagement.com",
+     "note": "Industry news and analysis for RIAs, wirehouse and independent advisors"
+    },
+    {
+     "name": "Citywire RIA",
+     "url": "https://citywire.com/ria",
+     "note": "RIA news, M&A and CIO coverage for independent wealth firms"
+    },
+    {
+     "name": "Financial Advisor Magazine",
+     "url": "https://www.fa-mag.com",
+     "note": "Long-running monthly read by independent advisors and RIA principals"
+    },
+    {
+     "name": "Barron's",
+     "url": "https://www.barrons.com",
+     "note": "National outlet whose advisor coverage and rankings the industry follows closely"
+    },
+    {
+     "name": "The Wall Street Journal",
+     "url": "https://www.wsj.com/finance",
+     "note": "National business outlet covering wealth firms, RIAs and personal finance"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "Financial Advisor Success",
+     "url": "https://www.kitces.com/podcast/",
+     "note": "Michael Kitces interviews RIA founders and firm leaders weekly"
+    },
+    {
+     "name": "The Long View",
+     "url": "https://www.morningstar.com/podcasts/the-long-view",
+     "note": "Morningstar's Christine Benz and team with investing and planning leaders"
+    },
+    {
+     "name": "Barron's Advisor",
+     "url": "https://podcasts.apple.com/us/podcast/barrons-advisor/id1510597807",
+     "note": "Weekly interviews with top advisors on growth, succession and practice management"
+    },
+    {
+     "name": "The WealthStack Podcast",
+     "url": "https://www.wealthmanagement.com/program/the-wealthstack-podcast",
+     "note": "WealthManagement.com show on wealthtech with RIA and fintech executives"
+    },
+    {
+     "name": "Animal Spirits",
+     "url": "https://podcasts.thecompoundnews.com/show/animalspirits/",
+     "note": "Michael Batnick and Ben Carlson (Ritholtz Wealth); widely heard by advisors"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "Schwab IMPACT",
+     "url": "https://impact.schwab.com",
+     "when": "October 2026 (Oct 27-29)",
+     "where": "Boston, MA"
+    },
+    {
+     "name": "FPA SUMMIT (formerly FPA Annual Conference)",
+     "url": "https://summit.financialplanningassociation.org",
+     "when": "November 2026 (Nov 9-11)",
+     "where": "National Harbor, MD"
+    },
+    {
+     "name": "Future Proof Citywide",
+     "url": "https://futureproofhq.com/citywide/",
+     "when": "March 2027 (Mar 14-17)",
+     "where": "Miami Beach, FL"
+    },
+    {
+     "name": "T3 Technology Conference",
+     "url": "https://t3conferences.com",
+     "when": "March 2027 (Mar 22-25)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "Wealth Management EDGE",
+     "url": "https://informaconnect.com/edge/",
+     "when": "June 2027 (Jun 8-10)",
+     "where": "Boca Raton, FL"
+    }
+   ]
+  },
+  "Private Equity & Venture Capital": {
+   "publications": [
+    {
+     "name": "Private Equity International",
+     "url": "https://www.privateequityinternational.com",
+     "note": "PEI Group flagship for global GPs and LPs"
+    },
+    {
+     "name": "Buyouts",
+     "url": "https://www.buyoutsinsider.com",
+     "note": "US mid-market private equity news and fundraising data"
+    },
+    {
+     "name": "PE Hub",
+     "url": "https://www.pehub.com",
+     "note": "Daily deal news that PE dealmakers and bankers track"
+    },
+    {
+     "name": "Venture Capital Journal",
+     "url": "https://www.venturecapitaljournal.com",
+     "note": "Trade publication of record for venture investors since 1961"
+    },
+    {
+     "name": "PitchBook News",
+     "url": "https://pitchbook.com/news",
+     "note": "Data-driven PE, VC and M&A reporting used across private markets"
+    },
+    {
+     "name": "TechCrunch",
+     "url": "https://techcrunch.com",
+     "note": "Startup and venture funding news read by founders and VCs"
+    },
+    {
+     "name": "WSJ Pro Private Equity",
+     "url": "https://www.wsj.com/pro/private-equity",
+     "note": "National outlet's dedicated private-equity desk"
+    },
+    {
+     "name": "Axios Pro Rata",
+     "url": "https://www.axios.com/newsletters/axios-pro-rata",
+     "note": "Dan Primack's daily deals newsletter read by PE and VC investors"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "20VC",
+     "url": "https://www.thetwentyminutevc.com",
+     "note": "Harry Stebbings interviews top VC and PE investors and founders"
+    },
+    {
+     "name": "Capital Allocators",
+     "url": "https://www.capitalallocators.com/podcast/",
+     "note": "Ted Seides with institutional LPs, CIOs and fund managers"
+    },
+    {
+     "name": "Invest Like the Best",
+     "url": "https://colossus.com/series/invest-like-the-best/",
+     "note": "Patrick O'Shaughnessy with investors and founders"
+    },
+    {
+     "name": "Private Equity FunCast",
+     "url": "https://podcasts.apple.com/us/podcast/private-equity-funcast/id712327513",
+     "note": "ParkerGale Capital partners on lower-mid-market PE operations"
+    },
+    {
+     "name": "Private Equity Deals with Capital Allocators",
+     "url": "https://podcasts.apple.com/us/podcast/private-equity-deals-with-capital-allocators/id1639927777",
+     "note": "Capital Allocators spin-off unpacking PE deals with the GPs who did them"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "TechCrunch Disrupt",
+     "url": "https://techcrunch.com/events/techcrunch-disrupt/",
+     "when": "October 2026 (Oct 13-15)",
+     "where": "San Francisco, CA"
+    },
+    {
+     "name": "ILPA Summit",
+     "url": "https://ilpa.org/conference/ilpa-summit/",
+     "when": "November 2026 (Nov 3-5)",
+     "where": "New York, NY"
+    },
+    {
+     "name": "SuperReturn North America",
+     "url": "https://informaconnect.com/superreturn-north-america/",
+     "when": "February 2027 (Feb 1-3)",
+     "where": "Hollywood, FL"
+    },
+    {
+     "name": "ACG DealMAX",
+     "url": "https://dealmax.org",
+     "when": "May 2027 (May 3-5)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "SuperReturn International",
+     "url": "https://informaconnect.com/superreturn-international/",
+     "when": "June 2027 (Jun 7-11)",
+     "where": "Berlin, Germany"
+    }
+   ]
+  },
+  "Insurance": {
+   "publications": [
+    {
+     "name": "Insurance Journal",
+     "url": "https://www.insurancejournal.com",
+     "note": "Most-read P&C trade news for agents, brokers and carriers"
+    },
+    {
+     "name": "Business Insurance",
+     "url": "https://www.businessinsurance.com",
+     "note": "Commercial insurance and risk-management news for brokers and risk managers"
+    },
+    {
+     "name": "Carrier Management",
+     "url": "https://www.carriermanagement.com",
+     "note": "Written for insurance carrier C-suite executives"
+    },
+    {
+     "name": "Best's Review",
+     "url": "https://bestsreview.ambest.com",
+     "note": "AM Best's magazine for insurance executives, tied to its ratings authority"
+    },
+    {
+     "name": "Insurance Business America",
+     "url": "https://www.insurancebusinessmag.com/us/",
+     "note": "News and rankings for brokers, agencies and carriers"
+    },
+    {
+     "name": "PropertyCasualty360",
+     "url": "https://www.propertycasualty360.com",
+     "note": "Home of National Underwriter; P&C news and analysis"
+    },
+    {
+     "name": "The Wall Street Journal",
+     "url": "https://www.wsj.com",
+     "note": "National business outlet covering insurers, rates and catastrophe losses"
+    },
+    {
+     "name": "Reuters",
+     "url": "https://www.reuters.com/business/finance/",
+     "note": "Wire service with steady insurance and reinsurance coverage"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "The Insurance Podcast",
+     "url": "https://www.theinsurancepodcast.com",
+     "note": "Pete Tessier and Curt Wyatt with insurance CEOs, brokers and innovators"
+    },
+    {
+     "name": "The Future of Insurance",
+     "url": "https://future-of-insurance.com/podcast/",
+     "note": "Bryan Falchuk (PLRB CEO) with carrier and insurtech leaders"
+    },
+    {
+     "name": "InsTech Podcast",
+     "url": "https://www.instech.co/item-type/podcasts/",
+     "note": "Matthew Grant and Robin Merttens on insurance innovation, MGA and carrier CEOs"
+    },
+    {
+     "name": "Profiles in Risk",
+     "url": "https://podcasts.apple.com/us/podcast/profiles-in-risk/id1209984530",
+     "note": "Insurance Nerds' long-running interview show with industry leaders"
+    },
+    {
+     "name": "Insurance Journal Podcast",
+     "url": "https://podcasts.apple.com/us/podcast/insurance-journal-podcast/id281295940",
+     "note": "Insurance Journal's show on market trends and emerging risks"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "ITC Vegas (InsureTech Connect)",
+     "url": "https://vegas.insuretechconnect.com",
+     "when": "Annual. 2026 edition is this week, so aim for 2027",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "CIAB Insurance Leadership Forum",
+     "url": "https://www.ciab.com/events/insurance-leadership-forum",
+     "when": "Annual. 2026 edition is this week, so aim for 2027",
+     "where": "Colorado Springs, CO"
+    },
+    {
+     "name": "WSIA Annual Marketplace",
+     "url": "https://www.wsia.org",
+     "when": "October 2026 (Oct 11-14)",
+     "where": "San Diego, CA"
+    },
+    {
+     "name": "RIMS RISKWORLD",
+     "url": "https://www.rims.org/annual-conferences/riskworld-2027/home",
+     "when": "April 2027 (Apr 18-21)",
+     "where": "New Orleans, LA"
+    },
+    {
+     "name": "Insurtech Insights USA",
+     "url": "https://insurtechinsights.com/america/",
+     "when": "June 2027 (Jun 2-3)",
+     "where": "New York, NY"
+    }
+   ]
+  },
+  "Accounting & Professional Firms": {
+   "publications": [
+    {
+     "name": "Accounting Today",
+     "url": "https://www.accountingtoday.com",
+     "note": "Leading news source for CPA firm partners and managing partners"
+    },
+    {
+     "name": "Journal of Accountancy",
+     "url": "https://www.journalofaccountancy.com",
+     "note": "AICPA's flagship publication read across the profession"
+    },
+    {
+     "name": "CPA Practice Advisor",
+     "url": "https://www.cpapracticeadvisor.com",
+     "note": "Technology and practice-management news for firm owners"
+    },
+    {
+     "name": "INSIDE Public Accounting",
+     "url": "https://insidepublicaccounting.com",
+     "note": "Firm benchmarking and the IPA 500 rankings firm leaders watch"
+    },
+    {
+     "name": "The CPA Journal",
+     "url": "https://www.cpajournal.com",
+     "note": "NYSSCPA's journal for technical and professional-issues pieces"
+    },
+    {
+     "name": "Going Concern",
+     "url": "https://www.goingconcern.com",
+     "note": "Candid news on Big Four and public-accounting firm life"
+    },
+    {
+     "name": "The Wall Street Journal (CFO Journal)",
+     "url": "https://www.wsj.com",
+     "note": "National outlet's finance and accounting desk, read by CFOs and firm leaders"
+    },
+    {
+     "name": "Financial Times",
+     "url": "https://www.ft.com",
+     "note": "Global business outlet with regular Big Four and accountancy coverage"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "The Accounting Podcast",
+     "url": "https://accounting.show",
+     "note": "Blake Oliver and David Leary; weekly accounting news and interviews"
+    },
+    {
+     "name": "Earmark Podcast",
+     "url": "https://podcast.earmarkcpe.com",
+     "note": "Blake Oliver with firm owners and profession leaders (free CPE)"
+    },
+    {
+     "name": "Journal of Accountancy Podcast",
+     "url": "https://www.journalofaccountancy.com/podcast/",
+     "note": "AICPA's show with CPA leaders on practice, AI and advocacy"
+    },
+    {
+     "name": "On the Air with Accounting Today",
+     "url": "https://www.accountingtoday.com/podcasts",
+     "note": "Accounting Today's weekly show with firm and tech leaders"
+    },
+    {
+     "name": "CPA Trendlines Podcast",
+     "url": "https://cpatrendlines.com/category/podcast/",
+     "note": "Firm growth, M&A and leadership conversations for CPA firm owners"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "AICPA Digital CPA Conference",
+     "url": "https://www.cpa.com/digital-cpa",
+     "when": "December 2026 (Dec 6-9)",
+     "where": "San Diego, CA"
+    },
+    {
+     "name": "AICPA Conference on Current SEC and PCAOB Developments",
+     "url": "https://www.aicpa-cima.com/cpe-learning/conference/aicpa-conference-on-current-sec-and-pcaob-developments",
+     "when": "December 2026 (Dec 7-9)",
+     "where": "Washington, DC"
+    },
+    {
+     "name": "Accounting Today Firm Growth Forum",
+     "url": "https://firm-growth-forum.accountingtoday.com",
+     "when": "May 2027 (May 24-26)",
+     "where": "San Diego, CA"
+    },
+    {
+     "name": "AICPA & CIMA ENGAGE",
+     "url": "https://www.aicpaengage.com",
+     "when": "June 2027 (Jun 7-10)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "Scaling New Heights",
+     "url": "https://www.woodard.com",
+     "when": "June 2027 (Jun 27-30)",
+     "where": "Orlando, FL"
+    }
+   ]
+  },
+  "Crypto & Blockchain": {
+   "publications": [
+    {
+     "name": "CoinDesk",
+     "url": "https://www.coindesk.com",
+     "note": "Largest crypto newsroom; read by institutional and industry leaders"
+    },
+    {
+     "name": "The Block",
+     "url": "https://www.theblock.co",
+     "note": "Crypto news and data favored by funds and exchanges"
+    },
+    {
+     "name": "Blockworks",
+     "url": "https://blockworks.com",
+     "note": "Institutional-focused crypto news, research and events"
+    },
+    {
+     "name": "DL News",
+     "url": "https://www.dlnews.com",
+     "note": "Independent reporting on crypto markets, DeFi and regulation"
+    },
+    {
+     "name": "Decrypt",
+     "url": "https://decrypt.co",
+     "note": "Crypto and Web3 news for a broad industry audience"
+    },
+    {
+     "name": "The Defiant",
+     "url": "https://thedefiant.io",
+     "note": "DeFi-focused news founded by Camila Russo"
+    },
+    {
+     "name": "Bloomberg (Crypto)",
+     "url": "https://www.bloomberg.com/crypto",
+     "note": "National outlet with a dedicated crypto desk"
+    },
+    {
+     "name": "Fortune Crypto",
+     "url": "https://fortune.com/crypto/",
+     "note": "National business outlet's crypto vertical, read by executives"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "Unchained",
+     "url": "https://unchainedcrypto.com",
+     "note": "Laura Shin interviews crypto founders and investors"
+    },
+    {
+     "name": "Bankless",
+     "url": "https://www.bankless.com/podcast",
+     "note": "Ryan Sean Adams and David Hoffman; top Ethereum and DeFi show"
+    },
+    {
+     "name": "Empire",
+     "url": "https://blockworks.com/podcast/empire",
+     "note": "Blockworks show with Jason Yanowitz and Santiago Roel Santos; founder and investor interviews"
+    },
+    {
+     "name": "The Chopping Block",
+     "url": "https://unchainedcrypto.com/the-chopping-block/",
+     "note": "Haseeb Qureshi (Dragonfly) and crypto insiders on the week's biggest stories"
+    },
+    {
+     "name": "Coin Stories",
+     "url": "https://podcasts.apple.com/us/podcast/coin-stories-with-natalie-brunell/id1569130932",
+     "note": "Natalie Brunell with bitcoin and digital-asset leaders"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "TOKEN2049 Singapore",
+     "url": "https://www.token2049.com/singapore",
+     "when": "October 2026 (Oct 7-8)",
+     "where": "Singapore"
+    },
+    {
+     "name": "Digital Asset Summit (DAS) NYC",
+     "url": "https://blockworks.com/event/digital-asset-summit-nyc",
+     "when": "Mar/Apr 2027 (Mar 30-Apr 1)",
+     "where": "New York, NY"
+    },
+    {
+     "name": "DC Blockchain Summit",
+     "url": "https://www.dcblockchainsummit.com",
+     "when": "April 2027",
+     "where": "Washington, DC"
+    },
+    {
+     "name": "Consensus Miami",
+     "url": "https://consensus.coindesk.com",
+     "when": "May 2027 (May 4-6)",
+     "where": "Miami Beach, FL"
+    },
+    {
+     "name": "Bitcoin 2027",
+     "url": "https://conference.b.tc",
+     "when": "July 2027 (Jul 15-17)",
+     "where": "Nashville, TN"
+    }
+   ]
+  },
+  "Cannabis & Emerging Industries": {
+   "publications": [
+    {
+     "name": "MJBizDaily",
+     "url": "https://mjbizdaily.com",
+     "note": "The cannabis industry's leading business and financial news source"
+    },
+    {
+     "name": "Cannabis Business Times",
+     "url": "https://www.cannabisbusinesstimes.com",
+     "note": "Trade outlet for licensed cultivators and operators"
+    },
+    {
+     "name": "Marijuana Moment",
+     "url": "https://www.marijuanamoment.net",
+     "note": "Tom Angell's policy desk on rescheduling, legislation and regulation"
+    },
+    {
+     "name": "New Cannabis Ventures",
+     "url": "https://www.newcannabisventures.com",
+     "note": "Cannabis capital markets, public companies and investor news"
+    },
+    {
+     "name": "Business of Cannabis",
+     "url": "https://businessofcannabis.com",
+     "note": "International cannabis business news, strong on Europe and medical markets"
+    },
+    {
+     "name": "Psychedelic Alpha",
+     "url": "https://psychedelicalpha.com",
+     "note": "Data-driven news on the psychedelics drug-development and policy sector"
+    },
+    {
+     "name": "Bloomberg",
+     "url": "https://www.bloomberg.com",
+     "note": "National outlet covering cannabis stocks, MSOs and rescheduling"
+    },
+    {
+     "name": "Reuters",
+     "url": "https://www.reuters.com",
+     "note": "Wire service covering cannabis policy and industry deals"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "The Dime",
+     "url": "https://www.dimepodcast.com",
+     "note": "Bryan Fields interviews cannabis CEOs, founders and investors weekly"
+    },
+    {
+     "name": "Higher Exchanges",
+     "url": "https://podcasts.apple.com/us/podcast/higher-exchanges/id1710898583",
+     "note": "Jesse Redmond and Morgan Paxhia with cannabis CEOs and capital allocators"
+    },
+    {
+     "name": "High Spirits: The Cannabis Business Podcast",
+     "url": "https://www.highspirits.media",
+     "note": "Cannabis business, capital markets and policy conversations"
+    },
+    {
+     "name": "Cannabis Legalization News",
+     "url": "https://cannabislegalizationnews.com",
+     "note": "Attorney Thomas Howard and Miguel Santiago on cannabis law and policy"
+    },
+    {
+     "name": "Cannabis Tech Talks",
+     "url": "https://cannatechtoday.com/podcasts/",
+     "note": "Cannabis & Tech Today's short interviews with industry leaders"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "Hall of Flowers New York",
+     "url": "https://www.hallofflowers.com",
+     "when": "October 2026 (Oct 21-22)",
+     "where": "New York, NY"
+    },
+    {
+     "name": "MJBizCon",
+     "url": "https://mjbizconference.com",
+     "when": "December 2026 (Dec 1-4)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "Cannabis Capital Conference",
+     "url": "https://events.igniteit.com/miami27/home",
+     "when": "March 2027 (Mar 24-26)",
+     "where": "Hollywood, FL"
+    },
+    {
+     "name": "International Cannabis Business Conference (ICBC) Berlin",
+     "url": "https://internationalcbc.com/berlin/",
+     "when": "April 2027 (Apr 13-15)",
+     "where": "Berlin, Germany"
+    },
+    {
+     "name": "Psychedelic Science 2027 (MAPS)",
+     "url": "https://maps.org",
+     "when": "May 2027 (May 3-7)",
+     "where": "Denver, CO"
+    }
+   ]
+  },
+  "Technology & SaaS": {
+   "publications": [
+    {
+     "name": "TechCrunch",
+     "url": "https://techcrunch.com",
+     "note": "Startup, funding and product-launch news read by founders, VCs and tech operators"
+    },
+    {
+     "name": "The Information",
+     "url": "https://www.theinformation.com",
+     "note": "Subscription scoops on big tech, AI and enterprise software; read closely by execs and investors"
+    },
+    {
+     "name": "VentureBeat",
+     "url": "https://venturebeat.com",
+     "note": "Enterprise AI news and analysis aimed at technical decision-makers"
+    },
+    {
+     "name": "SiliconANGLE",
+     "url": "https://siliconangle.com",
+     "note": "Enterprise tech, cloud and AI coverage plus theCUBE video interviews with execs"
+    },
+    {
+     "name": "CIO",
+     "url": "https://www.cio.com",
+     "note": "IT leadership publication read by CIOs and enterprise software buyers"
+    },
+    {
+     "name": "CIO Dive",
+     "url": "https://www.ciodive.com",
+     "note": "Industry Dive daily news on IT strategy, cloud and enterprise software for IT execs"
+    },
+    {
+     "name": "The Wall Street Journal (Tech)",
+     "url": "https://www.wsj.com/tech",
+     "note": "National business outlet; heavy coverage of AI, SaaS and big tech deals"
+    },
+    {
+     "name": "Bloomberg Technology",
+     "url": "https://www.bloomberg.com/technology",
+     "note": "National business outlet; tech markets, funding rounds and AI industry coverage"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "20VC (The Twenty Minute VC)",
+     "url": "https://www.thetwentyminutevc.com",
+     "note": "Harry Stebbings interviews founders and VCs; multiple episodes weekly"
+    },
+    {
+     "name": "The Official SaaStr Podcast",
+     "url": "https://www.saastr.com/podcasts/",
+     "note": "Jason Lemkin and SaaStr on B2B SaaS, AI and go-to-market"
+    },
+    {
+     "name": "Lenny's Podcast",
+     "url": "https://www.lennysnewsletter.com/podcast",
+     "note": "Lenny Rachitsky on product, growth and leadership with tech operators"
+    },
+    {
+     "name": "Acquired",
+     "url": "https://www.acquired.fm",
+     "note": "Ben Gilbert and David Rosenthal's long-form company deep dives; 1M+ listeners per episode"
+    },
+    {
+     "name": "No Priors",
+     "url": "https://podcasts.apple.com/us/podcast/no-priors-artificial-intelligence-technology-startups/id1668002688",
+     "note": "Sarah Guo and Elad Gil interview AI founders and researchers"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "TechCrunch Disrupt 2026",
+     "url": "https://techcrunch.com/events/techcrunch-disrupt/",
+     "when": "October 2026 (Oct 13-15)",
+     "where": "San Francisco, CA"
+    },
+    {
+     "name": "Web Summit 2026",
+     "url": "https://websummit.com",
+     "when": "November 2026 (Nov 9-12)",
+     "where": "Lisbon, Portugal"
+    },
+    {
+     "name": "AWS re:Invent 2026",
+     "url": "https://aws.amazon.com/events/reinvent/",
+     "when": "November-December 2026 (Nov 30-Dec 4)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "CES 2027",
+     "url": "https://www.ces.tech",
+     "when": "January 2027 (Jan 6-9)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "SaaStr AI Annual 2027",
+     "url": "https://www.saastrannual.com",
+     "when": "May 2027 (May 11-12)",
+     "where": "San Mateo, CA (SF Bay Area)"
+    }
+   ]
+  },
+  "Cybersecurity & IT Services": {
+   "publications": [
+    {
+     "name": "Dark Reading",
+     "url": "https://www.darkreading.com",
+     "note": "Security news and analysis read widely by CISOs and security teams"
+    },
+    {
+     "name": "SecurityWeek",
+     "url": "https://www.securityweek.com",
+     "note": "Daily cybersecurity news, breaches, vulnerabilities and industry deals"
+    },
+    {
+     "name": "CSO Online",
+     "url": "https://www.csoonline.com",
+     "note": "Security leadership publication for CSOs/CISOs; tracks CISO appointments"
+    },
+    {
+     "name": "The Record from Recorded Future News",
+     "url": "https://therecord.media",
+     "note": "Cyber news on policy, ransomware and government, read by policymakers and security leaders"
+    },
+    {
+     "name": "SC Media",
+     "url": "https://www.scworld.com",
+     "note": "Long-running security trade outlet; runs the SC Awards and RSAC coverage"
+    },
+    {
+     "name": "CRN",
+     "url": "https://www.crn.com",
+     "note": "The Channel Company's IT channel publication read by MSPs, solution providers and vendors"
+    },
+    {
+     "name": "WSJ Pro Cybersecurity",
+     "url": "https://wsjpro.com/cybersecurity/",
+     "note": "National business outlet; cyber risk through a business lens for executives and boards"
+    },
+    {
+     "name": "Reuters (Cybersecurity)",
+     "url": "https://www.reuters.com/technology/cybersecurity/",
+     "note": "National/global wire covering major breaches, cyber policy and security M&A"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "Risky Business",
+     "url": "https://risky.biz",
+     "note": "Patrick Gray's weekly security news show plus vendor 'Soap Box' interviews"
+    },
+    {
+     "name": "Defense in Depth (CISO Series)",
+     "url": "https://cisoseries.com/category/podcast/defense-in-depth/",
+     "note": "David Spark and guest CISOs debate one security topic weekly"
+    },
+    {
+     "name": "CyberWire Daily",
+     "url": "https://thecyberwire.com/podcasts/daily-podcast",
+     "note": "N2K's weekday cyber news show hosted by Dave Bittner, with expert interviews"
+    },
+    {
+     "name": "The Business of Tech",
+     "url": "https://businessof.tech",
+     "note": "Dave Sobel's daily MSP/IT services news and interview show (MSP Radio)"
+    },
+    {
+     "name": "Darknet Diaries",
+     "url": "https://darknetdiaries.com",
+     "note": "Jack Rhysider's hugely popular narrative stories of hacks and breaches"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "IT Nation Connect Global 2026",
+     "url": "https://itnation.connectwise.com/connect-global",
+     "when": "November 2026 (Nov 4-6)",
+     "where": "Orlando, FL"
+    },
+    {
+     "name": "Channel Partners Conference & Expo + MSP Summit 2027",
+     "url": "https://channelpartnersconference.com",
+     "when": "March 2027 (Mar 15-18)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "RSAC 2027 Conference",
+     "url": "https://www.rsaconference.com",
+     "when": "April 2027",
+     "where": "San Francisco, CA"
+    },
+    {
+     "name": "Gartner Security & Risk Management Summit 2027",
+     "url": "https://www.gartner.com/en/conferences/na/security-risk-management-us",
+     "when": "June 2027 (Jun 14-16)",
+     "where": "National Harbor, MD"
+    },
+    {
+     "name": "Black Hat USA 2027",
+     "url": "https://www.blackhat.com",
+     "when": "July-August 2027",
+     "where": "Las Vegas, NV"
+    }
+   ]
+  },
+  "Aerospace & Aviation": {
+   "publications": [
+    {
+     "name": "Aviation Week & Space Technology",
+     "url": "https://aviationweek.com",
+     "note": "The flagship aerospace trade publication for industry execs, engineers and investors"
+    },
+    {
+     "name": "SpaceNews",
+     "url": "https://spacenews.com",
+     "note": "Leading trade outlet for the commercial, civil and military space business"
+    },
+    {
+     "name": "FlightGlobal",
+     "url": "https://www.flightglobal.com",
+     "note": "Global airline, aerospace and defence aviation news"
+    },
+    {
+     "name": "Aviation International News (AIN)",
+     "url": "https://www.ainonline.com",
+     "note": "Top business and general aviation publication; show dailies at NBAA and major airshows"
+    },
+    {
+     "name": "The Air Current",
+     "url": "https://theaircurrent.com",
+     "note": "Jon Ostrower's subscription outlet for deep aerospace industry reporting; read by execs"
+    },
+    {
+     "name": "Airline Weekly (Skift)",
+     "url": "https://airlineweekly.skift.com",
+     "note": "Airline business and strategy analysis read by airline execs and analysts"
+    },
+    {
+     "name": "Reuters (Aerospace & Defense)",
+     "url": "https://www.reuters.com/business/aerospace-defense/",
+     "note": "National/global wire; Boeing, Airbus, airlines and supplier coverage"
+    },
+    {
+     "name": "Bloomberg",
+     "url": "https://www.bloomberg.com",
+     "note": "National business outlet covering aerospace manufacturers, airlines and space companies"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "Aviation Week's Check 6 Podcast",
+     "url": "https://aviationweek.com/check6",
+     "note": "Aviation Week editors on commercial, defense and space industry news"
+    },
+    {
+     "name": "Space Minds (SpaceNews)",
+     "url": "https://spacenews.com/space-minds-podcast/",
+     "note": "Weekly SpaceNews interviews with space founders, agency heads and execs"
+    },
+    {
+     "name": "The Aerospace Advantage",
+     "url": "https://www.mitchellaerospacepower.org/podcast/",
+     "note": "Mitchell Institute show hosted by Heather 'Lucky' Penney on air and space power"
+    },
+    {
+     "name": "AvTalk (Flightradar24)",
+     "url": "https://www.flightradar24.com/blog/avtalk-podcast/",
+     "note": "Weekly aviation news and industry guest interviews"
+    },
+    {
+     "name": "Main Engine Cut Off",
+     "url": "https://mainenginecutoff.com/podcast",
+     "note": "Anthony Colangelo on space industry business, policy and founder interviews"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "NBAA-BACE 2026",
+     "url": "https://nbaa.org/events/2026-nbaa-business-aviation-convention-exhibition-nbaa-bace/",
+     "when": "October 2026 (Oct 20-22)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "Space Symposium 2027",
+     "url": "https://www.spacesymposium.org",
+     "when": "April 2027 (Apr 12-15)",
+     "where": "Colorado Springs, CO"
+    },
+    {
+     "name": "MRO Americas 2027",
+     "url": "https://mroamericas.aviationweek.com",
+     "when": "April 2027 (Apr 13-15)",
+     "where": "Orlando, FL"
+    },
+    {
+     "name": "Paris Air Show 2027",
+     "url": "https://www.siae.fr/en/",
+     "when": "June 2027 (Jun 14-20)",
+     "where": "Le Bourget, Paris, France"
+    },
+    {
+     "name": "Dubai Airshow 2027",
+     "url": "https://www.dubaiairshow.aero",
+     "when": "November 2027 (Nov 15-19)",
+     "where": "Dubai, UAE"
+    }
+   ]
+  },
+  "Defense & Government Contracting": {
+   "publications": [
+    {
+     "name": "Defense News",
+     "url": "https://www.defensenews.com",
+     "note": "Core defense industry trade read by DoD officials, primes and suppliers"
+    },
+    {
+     "name": "Breaking Defense",
+     "url": "https://breakingdefense.com",
+     "note": "Defense programs, budgets and acquisition news for industry and Pentagon insiders"
+    },
+    {
+     "name": "Defense One",
+     "url": "https://www.defenseone.com",
+     "note": "GovExec's national security and defense tech outlet"
+    },
+    {
+     "name": "Washington Technology",
+     "url": "https://www.washingtontechnology.com",
+     "note": "The business of government contracting; publishes the annual Top 100 federal contractors"
+    },
+    {
+     "name": "Nextgov/FCW",
+     "url": "https://www.nextgov.com",
+     "note": "Federal IT, acquisition and cyber news; runs the Federal 100 awards"
+    },
+    {
+     "name": "Federal News Network",
+     "url": "https://federalnewsnetwork.com",
+     "note": "Federal workforce, contracting and agency news; radio/podcasts in the DC region"
+    },
+    {
+     "name": "The Wall Street Journal",
+     "url": "https://www.wsj.com",
+     "note": "National business outlet covering defense primes, Pentagon spending and contracts"
+    },
+    {
+     "name": "Politico (Morning Defense / Politico Pro)",
+     "url": "https://www.politico.com",
+     "note": "National outlet; Morning Defense is must-read for defense policy and budget insiders"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "Defense & Aerospace Report",
+     "url": "https://defaeroreport.com/podcasts/",
+     "note": "Vago Muradian's daily and weekly shows with defense officials and industry execs"
+    },
+    {
+     "name": "War on the Rocks",
+     "url": "https://warontherocks.com/category/podcasts/",
+     "note": "Defense strategy and national security analysis with experts and officials"
+    },
+    {
+     "name": "The Federal Drive with Terry Gerton",
+     "url": "https://federalnewsnetwork.com/podcast/federal-drive-with-terry-gerton-podcast/",
+     "note": "Federal News Network daily show on agencies, contracting and federal IT"
+    },
+    {
+     "name": "Govcon Giants",
+     "url": "https://govcongiants.libsyn.com",
+     "note": "Eric Coffie on winning government contracts; interviews with contractor CEOs"
+    },
+    {
+     "name": "Defense One Radio",
+     "url": "https://www.defenseone.com/topic/podcast/",
+     "note": "Defense One's national security podcast"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "AUSA Annual Meeting & Exposition 2026",
+     "url": "https://meetings.ausa.org/annual/2026/",
+     "when": "October 2026 (Oct 12-14)",
+     "where": "Washington, DC"
+    },
+    {
+     "name": "I/ITSEC 2026",
+     "url": "https://www.iitsec.org",
+     "when": "November-December 2026 (Nov 30-Dec 3)",
+     "where": "Orlando, FL"
+    },
+    {
+     "name": "AFA Warfare Symposium 2027",
+     "url": "https://www.afa.org/afa-warfare-symposium/",
+     "when": "March 2027 (Mar 1-3)",
+     "where": "Aurora, CO"
+    },
+    {
+     "name": "Sea-Air-Space 2027",
+     "url": "https://seaairspace.org",
+     "when": "April 2027 (Apr 4-7)",
+     "where": "National Harbor, MD"
+    },
+    {
+     "name": "SOF Week 2027",
+     "url": "https://sofweek.org",
+     "when": "May 2027 (May 3-6)",
+     "where": "Tampa, FL"
+    }
+   ]
+  },
+  "Logistics, Supply Chain & Transportation": {
+   "publications": [
+    {
+     "name": "FreightWaves",
+     "url": "https://www.freightwaves.com",
+     "note": "High-volume freight and trucking news with market data; widely read by carriers and brokers"
+    },
+    {
+     "name": "Transport Topics",
+     "url": "https://www.ttnews.com",
+     "note": "Trucking industry news; publishes the Top 100 for-hire and private carrier lists"
+    },
+    {
+     "name": "Supply Chain Dive",
+     "url": "https://www.supplychaindive.com",
+     "note": "Industry Dive daily news for supply chain and logistics executives"
+    },
+    {
+     "name": "Logistics Management",
+     "url": "https://www.logisticsmgmt.com",
+     "note": "Shipper-focused magazine; annual State of Logistics and 3PL studies"
+    },
+    {
+     "name": "DC Velocity",
+     "url": "https://www.dcvelocity.com",
+     "note": "Logistics, warehousing and transportation news for supply chain managers"
+    },
+    {
+     "name": "Journal of Commerce (JOC)",
+     "url": "https://www.joc.com",
+     "note": "Container shipping, ports and international trade logistics coverage"
+    },
+    {
+     "name": "WSJ Logistics Report",
+     "url": "https://www.wsj.com/news/logistics-report",
+     "note": "National business outlet's daily supply chain and logistics news and newsletter"
+    },
+    {
+     "name": "Bloomberg (Supply Lines)",
+     "url": "https://www.bloomberg.com/account/newsletters/supply-lines",
+     "note": "National business outlet's daily global trade and supply chain newsletter"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "WHAT THE TRUCK?!?",
+     "url": "https://www.freightwaves.com/news/category/media/podcast",
+     "note": "FreightWaves' freight and trucking news show, three episodes weekly with industry guests"
+    },
+    {
+     "name": "Everything is Logistics",
+     "url": "https://podcasts.apple.com/us/podcast/everything-is-logistics/id1539056821",
+     "note": "Blythe Brumleve Milligan interviews logistics CEOs and operators"
+    },
+    {
+     "name": "The Logistics of Logistics",
+     "url": "https://www.thelogisticsoflogistics.com",
+     "note": "Joe Lynch; 600+ interviews with 3PL, freight and supply chain leaders"
+    },
+    {
+     "name": "Supply Chain Now",
+     "url": "https://supplychainnow.com",
+     "note": "Scott Luton's show with supply chain CEOs and practitioners"
+    },
+    {
+     "name": "The New Warehouse Podcast",
+     "url": "https://thenewwarehouse.com",
+     "note": "Kevin Lawton on warehousing, distribution and logistics tech, twice weekly"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "CSCMP EDGE 2026",
+     "url": "https://www.cscmpedge.org",
+     "when": "October 2026 (Oct 4-7)",
+     "where": "Nashville, TN"
+    },
+    {
+     "name": "ATA Management Conference & Exhibition (MCE) 2026",
+     "url": "https://mce.trucking.org",
+     "when": "October 2026 (Oct 17-20)",
+     "where": "Charlotte, NC"
+    },
+    {
+     "name": "Manifest 2027",
+     "url": "https://manife.st",
+     "when": "February 2027 (Feb 8-10)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "TIA Capital Ideas Conference & Exhibition 2027",
+     "url": "https://tianet.org/TIA/TIAnetOrg/Meetings/Capital-Ideas-Conference.aspx",
+     "when": "April 2027 (Apr 5-7)",
+     "where": "Orlando, FL"
+    },
+    {
+     "name": "ProMat 2027",
+     "url": "https://www.promatshow.com",
+     "when": "April 2027 (Apr 19-21)",
+     "where": "Chicago, IL"
+    }
+   ]
+  },
+  "Telecommunications & Media Technology": {
+   "publications": [
+    {
+     "name": "Light Reading",
+     "url": "https://www.lightreading.com",
+     "note": "Core telecom trade covering operators, broadband, cable and 5G/6G"
+    },
+    {
+     "name": "Fierce Network",
+     "url": "https://www.fierce-network.com",
+     "note": "Telecom, wireless, broadband and cloud networking news for industry execs"
+    },
+    {
+     "name": "RCR Wireless News",
+     "url": "https://www.rcrwireless.com",
+     "note": "Wireless, 5G and digital infrastructure news and analysis since 1982"
+    },
+    {
+     "name": "Mobile World Live",
+     "url": "https://www.mobileworldlive.com",
+     "note": "GSMA's daily news hub for the global mobile industry"
+    },
+    {
+     "name": "TV Tech",
+     "url": "https://www.tvtechnology.com",
+     "note": "Broadcast, production and streaming technology news for media-tech buyers"
+    },
+    {
+     "name": "TVNewsCheck",
+     "url": "https://tvnewscheck.com",
+     "note": "TV broadcasting business and technology news read by station groups and vendors"
+    },
+    {
+     "name": "The Wall Street Journal",
+     "url": "https://www.wsj.com",
+     "note": "National business outlet covering carriers, cable, streaming and media deals"
+    },
+    {
+     "name": "Bloomberg",
+     "url": "https://www.bloomberg.com",
+     "note": "National business outlet covering telecom operators, spectrum and media companies"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "Light Reading Podcasts",
+     "url": "https://www.lightreading.com/podcasts",
+     "note": "Light Reading's network of telecom shows with operator and analyst guests"
+    },
+    {
+     "name": "The Five Nine (Fierce Network)",
+     "url": "https://www.fierce-network.com/keyword/podcast",
+     "note": "Fierce Network editors on telecom trends and industry interviews"
+    },
+    {
+     "name": "The Broadband Bunch",
+     "url": "https://broadbandbunch.com/podcast/",
+     "note": "Pete Pizzutillo's weekly interviews with broadband and fiber execs (500+ episodes)"
+    },
+    {
+     "name": "Decoder with Nilay Patel",
+     "url": "https://podcasts.apple.com/us/podcast/decoder-with-nilay-patel/id1011668648",
+     "note": "The Verge editor-in-chief interviews tech and media CEOs"
+    },
+    {
+     "name": "The Town with Matthew Belloni",
+     "url": "https://www.theringer.com/podcasts/the-town-with-matthew-belloni",
+     "note": "Puck's Matt Belloni on the business of Hollywood, streaming and media"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "MWC Las Vegas 2026",
+     "url": "https://www.mwclasvegas.com",
+     "when": "October 2026 (Oct 14-16)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "MWC Barcelona 2027",
+     "url": "https://www.mwcbarcelona.com",
+     "when": "March 2027 (Mar 1-4)",
+     "where": "Barcelona, Spain"
+    },
+    {
+     "name": "NAB Show 2027",
+     "url": "https://www.nabshow.com",
+     "when": "April 2027 (Apr 3-7)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "Fiber Connect 2027",
+     "url": "https://fiberconnect.fiberbroadband.org",
+     "when": "June 2027 (Jun 13-16)",
+     "where": "Nashville, TN"
+    },
+    {
+     "name": "IBC 2027",
+     "url": "https://show.ibc.org",
+     "when": "September 2027 (Sep 10-13)",
+     "where": "Amsterdam, Netherlands"
+    }
+   ]
+  },
+  "Real Estate": {
+   "publications": [
+    {
+     "name": "The Real Deal",
+     "url": "https://therealdeal.com",
+     "note": "Deal-driven news on developers, brokerages and big-money players; must-read in NY, Miami, LA"
+    },
+    {
+     "name": "Commercial Observer",
+     "url": "https://commercialobserver.com",
+     "note": "CRE owners, lenders, brokers; leasing, financing and power-player profiles"
+    },
+    {
+     "name": "Bisnow",
+     "url": "https://www.bisnow.com",
+     "note": "Daily CRE news + events across US metros; heavy developer/investor readership"
+    },
+    {
+     "name": "GlobeSt.com",
+     "url": "https://www.globest.com",
+     "note": "CRE owners, investors, developers and finance pros; national market analysis"
+    },
+    {
+     "name": "Inman",
+     "url": "https://www.inman.com",
+     "note": "Residential brokerage leaders, agents and proptech; the brokerage industry's trade"
+    },
+    {
+     "name": "HousingWire",
+     "url": "https://www.housingwire.com",
+     "note": "Housing, mortgage and residential real estate executives"
+    },
+    {
+     "name": "The Wall Street Journal (Real Estate)",
+     "url": "https://www.wsj.com/real-estate",
+     "note": "National: regular coverage of CRE, development, luxury and housing markets"
+    },
+    {
+     "name": "Bloomberg",
+     "url": "https://www.bloomberg.com",
+     "note": "National: CRE finance, REITs, office distress and property capital markets"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "The Walker Webcast",
+     "url": "https://www.walkerdunlop.com/webcast",
+     "note": "Willy Walker (Walker & Dunlop CEO) interviews CEOs/investors; 275+ episodes, active 2026"
+    },
+    {
+     "name": "Bisnow Reports",
+     "url": "https://www.bisnow.com/podcasts",
+     "note": "Weekly interview with a CRE newsmaker (e.g., TruAmerica CEO, 2026)"
+    },
+    {
+     "name": "The Weekly Take (CBRE)",
+     "url": "https://www.cbre.com/insights/podcasts",
+     "note": "Spencer Levy of CBRE; market outlooks with CRE leaders; 2026 season live"
+    },
+    {
+     "name": "BiggerPockets Real Estate Podcast",
+     "url": "https://www.biggerpockets.com/podcasts/real-estate",
+     "note": "Dave Meyer & Henry Washington; investor audience, 3 episodes/week in 2026"
+    },
+    {
+     "name": "The Tom Ferry Podcast Experience",
+     "url": "https://tomferry.podbean.com/",
+     "note": "Tom Ferry; residential brokerage owners/top agents, weekly in 2026"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "ULI Fall Meeting",
+     "url": "https://fall.uli.org/",
+     "when": "October 2026 (Oct 26-28)",
+     "where": "Miami Beach, FL"
+    },
+    {
+     "name": "NAIOP CRE.Converge",
+     "url": "https://www.naiop.org/events-and-sponsorship/corporate-events-list/conferences/2026-cre-converge/",
+     "when": "October 2026 (Oct 5-7)",
+     "where": "Denver, CO"
+    },
+    {
+     "name": "Inman Connect New York",
+     "url": "https://events.inman.com/inman-connect-new-york",
+     "when": "January 2027 (Jan 26-28)",
+     "where": "New York, NY"
+    },
+    {
+     "name": "NMHC Annual Meeting",
+     "url": "https://www.nmhc.org/meetings/calendar/annual-meeting/2027-nmhc-annual-meeting/",
+     "when": "January 2027 (Jan 26-28)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "ICSC Las Vegas",
+     "url": "https://www.icsc.com/attend-and-learn/events/details/las-vegas-2027",
+     "when": "May 2027 (May 24-26)",
+     "where": "Las Vegas, NV"
+    }
+   ]
+  },
+  "Legal & Law Firms": {
+   "publications": [
+    {
+     "name": "The American Lawyer",
+     "url": "https://www.law.com/americanlawyer/",
+     "note": "Big Law managing partners; Am Law 100/200 rankings, firm business coverage"
+    },
+    {
+     "name": "Law360",
+     "url": "https://www.law360.com",
+     "note": "Daily legal news read across firms and in-house; practice-area and firm moves"
+    },
+    {
+     "name": "ABA Journal",
+     "url": "https://www.abajournal.com",
+     "note": "ABA flagship; read by roughly half of US lawyers; business of law coverage"
+    },
+    {
+     "name": "The National Law Journal",
+     "url": "https://www.law.com/nationallawjournal/",
+     "note": "ALM title covering national legal news, verdicts and firm leadership"
+    },
+    {
+     "name": "Above the Law",
+     "url": "https://abovethelaw.com",
+     "note": "Widely read Big Law/legal-industry news and commentary"
+    },
+    {
+     "name": "Bloomberg Law",
+     "url": "https://news.bloomberglaw.com",
+     "note": "Business of law, litigation and firm news for firm leaders and GCs"
+    },
+    {
+     "name": "Reuters Legal",
+     "url": "https://www.reuters.com/legal/",
+     "note": "National: steady coverage of law firms, litigation and legal industry"
+    },
+    {
+     "name": "The Wall Street Journal",
+     "url": "https://www.wsj.com",
+     "note": "National: covers Big Law, major litigation and GC/boardroom legal issues"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "LawNext",
+     "url": "https://www.lawnext.com/podcasts",
+     "note": "Bob Ambrogi; weekly interviews with legal innovators and firm leaders"
+    },
+    {
+     "name": "The Geek in Review",
+     "url": "https://www.geeklawblog.com/podcast",
+     "note": "Greg Lambert & Marlene Gebauer; legal innovation, law firm leaders, KM"
+    },
+    {
+     "name": "Lawyerist Podcast",
+     "url": "https://lawyerist.com/podcast/",
+     "note": "Stephanie Everett & Zack Glaser; law firm business, growth, leadership"
+    },
+    {
+     "name": "Above the Law - Thinking Like a Lawyer",
+     "url": "https://legaltalknetwork.com/podcasts/thinking-like-a-lawyer/",
+     "note": "Joe Patrice & ATL editors; legal-industry news and trends"
+    },
+    {
+     "name": "Maximum Lawyer",
+     "url": "https://maximumlawyer.com/podcast/",
+     "note": "Tyson Mutrux; law firm owners on growth, marketing and operations"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "ClioCon",
+     "url": "https://cliocon.com/",
+     "when": "October 2026 (Oct 26-27)",
+     "where": "Boston, MA"
+    },
+    {
+     "name": "Legalweek",
+     "url": "https://www.event.law.com/legalweek",
+     "when": "March 2027 (Mar 1-3)",
+     "where": "New York, NY"
+    },
+    {
+     "name": "ABA TECHSHOW",
+     "url": "https://www.techshow.com/",
+     "when": "March 2027 (Mar 3-6)",
+     "where": "Chicago, IL"
+    },
+    {
+     "name": "LMA Annual Conference (LMA27)",
+     "url": "https://conference.legalmarketing.org/",
+     "when": "March 2027 (Mar 22-24)",
+     "where": "Seattle, WA"
+    },
+    {
+     "name": "ILTACON",
+     "url": "https://www.iltacon.org/",
+     "when": "August 2027 (Aug 8-12)",
+     "where": "Nashville, TN"
+    }
+   ]
+  },
+  "Professional Services & Consulting": {
+   "publications": [
+    {
+     "name": "Consulting Magazine",
+     "url": "https://www.consultingmag.com",
+     "note": "Consulting firm leaders; Top Consultants, Best Firms, industry moves"
+    },
+    {
+     "name": "Consultancy.org / Consulting.us",
+     "url": "https://www.consultancy.org",
+     "note": "Global consulting-industry news network: M&A, appointments, firm news"
+    },
+    {
+     "name": "Accounting Today",
+     "url": "https://www.accountingtoday.com",
+     "note": "CPA firm leaders; Top 100 Firms, firm M&A and PE coverage"
+    },
+    {
+     "name": "Journal of Accountancy",
+     "url": "https://www.journalofaccountancy.com",
+     "note": "AICPA's flagship; read across the CPA profession"
+    },
+    {
+     "name": "CPA Practice Advisor",
+     "url": "https://www.cpapracticeadvisor.com",
+     "note": "Accounting firm owners; practice management and tech"
+    },
+    {
+     "name": "INSIDE Public Accounting",
+     "url": "https://insidepublicaccounting.com",
+     "note": "CPA firm managing partners; firm benchmarking and rankings"
+    },
+    {
+     "name": "Harvard Business Review",
+     "url": "https://hbr.org",
+     "note": "National: management ideas; frequent home for consultant bylines"
+    },
+    {
+     "name": "Financial Times",
+     "url": "https://www.ft.com",
+     "note": "National: regular coverage of Big Four, consulting and professional-services firms"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "Consulting Success Podcast",
+     "url": "https://www.consultingsuccess.com/podcast",
+     "note": "Michael Zipursky; consulting firm growth, pricing, firm exits"
+    },
+    {
+     "name": "2Bobs",
+     "url": "https://podcasts.apple.com/us/podcast/2bobs-with-david-c-baker-and-blair-enns/id1219490591",
+     "note": "David C. Baker & Blair Enns; positioning and pricing for expertise firms"
+    },
+    {
+     "name": "The Accounting Podcast",
+     "url": "https://accounting.show/",
+     "note": "Blake Oliver & David Leary; accounting-firm business news, 500+ episodes"
+    },
+    {
+     "name": "HBR IdeaCast",
+     "url": "https://hbr.org/podcasts/ideacast",
+     "note": "Harvard Business Review; weekly interviews with leaders and management thinkers"
+    },
+    {
+     "name": "Spiraling Up (Hinge)",
+     "url": "https://hingemarketing.com/library/format/podcasts",
+     "note": "Hinge; marketing and growth for professional services firms"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "Thomson Reuters SYNERGY",
+     "url": "https://www.thomsonreuters.com/en/synergy",
+     "when": "November 2026 (Nov 16-19)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "Digital CPA Conference",
+     "url": "https://www.cpa.com/digital-cpa",
+     "when": "December 2026 (Dec 6-9)",
+     "where": "San Diego, CA"
+    },
+    {
+     "name": "Accounting Today Firm Growth Forum",
+     "url": "https://firm-growth-forum.accountingtoday.com/",
+     "when": "May 2027 (May 24-26)",
+     "where": "San Diego, CA"
+    },
+    {
+     "name": "AICPA & CIMA ENGAGE",
+     "url": "https://www.aicpaengage.com/",
+     "when": "June 2027 (Jun 7-10)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "Scaling New Heights",
+     "url": "https://www.woodard.com/scaling-new-heights-2027-about",
+     "when": "June 2027 (Jun 27-30)",
+     "where": "Orlando, FL"
+    }
+   ]
+  },
+  "Staffing & Recruiting": {
+   "publications": [
+    {
+     "name": "Staffing Industry Analysts (Staffing Industry Review)",
+     "url": "https://www.staffingindustry.com",
+     "note": "The staffing exec's trade: daily news, rankings, research"
+    },
+    {
+     "name": "Staffing Success (ASA)",
+     "url": "https://americanstaffing.net/asa-publications/staffing-success-magazine/",
+     "note": "American Staffing Association magazine for staffing firm leaders"
+    },
+    {
+     "name": "ERE",
+     "url": "https://www.ere.net",
+     "note": "Talent acquisition and recruiting leaders"
+    },
+    {
+     "name": "HR Dive",
+     "url": "https://www.hrdive.com",
+     "note": "Daily HR/workforce news read by HR and talent executives"
+    },
+    {
+     "name": "HR Executive",
+     "url": "https://hrexecutive.com",
+     "note": "Strategic HR/TA coverage; 220K+ subscribers; runs HR Tech"
+    },
+    {
+     "name": "SHRM (HR News / HR Magazine)",
+     "url": "https://www.shrm.org",
+     "note": "Largest HR association's news and magazine; buyer-side reach"
+    },
+    {
+     "name": "The Wall Street Journal",
+     "url": "https://www.wsj.com",
+     "note": "National: labor market, hiring and workplace coverage"
+    },
+    {
+     "name": "Fortune",
+     "url": "https://fortune.com",
+     "note": "National: workplace, hiring and future-of-work coverage"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "Recruiting Future with Matt Alder",
+     "url": "https://recruitingfuture.com",
+     "note": "Senior TA/HR leaders; 2 episodes/week, active 2026"
+    },
+    {
+     "name": "The Chad & Cheese Podcast",
+     "url": "https://www.chadcheese.com",
+     "note": "Chad Sowash & Joel Cheesman; recruiting/HR tech and workforce news"
+    },
+    {
+     "name": "The Staffing Show",
+     "url": "https://staffinghub.com/the-staffing-show/",
+     "note": "David Folwell; staffing firm executives and fastest-growing firms"
+    },
+    {
+     "name": "Secrets of Staffing Success",
+     "url": "https://www.haleymarketing.com/haley-resources/secrets-of-staffing-success-podcasts/",
+     "note": "Brad Bialy (Haley Marketing); interviews staffing firm owners"
+    },
+    {
+     "name": "The Staffing Playbook Podcast",
+     "url": "https://thestaffingpodcast.podbean.com/",
+     "note": "Steve Farrell (YES); staffing growth strategy and industry data"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "ASA Staffing World",
+     "url": "https://americanstaffing.net/sw26/",
+     "when": "October 2026 (Oct 12-14)",
+     "where": "Denver, CO"
+    },
+    {
+     "name": "HR Technology Conference & Expo",
+     "url": "https://www.hrtechnologyconference.com/",
+     "when": "October 2026 (Oct 20-22)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "Talent Acquisition Week",
+     "url": "https://talentacquisitionweek.com/",
+     "when": "February 2027 (Feb 1-4)",
+     "where": "San Diego, CA"
+    },
+    {
+     "name": "SIA Executive Forum North America",
+     "url": "https://www.staffingindustry.com/conferences/staffing-conferences",
+     "when": "March 2027 (Mar 8-11)",
+     "where": "Miami Beach, FL"
+    },
+    {
+     "name": "SHRM Annual Conference & Expo (SHRM27)",
+     "url": "https://annual.shrm.org/",
+     "when": "June 2027 (Jun 27-30)",
+     "where": "Chicago, IL"
+    }
+   ]
+  },
+  "Franchise & Multi-Unit Operations": {
+   "publications": [
+    {
+     "name": "Franchise Times",
+     "url": "https://www.franchisetimes.com",
+     "note": "Franchisors, multi-unit operators, franchise M&A (Dealmakers, Top 400)"
+    },
+    {
+     "name": "Multi-Unit Franchisee",
+     "url": "https://www.franchising.com/magazines/multiunit_franchisee/",
+     "note": "Quarterly for multi-unit franchisees; Mega 99 largest-operator list"
+    },
+    {
+     "name": "Franchise Update",
+     "url": "https://www.franchising.com/magazines/franchise_update/",
+     "note": "Franchisor C-suite and development leaders"
+    },
+    {
+     "name": "Franchising World (IFA)",
+     "url": "https://www.franchise.org/franchising-world-magazine/",
+     "note": "International Franchise Association's magazine"
+    },
+    {
+     "name": "QSR Magazine",
+     "url": "https://www.qsrmagazine.com",
+     "note": "Quick-service/fast-casual execs and franchisors; QSR 50"
+    },
+    {
+     "name": "Restaurant Business",
+     "url": "https://www.restaurantbusinessonline.com",
+     "note": "Restaurant chain operators and franchisees; business-side coverage"
+    },
+    {
+     "name": "Nation's Restaurant News",
+     "url": "https://www.nrn.com",
+     "note": "Restaurant chain leadership, strategy and franchising"
+    },
+    {
+     "name": "Entrepreneur (Franchise)",
+     "url": "https://www.entrepreneur.com/franchises",
+     "note": "National: Franchise 500 and ongoing franchise coverage"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "Franchise Voice (IFA)",
+     "url": "https://podcast.franchise.org/",
+     "note": "Jack Monson for the IFA; franchisor CEO interviews, active 2026"
+    },
+    {
+     "name": "Franchise News Podcast",
+     "url": "https://podcasts.apple.com/us/podcast/franchise-news-podcast/id1788209940",
+     "note": "Jack Monson; weekly franchise industry news"
+    },
+    {
+     "name": "FranchiseU!",
+     "url": "https://business.louisville.edu/research-and-centers/yum-center-global-franchise-excellence/franchiseu-media/franchiseu-podcast",
+     "note": "Dr. Kathy Gosser (UofL Yum! Center); franchisees to C-suite"
+    },
+    {
+     "name": "A Deeper Dive (Restaurant Business)",
+     "url": "https://www.restaurantbusinessonline.com/article/deeper-dive",
+     "note": "Jonathan Maze; weekly with restaurant/franchise CEOs"
+    },
+    {
+     "name": "QSR Uncut",
+     "url": "https://www.qsrmagazine.com/fast-casual/fast-forward-podcast-qsr-magazine",
+     "note": "QSR editors; interviews with restaurant brand CEOs"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "Franchise Leadership & Development Conference (FLDC)",
+     "url": "https://www.franchisedevelopmentconference.com/",
+     "when": "October 2026 (Oct 5-8)",
+     "where": "Atlanta, GA"
+    },
+    {
+     "name": "Restaurant Finance & Development Conference (RFDC)",
+     "url": "https://www.restfinance.com/conferences/",
+     "when": "November 2026 (Nov 9-11)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "IFA Annual Convention",
+     "url": "https://www.franchise.org/annual-convention/",
+     "when": "February 2027 (Feb 22-24)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "Multi-Unit Franchising Conference (MUFC)",
+     "url": "https://www.multiunitfranchisingconference.com/",
+     "when": "April 2027 (Apr 27-30)",
+     "where": "Las Vegas, NV"
+    },
+    {
+     "name": "International Franchise Expo (IFE)",
+     "url": "https://www.franchiseexpo.com/ife",
+     "when": "June 2027 (Jun 4-5)",
+     "where": "New York, NY"
+    }
+   ]
+  },
+  "Education & Higher Learning": {
+   "publications": [
+    {
+     "name": "The Chronicle of Higher Education",
+     "url": "https://www.chronicle.com",
+     "note": "College presidents, provosts and administrators"
+    },
+    {
+     "name": "Inside Higher Ed",
+     "url": "https://www.insidehighered.com",
+     "note": "Daily higher-ed news; annual presidents/CBO surveys"
+    },
+    {
+     "name": "Higher Ed Dive",
+     "url": "https://www.highereddive.com",
+     "note": "Higher-ed business, enrollment and finance news"
+    },
+    {
+     "name": "Education Week",
+     "url": "https://www.edweek.org",
+     "note": "K-12 leaders, superintendents and district decision-makers"
+    },
+    {
+     "name": "EdSurge",
+     "url": "https://www.edsurge.com",
+     "note": "Edtech founders, investors and school/college tech leaders"
+    },
+    {
+     "name": "The Hechinger Report",
+     "url": "https://hechingerreport.org",
+     "note": "Nonprofit education journalism, K-12 through higher ed; widely syndicated"
+    },
+    {
+     "name": "The 74",
+     "url": "https://www.the74million.org",
+     "note": "K-12 policy and innovation news for education leaders"
+    },
+    {
+     "name": "K-12 Dive",
+     "url": "https://www.k12dive.com",
+     "note": "K-12 district leadership, operations and edtech news"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "Future U",
+     "url": "https://www.futureupodcast.com",
+     "note": "Jeff Selingo & Michael Horn; higher-ed leadership and newsmakers (season 10, 2026)"
+    },
+    {
+     "name": "The Key with Inside Higher Ed",
+     "url": "https://www.insidehighered.com/podcasts/the-key",
+     "note": "Inside Higher Ed editors; presidents, finance, policy"
+    },
+    {
+     "name": "This Week with EdSurge",
+     "url": "https://www.edsurge.com/podcasts",
+     "note": "EdSurge; weekly on schools, edtech and teaching"
+    },
+    {
+     "name": "Edtech Insiders",
+     "url": "https://www.edtechinsiders.org/podcast",
+     "note": "Alex Sarlin & Ben Kornell; edtech CEOs, investors, weekly news"
+    },
+    {
+     "name": "Class Disrupted",
+     "url": "https://www.the74million.org/class-disrupted-podcast/",
+     "note": "Diane Tavenner & Michael Horn; K-12 innovation and AI (season 7)"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "EDUCAUSE Annual Conference",
+     "url": "https://events.educause.edu/annual-conference",
+     "when": "Annual. 2026 edition is this week, so aim for 2027",
+     "where": "Denver, CO"
+    },
+    {
+     "name": "NAIS Thrive Annual Conference",
+     "url": "https://www.nais.org/events/annual-conference",
+     "when": "March 2027 (Mar 3-5)",
+     "where": "Baltimore, MD"
+    },
+    {
+     "name": "SXSW EDU",
+     "url": "https://sxswedu.com",
+     "when": "March 2027 (Mar 13-16)",
+     "where": "Austin, TX"
+    },
+    {
+     "name": "ASU+GSV Summit",
+     "url": "https://asugsvsummit.com",
+     "when": "April 2027 (Apr 4-7)",
+     "where": "San Diego, CA"
+    },
+    {
+     "name": "ISTELive 27",
+     "url": "https://conference.iste.org/2027/",
+     "when": "June 2027 (Jun 27-30)",
+     "where": "Boston, MA"
+    }
+   ]
+  },
+  "Travel & Hospitality": {
+   "publications": [
+    {
+     "name": "Skift",
+     "url": "https://skift.com/",
+     "note": "Must-read daily for travel execs across hotels, airlines, OTAs and travel tech"
+    },
+    {
+     "name": "Travel Weekly",
+     "url": "https://www.travelweekly.com/",
+     "note": "Flagship U.S. trade for travel advisors, tour operators, cruise and hotel sales leaders"
+    },
+    {
+     "name": "PhocusWire",
+     "url": "https://www.phocuswire.com/",
+     "note": "Travel tech and distribution news; read by founders, investors and OTA/airline execs"
+    },
+    {
+     "name": "Hotel Management",
+     "url": "https://www.hotelmanagement.net/",
+     "note": "Questex hotel trade covering owners, operators, brands, development and design"
+    },
+    {
+     "name": "CoStar News: Hotels (formerly Hotel News Now)",
+     "url": "https://www.costar.com/news/hotels",
+     "note": "Hotel investment, transactions and performance data; CEO interviews"
+    },
+    {
+     "name": "LODGING Magazine",
+     "url": "https://lodgingmagazine.com/",
+     "note": "Official publication of the American Hotel & Lodging Association (AHLA)"
+    },
+    {
+     "name": "Hospitality Net",
+     "url": "https://www.hospitalitynet.org/",
+     "note": "Global hotel-industry news hub widely used for executive op-eds and announcements"
+    },
+    {
+     "name": "CNBC Travel",
+     "url": "https://www.cnbc.com/travel/",
+     "note": "National business coverage of hotels, cruise lines and online travel companies"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "The Skift Travel Podcast",
+     "url": "https://skift.com/skift-travel-podcasts/",
+     "note": "Sarah Kopit and Seth Borko on the week's biggest travel business stories"
+    },
+    {
+     "name": "Hospitality Daily Podcast",
+     "url": "https://podcast.hospitalitydaily.com/",
+     "note": "Josiah Mackenzie; daily interviews with hotel leaders, most-listened show in the hotel industry"
+    },
+    {
+     "name": "No Vacancy (Live / News)",
+     "url": "https://novacancynews.com/",
+     "note": "Glenn Haussman; 1,000+ episodes interviewing hotel CEOs, owners and brand execs"
+    },
+    {
+     "name": "The Folo by Travel Weekly",
+     "url": "https://www.travelweekly.com/Podcasts/Folo",
+     "note": "Travel Weekly editors and guests unpack the week's top travel news"
+    },
+    {
+     "name": "In Phocus (PhocusWire)",
+     "url": "https://www.phocuswire.com/In-Phocus-Podcast",
+     "note": "PhocusWire editors interview travel tech executives and entrepreneurs"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "WTM London (World Travel Market)",
+     "url": "https://www.wtm.com/london/en-gb.html",
+     "when": "November 3-5, 2026",
+     "where": "London, UK (ExCeL London)"
+    },
+    {
+     "name": "The Phocuswright Conference",
+     "url": "https://www.phocuswrightconference.com/",
+     "when": "November 17-19, 2026",
+     "where": "Fort Lauderdale, FL"
+    },
+    {
+     "name": "Americas Lodging Investment Summit (ALIS)",
+     "url": "https://www.burba.com/ALIS",
+     "when": "January 25-27, 2027",
+     "where": "Los Angeles, CA (JW Marriott L.A. LIVE)"
+    },
+    {
+     "name": "NYU International Hospitality Investment Forum (IHIF)",
+     "url": "https://www.ihifamericas.com/",
+     "when": "June 6-8, 2027",
+     "where": "New York, NY (Marriott Marquis)"
+    },
+    {
+     "name": "HITEC (Hospitality Industry Technology Exposition & Conference)",
+     "url": "https://www.hitec.org/",
+     "when": "June 28 - July 1, 2027",
+     "where": "Orlando, FL (Orange County Convention Center)"
+    }
+   ]
+  },
+  "Restaurants & Food Service": {
+   "publications": [
+    {
+     "name": "Nation's Restaurant News",
+     "url": "https://www.nrn.com/",
+     "note": "The restaurant industry's flagship trade for chain CEOs and operators"
+    },
+    {
+     "name": "Restaurant Business",
+     "url": "https://www.restaurantbusinessonline.com/",
+     "note": "Business-of-restaurants coverage: finance, franchising, chains, leadership"
+    },
+    {
+     "name": "QSR Magazine",
+     "url": "https://www.qsrmagazine.com/",
+     "note": "Quick-service and fast-casual trade read by brand execs and franchisees"
+    },
+    {
+     "name": "FSR Magazine",
+     "url": "https://www.fsrmagazine.com/",
+     "note": "Full-service restaurant trade for owners, operators and C-level execs"
+    },
+    {
+     "name": "Restaurant Dive",
+     "url": "https://www.restaurantdive.com/",
+     "note": "Daily executive news on chain strategy, operations and earnings"
+    },
+    {
+     "name": "Modern Restaurant Management",
+     "url": "https://modernrestaurantmanagement.com/",
+     "note": "Daily online trade for independents and multi-unit franchise operators; takes expert bylines"
+    },
+    {
+     "name": "Fast Casual",
+     "url": "https://www.fastcasual.com/",
+     "note": "Trade for fast-casual brand leaders; runs the Fast Casual Executive Summit"
+    },
+    {
+     "name": "CNBC Restaurants",
+     "url": "https://www.cnbc.com/restaurants/",
+     "note": "National business coverage of restaurant chains, earnings and CEO moves"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "A Deeper Dive (Restaurant Business)",
+     "url": "https://www.restaurantbusinessonline.com/article/deeper-dive",
+     "note": "Jonathan Maze; weekly interviews with chain CEOs and industry leaders"
+    },
+    {
+     "name": "Take-Away with Sam Oches (NRN)",
+     "url": "https://www.nrn.com/program/take-away-with-sam-oches",
+     "note": "NRN editor-in-chief interviews restaurant CEOs and founders"
+    },
+    {
+     "name": "QSR Uncut",
+     "url": "https://podcasts.apple.com/us/podcast/qsr-uncut/id1448762355",
+     "note": "QSR editorial director Danny Klein on fast food and fast-casual trends"
+    },
+    {
+     "name": "Restaurant Unstoppable",
+     "url": "https://www.restaurantunstoppable.com/",
+     "note": "Eric Cacciatore; twice-weekly interviews with restaurateurs and operators"
+    },
+    {
+     "name": "Restaurant Rockstars Podcast",
+     "url": "https://restaurantrockstars.com/podcasts/",
+     "note": "Roger Beaudoin; conversations with top operators, chefs and industry pros"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "Fast Casual Executive Summit",
+     "url": "https://fastcasualsummit.com/",
+     "when": "October 4-6, 2026",
+     "where": "Arlington, TX"
+    },
+    {
+     "name": "Restaurant Finance & Development Conference (RFDC)",
+     "url": "https://www.restfinance.com/rfdc/",
+     "when": "November 9-11, 2026",
+     "where": "Las Vegas, NV (Wynn Las Vegas)"
+    },
+    {
+     "name": "Restaurant Leadership Conference (RLC)",
+     "url": "https://informaconnect.com/restaurant-leadership-conference/",
+     "when": "April 4-7, 2027",
+     "where": "Phoenix, AZ (JW Marriott Desert Ridge)"
+    },
+    {
+     "name": "Multi-Unit Franchising Conference (MUFC)",
+     "url": "https://www.multiunitfranchisingconference.com/",
+     "when": "April 27-30, 2027",
+     "where": "Las Vegas, NV (Caesars Forum)"
+    },
+    {
+     "name": "National Restaurant Association Show",
+     "url": "https://www.nationalrestaurantshow.com/",
+     "when": "May 22-25, 2027",
+     "where": "Chicago, IL (McCormick Place)"
+    }
+   ]
+  },
+  "Retail & E-Commerce": {
+   "publications": [
+    {
+     "name": "Retail Dive",
+     "url": "https://www.retaildive.com/",
+     "note": "Daily executive-level retail news: strategy, deals, store and digital"
+    },
+    {
+     "name": "Modern Retail",
+     "url": "https://www.modernretail.co/",
+     "note": "Digiday's title on DTC brands and retail disruption; read by founders and brand execs"
+    },
+    {
+     "name": "Glossy",
+     "url": "https://www.glossy.co/",
+     "note": "Beauty, fashion and luxury business news for brand leaders"
+    },
+    {
+     "name": "Retail TouchPoints",
+     "url": "https://www.retailtouchpoints.com/",
+     "note": "Retail exec coverage of CX, stores and digital commerce; runs executive viewpoints"
+    },
+    {
+     "name": "Chain Store Age",
+     "url": "https://chainstoreage.com/",
+     "note": "Long-running trade for retail chain executives: tech, real estate, operations"
+    },
+    {
+     "name": "Digital Commerce 360",
+     "url": "https://www.digitalcommerce360.com/",
+     "note": "E-commerce news and Top 1000 data (formerly Internet Retailer)"
+    },
+    {
+     "name": "Retail Brew",
+     "url": "https://www.retailbrew.com/",
+     "note": "Morning Brew's retail newsletter on DTC, e-comm and marketing for industry leaders"
+    },
+    {
+     "name": "CNBC Retail",
+     "url": "https://www.cnbc.com/retail/",
+     "note": "National business coverage of retailers, consumer brands and earnings"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "The Modern Retail Podcast",
+     "url": "https://www.modernretail.co/podcasts/",
+     "note": "Interviews with DTC and retail founders/CEOs (e.g., Rhone, Boll & Branch)"
+    },
+    {
+     "name": "Future Commerce",
+     "url": "https://www.futurecommerce.com/episodes",
+     "note": "Phillip Jackson and Brian Lange on commerce, culture and retail strategy"
+    },
+    {
+     "name": "Limited Supply",
+     "url": "https://podcasts.apple.com/us/podcast/limited-supply/id1635582800",
+     "note": "Nik Sharma; weekly DTC brand-building conversations with founders and operators"
+    },
+    {
+     "name": "DTC POD: How The Best Brands Are Built",
+     "url": "https://dtcpod.simplecast.com/episodes",
+     "note": "Ramon Berrios and Blaine Bolus interview DTC founders weekly"
+    },
+    {
+     "name": "Shopify Masters",
+     "url": "https://podcasts.apple.com/us/podcast/shopify-masters/id900763980",
+     "note": "Shopify's weekly show featuring founders who scaled e-commerce brands"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "Shoptalk Fall",
+     "url": "https://fall.shoptalk.com/",
+     "when": "Annual. 2026 edition is this week, so aim for 2027",
+     "where": "Nashville, TN (Music City Center)"
+    },
+    {
+     "name": "NRF 2027: Retail's Big Show",
+     "url": "https://nrfbigshow.nrf.com/",
+     "when": "January 10-12, 2027",
+     "where": "New York, NY (Javits Center)"
+    },
+    {
+     "name": "eTail Palm Springs (eTail West)",
+     "url": "https://etailwest.wbresearch.com/",
+     "when": "February 22-25, 2027",
+     "where": "Palm Desert, CA (JW Marriott Desert Springs)"
+    },
+    {
+     "name": "Shoptalk Spring",
+     "url": "https://spring.shoptalk.com/home",
+     "when": "March 22-24, 2027",
+     "where": "Las Vegas, NV (Mandalay Bay)"
+    },
+    {
+     "name": "CommerceNext Growth Show",
+     "url": "https://growthshow.commercenext.com/",
+     "when": "June 8-9, 2027",
+     "where": "New York, NY (North Javits)"
+    }
+   ]
+  },
+  "Sports & Entertainment": {
+   "publications": [
+    {
+     "name": "Sports Business Journal",
+     "url": "https://www.sportsbusinessjournal.com/",
+     "note": "The industry bible for team, league, media and sponsorship executives"
+    },
+    {
+     "name": "Front Office Sports",
+     "url": "https://frontofficesports.com/",
+     "note": "Sports business news and newsletters with a large exec and next-gen audience"
+    },
+    {
+     "name": "Sportico",
+     "url": "https://www.sportico.com/",
+     "note": "Sports business, valuations, deals and ownership coverage"
+    },
+    {
+     "name": "The Hollywood Reporter",
+     "url": "https://www.hollywoodreporter.com/",
+     "note": "Top entertainment business trade; most-trafficked entertainment industry site"
+    },
+    {
+     "name": "Variety",
+     "url": "https://variety.com/",
+     "note": "Entertainment and media business trade read across studios, streamers and talent"
+    },
+    {
+     "name": "Billboard",
+     "url": "https://www.billboard.com/",
+     "note": "Music industry trade; charts, business and power lists"
+    },
+    {
+     "name": "Pollstar",
+     "url": "https://news.pollstar.com/",
+     "note": "The live-entertainment and touring industry's trade publication"
+    },
+    {
+     "name": "CNBC Sport",
+     "url": "https://www.cnbc.com/sport/",
+     "note": "National business coverage of sports ownership, media rights and valuations"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "SBJ Morning Buzzcast",
+     "url": "https://sbj-morning-buzzcast.simplecast.com/",
+     "note": "Abe Madkour's daily 10-minute sports business news briefing"
+    },
+    {
+     "name": "Front Office Sports Today",
+     "url": "https://podcasts.apple.com/us/podcast/front-office-sports-today/id1579078258",
+     "note": "FOS daily briefing on deals, decisions and culture shaping the sports industry"
+    },
+    {
+     "name": "Sporticast (Sportico)",
+     "url": "https://www.sportico.com/c/podcasts/",
+     "note": "Scott Soshnick and Eben Novy-Williams with sports business guests and dealmakers"
+    },
+    {
+     "name": "The Town with Matthew Belloni",
+     "url": "https://www.theringer.com/podcasts/the-town-with-matthew-belloni",
+     "note": "The Ringer/Puck's Matt Belloni on the business of Hollywood with exec guests"
+    },
+    {
+     "name": "Strictly Business (Variety)",
+     "url": "https://variety.com/p/variety-podcasts/",
+     "note": "Variety's weekly interviews with media and entertainment business leaders"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "Leaders Week London",
+     "url": "https://leadersinsport.com/sport-business/leaders-events/leaders-week-london/",
+     "when": "October 5-8, 2026",
+     "where": "London, UK (Stamford Bridge)"
+    },
+    {
+     "name": "MIT Sloan Sports Analytics Conference",
+     "url": "https://www.sloansportsconference.com/",
+     "when": "February 25-26, 2027",
+     "where": "Boston, MA (Boston Convention & Exhibition Center)"
+    },
+    {
+     "name": "SXSW Conferences & Festivals",
+     "url": "https://sxsw.com/",
+     "when": "March 15-21, 2027",
+     "where": "Austin, TX"
+    },
+    {
+     "name": "Pollstar Live!",
+     "url": "https://pollstar.live/",
+     "when": "April 13-15, 2027",
+     "where": "Indian Wells, CA (Greater Palm Springs)"
+    },
+    {
+     "name": "SBJ World Congress of Sports",
+     "url": "https://www.worldcongressofsports.com/2027/",
+     "when": "April 19-21, 2027",
+     "where": "Miami, FL (JW Marriott Marquis)"
+    }
+   ]
+  },
+  "Nonprofit & Advocacy": {
+   "publications": [
+    {
+     "name": "The Chronicle of Philanthropy",
+     "url": "https://www.philanthropy.com/",
+     "note": "Leading news source for nonprofit CEOs, fundraisers and foundation leaders"
+    },
+    {
+     "name": "Stanford Social Innovation Review (SSIR)",
+     "url": "https://ssir.org/",
+     "note": "Ideas and practice journal for social-sector leaders; publishes practitioner essays"
+    },
+    {
+     "name": "Nonprofit Quarterly",
+     "url": "https://nonprofitquarterly.org/",
+     "note": "Research-based analysis for nonprofit management and civic leaders"
+    },
+    {
+     "name": "The NonProfit Times",
+     "url": "https://thenonprofittimes.com/",
+     "note": "Business publication for nonprofit management; Power & Influence Top 50"
+    },
+    {
+     "name": "Inside Philanthropy",
+     "url": "https://www.insidephilanthropy.com/",
+     "note": "Covers major donors and foundations; read by development leaders"
+    },
+    {
+     "name": "Devex",
+     "url": "https://www.devex.com/",
+     "note": "Global development and aid news for INGO and funder executives"
+    },
+    {
+     "name": "Fast Company",
+     "url": "https://www.fastcompany.com/",
+     "note": "National business outlet; Most Innovative Nonprofits and World Changing Ideas coverage"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "The Nonprofit Show",
+     "url": "https://thenonprofitshow.buzzsprout.com/",
+     "note": "Daily show on the business side of nonprofits; 1,000+ episodes with sector leaders"
+    },
+    {
+     "name": "Nonprofits Are Messy",
+     "url": "https://joangarry.com/nonprofits-are-messy-podcast/",
+     "note": "Joan Garry and Glennda Testone on leadership, boards, fundraising and comms"
+    },
+    {
+     "name": "Nonprofit Lowdown",
+     "url": "https://podcasts.apple.com/us/podcast/nonprofit-lowdown/id1436858854",
+     "note": "Rhea Wong; weekly fundraising and leadership interviews"
+    },
+    {
+     "name": "The Fundraising Everywhere Podcast",
+     "url": "https://fundraisingeverywhere.podbean.com/",
+     "note": "Nikki Bell and Simon Scriver on fundraising strategy and charity leadership"
+    },
+    {
+     "name": "The Business of Giving",
+     "url": "https://denver-frederick.com/",
+     "note": "Denver Frederick interviews nonprofit CEOs and social-sector leaders"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "bbcon (Blackbaud)",
+     "url": "https://www.bbconference.com/2026/agenda_overview",
+     "when": "Annual. 2026 edition is this week, so aim for 2027",
+     "where": "Columbus, OH"
+    },
+    {
+     "name": "Nonprofit Technology Conference (NTC, by NTEN)",
+     "url": "https://www.nten.org/gather/ntc",
+     "when": "March 23-26, 2027",
+     "where": "Portland, OR (Oregon Convention Center) + virtual"
+    },
+    {
+     "name": "Skoll World Forum",
+     "url": "https://skoll.org/skoll-world-forum/",
+     "when": "April 6-9, 2027",
+     "where": "Oxford, UK"
+    },
+    {
+     "name": "AFP ICON (Association of Fundraising Professionals)",
+     "url": "https://afpglobal.org/afp-icon",
+     "when": "April 11-13, 2027",
+     "where": "Baltimore, MD"
+    },
+    {
+     "name": "Council on Foundations: Leading Locally 2027",
+     "url": "https://cof.org/event/leading-locally-2027",
+     "when": "May 4-6, 2027",
+     "where": "Los Angeles, CA"
+    }
+   ]
+  },
+  "Faith-Based Organizations": {
+   "publications": [
+    {
+     "name": "Christianity Today",
+     "url": "https://www.christianitytoday.com/",
+     "note": "Flagship evangelical publication read by pastors and ministry leaders"
+    },
+    {
+     "name": "Religion News Service",
+     "url": "https://religionnews.com/",
+     "note": "Multi-faith news wire syndicated to mainstream outlets nationwide"
+    },
+    {
+     "name": "Outreach Magazine",
+     "url": "https://outreachmagazine.com/",
+     "note": "Church-leader magazine; publishes annual 100 largest/fastest-growing churches"
+    },
+    {
+     "name": "Church Executive",
+     "url": "https://churchexecutive.com/",
+     "note": "Business resource for senior/executive pastors and administrators at large churches"
+    },
+    {
+     "name": "OSV News",
+     "url": "https://www.osvnews.com/",
+     "note": "Major U.S. Catholic news agency (successor to Catholic News Service's U.S. wire)"
+    },
+    {
+     "name": "Jewish Telegraphic Agency (JTA)",
+     "url": "https://www.jta.org/",
+     "note": "Oldest and most widely read Jewish news wire service"
+    },
+    {
+     "name": "WORLD",
+     "url": "https://wng.org/",
+     "note": "Evangelical nonprofit newsroom; daily news site plus magazine"
+    },
+    {
+     "name": "Deseret News (Faith)",
+     "url": "https://www.deseret.com/faith/",
+     "note": "National-reach daily with a dedicated faith and religious-freedom desk"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "The Carey Nieuwhof Leadership Podcast",
+     "url": "https://careynieuwhof.com/mypodcast/",
+     "note": "Carey Nieuwhof interviews church and business leaders on leadership and change"
+    },
+    {
+     "name": "Craig Groeschel Leadership Podcast",
+     "url": "https://www.life.church/leadershippodcast/",
+     "note": "Life.Church pastor Craig Groeschel on practical leadership"
+    },
+    {
+     "name": "Andy Stanley Leadership Podcast",
+     "url": "https://andystanley.com/podcast",
+     "note": "Andy Stanley on leadership for ministry and marketplace leaders"
+    },
+    {
+     "name": "The Russell Moore Show",
+     "url": "https://www.christianitytoday.com/podcasts/the-russell-moore-show/",
+     "note": "Christianity Today's editor-in-chief on faith, culture and public life"
+    },
+    {
+     "name": "The Unstuck Church Podcast",
+     "url": "https://podcasts.apple.com/us/podcast/the-unstuck-church-podcast-with-amy-anderson/id1154567507",
+     "note": "The Unstuck Group (now hosted by Amy Anderson) on church health, strategy and leadership"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "NRB Convention (National Religious Broadcasters)",
+     "url": "https://nrbconvention.org/",
+     "when": "February 23-26, 2027",
+     "where": "National Harbor, MD (Gaylord National, Washington D.C. area)"
+    },
+    {
+     "name": "Exponential Global Conference",
+     "url": "https://exponential.org/global-2027/",
+     "when": "March 15-20, 2027",
+     "where": "Orlando, FL (First Baptist Orlando)"
+    },
+    {
+     "name": "Christian Leadership Alliance Outcomes Conference",
+     "url": "https://christianleadershipalliance.org/outcomes-conference-2027/",
+     "when": "April 6-8, 2027",
+     "where": "Jacksonville, FL (Hyatt Regency Riverfront)"
+    },
+    {
+     "name": "Religion Communicators Council Convention",
+     "url": "https://religioncommunicators.org/convention-2027/",
+     "when": "April 15-17, 2027",
+     "where": "Salt Lake City, UT"
+    },
+    {
+     "name": "Global Leadership Summit",
+     "url": "https://www.globalleadership.org/summit",
+     "when": "August 5-6, 2027",
+     "where": "In person, online and at host sites worldwide"
+    }
+   ]
+  },
+  "Politics & Public Affairs": {
+   "publications": [
+    {
+     "name": "Campaigns & Elections",
+     "url": "https://campaignsandelections.com/",
+     "note": "The trade magazine for political consultants and campaign professionals (since 1980)"
+    },
+    {
+     "name": "Politico",
+     "url": "https://www.politico.com/",
+     "note": "Read by operatives, lobbyists and policymakers; Playbook sets the D.C. agenda"
+    },
+    {
+     "name": "The Hill",
+     "url": "https://thehill.com/",
+     "note": "Nonpartisan Capitol Hill and campaign coverage with a large op-ed platform"
+    },
+    {
+     "name": "Punchbowl News",
+     "url": "https://punchbowl.news/",
+     "note": "Must-read nonpartisan newsletter on Congress and Washington power players"
+    },
+    {
+     "name": "Roll Call",
+     "url": "https://rollcall.com/",
+     "note": "Nonpartisan Capitol Hill and campaigns coverage since 1955"
+    },
+    {
+     "name": "Washington Examiner",
+     "url": "https://www.washingtonexaminer.com/",
+     "note": "Right-of-center politics and policy outlet widely read by GOP operatives"
+    },
+    {
+     "name": "Axios",
+     "url": "https://www.axios.com/",
+     "note": "National news outlet with politics and Washington newsletters widely read by D.C. insiders"
+    },
+    {
+     "name": "The Wall Street Journal (Politics)",
+     "url": "https://www.wsj.com/politics",
+     "note": "National business outlet covering campaigns, policy and influence industry"
+    }
+   ],
+   "podcasts": [
+    {
+     "name": "Pod Save America",
+     "url": "https://crooked.com/podcast-series/pod-save-america/",
+     "note": "Crooked Media; former Obama staffers on politics (left)"
+    },
+    {
+     "name": "Ruthless",
+     "url": "https://www.ruthlesspodcast.com/",
+     "note": "Josh Holmes and co-hosts; conservative strategists' take on politics (right)"
+    },
+    {
+     "name": "The Dispatch Podcast",
+     "url": "https://thedispatch.com/podcast/dispatch-podcast/",
+     "note": "Steve Hayes, Jonah Goldberg and guests; center-right politics and policy"
+    },
+    {
+     "name": "Hacks On Tap",
+     "url": "https://podcasts.apple.com/us/podcast/hacks-on-tap/id1467297559",
+     "note": "David Axelrod, Mike Murphy and John Heilemann; bipartisan campaign-strategist view"
+    },
+    {
+     "name": "The Conversation with Dasha Burns (POLITICO)",
+     "url": "https://podcasts.apple.com/us/podcast/playbook-deep-dive/id1111319839",
+     "note": "POLITICO's interview podcast (formerly Playbook Deep Dive) with policymakers and strategists"
+    }
+   ],
+   "conferences": [
+    {
+     "name": "Reed Awards & Conference (Campaigns & Elections)",
+     "url": "https://campaignsandelections.com/event/2027-reed-awards-conference/",
+     "when": "March 17-19, 2027",
+     "where": "Atlanta, GA"
+    },
+    {
+     "name": "AAPC Pollie Awards & Conference",
+     "url": "https://theaapc.org/education-events/",
+     "when": "April 12-14, 2027",
+     "where": "Phoenix, AZ (Arizona Grand Resort)"
+    },
+    {
+     "name": "CPAC USA",
+     "url": "https://www.cpac.org/us/events",
+     "when": "April 14-18, 2027",
+     "where": "Kissimmee, FL (Gaylord Palms, Orlando area)"
+    },
+    {
+     "name": "Public Affairs Council Advocacy Conference",
+     "url": "https://pac.org/events/signature",
+     "when": "May 25-27, 2027",
+     "where": "New Orleans, LA"
+    },
+    {
+     "name": "Netroots Nation",
+     "url": "https://www.netrootsnation.org/",
+     "when": "July 8-10, 2027",
+     "where": "Denver, CO"
+    }
+   ]
+  }
+ }
+}

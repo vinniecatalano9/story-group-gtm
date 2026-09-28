@@ -25,6 +25,7 @@ const SRC = {
   aaron: path.join(OFFERING, 'PR Learning Corpus/03_Aaron-StoryGroup-Voice/Aaron-Selling-System.md'),
   packages: path.join(os.homedir(), '.claude/skills/story-group-pitch-call-prep/assets/tier_reference.md'),
   caseIndex: path.join(os.homedir(), '.claude/skills/story-group-discovery-brief/assets/case_studies_index.md'),
+  media: path.join(HERE, 'industry-media.json'),
 };
 
 const read = (p, label) => {
@@ -166,11 +167,17 @@ if (dropped.length) {
   console.warn(`! Dropped ${dropped.length} entries that still use retired tiers or terms. Fix them at the source:`);
   dropped.forEach(d => console.warn(`  - [${d.k}] ${d.h.slice(0, 90)}`));
 }
+const media = JSON.parse(read(SRC.media, 'industry media map') || '{"data":{}}');
+for (const [ind, m] of Object.entries(media.data || {})) {
+  const names = xs => (xs || []).map(x => x.name).join(' · ');
+  all.push({ k: 'Outlets', g: ind, h: `Where we'd pitch: ${ind}`,
+    b: `Publications: ${names(m.publications)}\nPodcasts: ${names(m.podcasts)}\nConferences: ${(m.conferences || []).map(x => `${x.name}${x.when ? ` (${x.when})` : ''}`).join(' · ')}` });
+}
 const docs = all.filter(d => !isRetired(d));
 
 const json = v => JSON.stringify(v).replace(/<\//g, '<\\/');
 let out = page;
-for (const [id, data] of [['kbData', docs], ['casesData', cases]]) {
+for (const [id, data] of [['kbData', docs], ['casesData', cases], ['mediaData', { map: media.map, extra: media.extra, labels: media.labels, data: media.data }]]) {
   const re = new RegExp(`(<script type="application/json" id="${id}">)[\\s\\S]*?(</script>)`);
   if (!re.test(out)) { console.error(`x #${id} block missing from the page`); process.exit(1); }
   out = out.replace(re, (_, a, b) => a + json(data) + b);
