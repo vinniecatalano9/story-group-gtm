@@ -8,3 +8,5 @@ dist/
 .firebase/
 frontend-dist/
 .env.*
+
+.claude/settings.local.json
