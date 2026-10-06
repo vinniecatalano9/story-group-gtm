@@ -433,8 +433,17 @@
         <div class="iflags" data-for="secFit"></div>
       </section>
 
+      <section class="card" id="secAudit">
+        <h2 class="sec"><span class="n">6</span>Score their business</h2>
+        <p class="card-sub">Score each area 1 to 5 as it comes up. Before you wrap up, ask about any area that hasn't come up yet. A 1 or 2 is a gap, and the gaps steer the package. Score 6 or more to see their readiness score. <b style="color:var(--pink)">PR</b> marks the areas our PR work fixes directly.</p>
+        <div class="scale-key">
+          <span><i class="k1"></i><b>1</b> Not established</span><span><i class="k2"></i><b>2</b> In progress</span><span><i class="k3"></i><b>3</b> Established</span><span><i class="k4"></i><b>4</b> Scalable</span><span><i class="k4"></i><b>5</b> Optimized</span>
+        </div>
+        <div class="sug-bar"><span id="auditNote" class="muted"></span><span id="sugAll"></span></div>
+        <div id="rows"></div>
+      </section>
       <section class="card" id="secWrap">
-        <h2 class="sec"><span class="n">6</span>Wrap-up</h2>
+        <h2 class="sec"><span class="n">7</span>Wrap-up</h2>
         <p class="card-sub">The script fills in with their words from your notes. Recap, get a yes on next steps, and book Call 2.</p>
         <div id="wrapBeat"></div>
         <div class="iflags" data-for="secWrap"></div>
@@ -457,15 +466,6 @@
         </label>
       </section>
 
-      <section class="card" id="secAudit">
-        <h2 class="sec"><span class="n">7</span>Score their business</h2>
-        <p class="card-sub">Score each area 1 to 5 when it comes up, or right after the call. A 1 or 2 is a gap, and the gaps steer the package. Score 6 or more to see their readiness score. <b style="color:var(--pink)">PR</b> marks the areas our PR work fixes directly.</p>
-        <div class="scale-key">
-          <span><i class="k1"></i><b>1</b> Not established</span><span><i class="k2"></i><b>2</b> In progress</span><span><i class="k3"></i><b>3</b> Established</span><span><i class="k4"></i><b>4</b> Scalable</span><span><i class="k4"></i><b>5</b> Optimized</span>
-        </div>
-        <div class="sug-bar"><span id="auditNote" class="muted"></span><span id="sugAll"></span></div>
-        <div id="rows"></div>
-      </section>
     </main>
 
     <aside class="side" id="side">
@@ -496,13 +496,13 @@
   <h3>During the call</h3>
   <ol>
     <li>At the top of section 1, pick <b>what brought them in</b>: PR, Leads, Crisis, or Video. The booking link usually sets it. It changes the open's client story, the questions in section 5, the starting package, and the close.</li>
-    <li>Work down the left side, 1 to 6. It follows the trained Call 1: open, why they're here, size and budget, go deeper, the questions for their ad, then the close. Every line is in a pink <b>Try</b> box. A number turns green when that section is done.</li>
+    <li>Work down the left side, 1 to 7. It follows the trained Call 1: open, why they're here, size and budget, go deeper, the questions for their ad, the business scores, then the close. Every line is in a pink <b>Try</b> box. A number turns green when that section is done.</li>
     <li>Warnings show up right under the answer that set them off, with the words to say.</li>
     <li>The wrap-up recap fills itself in from your notes, turned into "you" language, so you can say it back. Anything blank shows as [brackets].</li>
-    <li>Section 7 is the business audit. Score areas as they come up, or right after the call. A dashed number is a suggested score from what they already said: click <b>Use it</b>, or <b>Fill in suggested scores</b> at the top of section 7 to take them all.</li>
+    <li>Section 6 is the business audit. Score areas as they come up, and ask about the rest before you wrap up. A dashed number is a suggested score from what they already said: click <b>Use it</b>, or <b>Fill in suggested scores</b> at the top of section 6 to take them all.</li>
     <li>Anything with a <b>pink dashed border</b> is a suggestion from what you typed or clicked (and their booking form): chips, dropdowns, scores, and the closeout. Nothing fills itself in. Click the chip or <b>Use it</b> to keep it; click a chip twice to say no and it stops suggesting.</li>
     <li>If anything inside the business looks shaky (who owns what, broken delivery, they can't keep up), click it under <b>BTC check</b> in section 2. The scorecard routes the call to BTC or a joint engagement and tells you to notify Dr. Brown.</li>
-    <li>Before you hang up, do the <b>Closeout</b> at the bottom of section 6. <b>Fill in suggestions</b> takes them all, then fix anything that's off.</li>
+    <li>Before you hang up, do the <b>Closeout</b> at the bottom of section 7. <b>Fill in suggestions</b> takes them all, then fix anything that's off.</li>
     <li>Click a button when you hear something (click again to undo).</li>
     <li>The package card shows what to recommend and the price to say first. Right under it, <b>Price it</b> lets you change the package, type a different price or term, take pieces out, or add à la carte lines. The total updates as you type.</li>
     <li>Tough question? Press <b>/</b> and type it, like "can you guarantee Forbes?" Press <b>Enter</b> for a short answer you can say. It only uses our playbook, so double-check anything that sounds off.</li>
@@ -1762,8 +1762,8 @@ function progress(a) {
     { id: 'secSize', label: 'Size and budget', done: !!f.revenue && !!f.budget && !!f.dm, part: !!(f.revenue || f.budget || f.dm) },
     { id: 'secDeep', label: 'Go deeper', done: deep.every(Boolean), part: deep.some(Boolean) },
     { id: 'secFit', label: `${TRACKS[track()].label} fit ${fitN} of ${fitOf}`, done: fitN === fitOf, part: fitN > 0 },
-    { id: 'secWrap', label: 'Wrap-up', done: beatDone(FLOW.find(b => b.id === 'b7')), part: !!(f.commit || f.dmCall2 || f.outlet || f.call2) },
     { id: 'secAudit', label: `Business ${a.n} of ${CATEGORIES.length}`, done: a.n === CATEGORIES.length, part: a.n > 0 },
+    { id: 'secWrap', label: 'Wrap-up', done: beatDone(FLOW.find(b => b.id === 'b7')), part: !!(f.commit || f.dmCall2 || f.outlet || f.call2) },
   ];
 }
 document.addEventListener('click', e => {
@@ -1796,7 +1796,7 @@ function renderCloseout(a) {
   const d = closeoutData(a);
   const line = (k, v, empty) => `<div><span class="muted">${k}:</span> ${v ? v : `<span class="muted">${empty}</span>`}</div>`;
   setHtml($('#closeAuto'), [
-    line('Readiness score', d.score && `<b>${esc(d.score)}</b>`, 'score areas in section 7'),
+    line('Readiness score', d.score && `<b>${esc(d.score)}</b>`, 'score areas in section 6'),
     line('Top 3 gaps', d.gaps.map(([x, v, s]) => `<b>${esc(x.name)}</b> ${v}${s ? ' <span class="muted">(suggested)</span>' : ''}`).join(' · '), 'shows once areas are scored or suggested'),
     line('Cost of waiting 6 to 12 months', d.cost && `<q>${esc(d.cost)}</q>`, 'not asked yet. "If nothing changes for 6 to 12 months, what does that cost you?"'),
     line('Package', d.pkg && `<b>${esc(d.pkg)}</b>`, 'shows once you click what you hear'),
@@ -2191,7 +2191,7 @@ function openTry(r) {
     : tryBox('Open', '"I have a limited amount of time. Are we ready to jump in? Do you have something to take notes with?"', [['The frame:', FRAME], story], 'script');
 }
 
-// Section 6: the v6 close (tie-down, trial commit, decision maker, Call 2 preview, video recap, booking).
+// Section 7: the v6 close (tie-down, trial commit, decision maker, Call 2 preview, video recap, booking).
 // The recap fills itself in from the notes: the first sentence of each, turned from "I/we/our" to "you/your",
 // in a "What I heard: ..." shape that reads right whether the rep typed a quote, a clause, or shorthand.
 const TO_YOU = [[/\bI'm\b/g, "you're"], [/\bI've\b/g, "you've"], [/\bI'd\b/g, "you'd"], [/\bI'll\b/g, "you'll"], [/\bI\b/g, 'you'],
