@@ -45,9 +45,20 @@
   .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
   .seg button { background: var(--panel); border: 0; padding: 7px 12px; cursor: pointer; font-size: 13px; color: var(--muted); }
   .seg button.on { background: var(--pink); color: #fff; font-weight: 600; }
+  .ns { display: inline-flex; gap: 6px; align-items: center; }
+  .ns select { width: auto; padding: 6px 8px; font-size: 13px; }
+  .ns-status { font-size: 12.5px; color: var(--muted); text-align: right; margin: -8px 0 12px; }
+  .ns-status:empty { display: none; }
+  details.more { position: relative; margin: 0; border: 0; padding: 0; }
+  details.more summary { list-style: none; color: var(--text); }
+  details.more summary::-webkit-details-marker { display: none; }
+  .more .menu { position: absolute; right: 0; top: calc(100% + 4px); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 4px; z-index: 30; min-width: 210px; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+  .more .menu button { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 7px 10px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+  .more .menu button:hover { background: var(--panel-2); }
 
   .grid { display: grid; grid-template-columns: minmax(0, 1fr) 430px; gap: 20px; align-items: start; }
-  @media (max-width: 1000px) { .grid { grid-template-columns: 1fr; } .side { position: static !important; max-height: none !important; } }
+  @media (max-width: 1180px) { .grid { grid-template-columns: minmax(0, 1fr) 340px; } }
+  @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } .side { position: static !important; max-height: none !important; } }
 
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin-bottom: 16px; scroll-margin-top: 70px; }
   .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--pink); margin: 0 0 10px; }
@@ -79,8 +90,24 @@
   .beat details { margin: 2px 0 8px; border: 0; padding: 0; }
   .beat details summary { font-size: 12px; }
   .beat .bname { font-weight: 600; }
-  .beat .say { color: var(--muted); font-size: 13px; font-style: italic; margin: 2px 0 8px; }
-  .say .try { font-style: normal; font-weight: 600; color: var(--pink); margin-right: 4px; }
+  .trybox { display: block; color: var(--text); font-size: 14.5px; margin: 2px 0 10px; background: var(--panel-2); border-left: 3px solid var(--pink); border-radius: 4px; padding: 8px 12px; }
+  .trybox .try { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--pink); margin-bottom: 2px; }
+  .trybox .then { display: block; color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .trybox.sm { font-size: 13.5px; padding: 6px 10px; margin: 2px 0 4px; }
+  #fitBody label.f > select, #fitBody label.f > input, #fitBody label.f > textarea { margin-top: auto; }
+  #c2Card { border-color: var(--pink); }
+  .trybox.script .then { color: var(--text); font-size: 13.5px; margin-top: 7px; }
+  .trybox .then b { color: var(--pink); font-weight: 600; margin-right: 5px; }
+  .track { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 6px 0 14px; }
+  .track .lbl { font-size: 12.5px; color: var(--muted); }
+  .iflags:empty { display: none; }
+  .words { font-size: 13px; border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 8px; }
+  .words .lbl { font-size: 10.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+  .words b { color: var(--muted); font-weight: 600; }
+  .iflags { margin-top: 10px; }
+  #openTry .trybox { margin: 14px 0 0; }
+  .row.inline { grid-template-columns: minmax(0, 1fr) 250px; }
+  @media (max-width: 640px) { .row.inline { grid-template-columns: 1fr; } }
   .beat .inputs { display: grid; gap: 8px; }
   .beat .inputs.three { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
   .beat.bare { display: block; border-top: 0; padding: 0 0 10px; }
@@ -161,6 +188,7 @@
   .flag .script { font-style: italic; margin-top: 5px; color: var(--muted); }
   .q { border-left: 3px solid var(--pink); padding: 4px 10px; margin: 8px 0; font-size: 13.5px; }
   .q small { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+  a.skip { float: right; color: var(--muted); text-decoration: underline; cursor: pointer; text-transform: none; letter-spacing: 0; font-size: 11.5px; }
   .case h4 { margin: 0 0 2px; font-size: 14px; }
   .case .ind { font-size: 10.5px; letter-spacing: .12em; color: var(--muted); text-transform: uppercase; }
   .case .fit { font-size: 11.5px; color: var(--good); margin-top: 2px; }
@@ -188,6 +216,28 @@
   .bdrow.dim b { font-weight: 400; }
   .sub-h { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 12px 0 2px; }
   .sub-h span { font-weight: 400; text-transform: none; letter-spacing: 0; }
+  /* live quote under the recommended package */
+  .quote { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 4px; }
+  .quote select[data-bd="pkg"] { margin: 6px 0 8px; }
+  .qline { display: flex; gap: 10px; }
+  .qline label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+  .qline label:first-child { flex: 1; }
+  .qline label:nth-child(2) { width: 80px; }
+  .money { position: relative; display: block; }
+  .money::before { content: '$'; position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+  .money input { padding-left: 20px; }
+  .qline input { font-size: 16px; font-weight: 600; }
+  .pchips { margin: 8px 0 4px; font-size: 12px; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+  .pchip { background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: 12px; cursor: pointer; }
+  .pchip:hover { border-color: var(--muted); }
+  .pchip.on { border-color: var(--pink); color: #fff; background: rgba(255,34,87,.16); }
+  .qadds { margin-top: 6px; }
+  .qadd { display: grid; grid-template-columns: 1fr 110px auto 16px; gap: 6px; align-items: center; font-size: 12.5px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+  .qadd input, .qadd select { padding: 4px 8px; font-size: 13px; }
+  .qadd .money::before { left: 7px; }
+  .qadd .money input { padding-left: 16px; }
+  .qtotal { background: var(--panel-2); border-radius: 6px; padding: 8px 10px; margin: 8px 0; font-size: 13.5px; }
+  .qtotal b { color: var(--pink); }
   .item { display: flex; gap: 8px; align-items: flex-start; }
   .item > div { flex: 1; }
   .rm { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 15px; line-height: 1; padding: 2px 4px; border-radius: 4px; }
@@ -201,7 +251,7 @@
   dialog textarea { min-height: 220px; font-size: 13px; }
 
   /* case pop-up */
-  .pop { position: fixed; right: 16px; bottom: 16px; width: 400px; max-width: calc(100vw - 32px); background: var(--panel-2); border: 1px solid var(--pink); border-radius: 10px; padding: 14px 16px; z-index: 40; box-shadow: 0 12px 40px rgba(0,0,0,.45); animation: popin .18s ease-out; }
+  .pop { position: fixed; right: 16px; bottom: 16px; width: 340px; max-width: calc(100vw - 32px); background: var(--panel-2); border: 1px solid var(--pink); border-radius: 10px; padding: 14px 16px; z-index: 40; box-shadow: 0 12px 40px rgba(0,0,0,.45); animation: popin .18s ease-out; }
   @keyframes popin { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
   .pop .ptop { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
   .pop .ptop .eyebrow { margin-bottom: 4px; }
@@ -274,22 +324,46 @@
   <div class="top">
     <div>
       <h1>Discovery <em>Scorecard</em></h1>
-      <div class="sub">Your notes go on the left, top to bottom. The right side is only for you; the prospect never sees it. Saves on this computer as you type.</div>
+      <div class="sub">Notes on the left, top to bottom. The right side is only for you. Saves on this computer as you type.</div>
     </div>
     <div class="actions">
       <div class="seg" id="mode"><button data-mode="c1">Call 1 · Discovery</button><button data-mode="c2">Call 2 · Pitch</button></div>
       <button class="btn" id="pasteBooking">Paste booking info</button>
       <button class="btn" id="helpBtn">How to use</button>
       <button class="btn" id="newCall" title="Clear everything and start a new call">Reset</button>
+      <span class="ns">
+        <select id="rep" title="Who the lead is assigned to in Nutshell">
+          <option value="">Your name</option>
+          <option value="vincent@storygroup.io">Vincent</option>
+          <option value="mmoonan@storygroup.io">McKenna</option>
+          <option value="michelle@storygroup.io">Michelle</option>
+          <option value="aaron@storygroup.io">Aaron</option>
+          <option value="annette@storygroup.io">Annette</option>
+          <option value="lydia@storygroup.io">Lydia</option>
+        </select>
+        <button class="btn primary" id="sendNutshell">Send to Nutshell</button>
+      </span>
+      <details class="more">
+        <summary class="btn">More</summary>
+        <div class="menu">
+          <button id="printReport">Client one-pager (print)</button>
+          <button id="copyBrief">Copy proposal brief</button>
+          <button id="copyCrm">Copy notes as text</button>
+          <button id="exportJson">Download a backup</button>
+        </div>
+      </details>
     </div>
   </div>
+  <div id="nsStatus" class="ns-status"></div>
 
   <div class="grid">
     <main id="main">
       <section class="card" id="beforeCard" hidden></section>
+      <section class="card" id="c2Card" hidden></section>
 
       <section class="card" id="secProspect">
         <h2 class="sec"><span class="n">1</span>Who you're talking to</h2>
+        <div class="track"><span class="lbl">What brought them in? It changes the questions below.</span><div class="seg" id="trackSeg"></div></div>
         <div class="fields">
           <label class="f">Name <input type="text" data-k="name" /></label>
           <label class="f">Title <input type="text" data-k="title" /></label>
@@ -312,6 +386,7 @@
             </select>
           </label>
         </div>
+        <div id="openTry"></div>
       </section>
 
       <section class="card" id="secWhy">
@@ -319,66 +394,47 @@
         <p class="card-sub">Let them talk. Type what brought them here in their words, and click anything you hear (click again to undo).</p>
         <div id="whyBeat"></div>
         <div id="chips"></div>
-        <details id="storyNotes">
-          <summary style="font-size:13px">More notes as they talk: an example, what they tried, why now, their 12-month goal</summary>
-          <div style="margin-top:12px"><div id="flow"></div></div>
-        </details>
+        <div class="iflags" data-for="secWhy"></div>
       </section>
 
       <section class="card" id="secSize">
         <h2 class="sec"><span class="n">3</span>Size and budget</h2>
-        <p class="card-sub">Ask once you understand their problem. These pick the package. Kickstart only comes up under $150K in revenue, under $5K a month, or when they're not ready for a monthly engagement.</p>
+        <p class="card-sub">Ask once you understand their problem. These pick the package.</p>
         <div id="sizeBeat"></div>
+        <div class="iflags" data-for="secSize"></div>
       </section>
 
-      <section class="card" id="secAudit">
-        <h2 class="sec"><span class="n">4</span>Score their business</h2>
-        <p class="card-sub">Score each area 1 to 5 as it comes up. A 1 or 2 is a gap, and the gaps drive the recommendation. <b style="color:var(--pink)">PR</b> marks the areas our PR work fixes directly.</p>
-        <div class="scale-key">
-          <span><i class="k1"></i><b>1</b> Not established</span><span><i class="k2"></i><b>2</b> In progress</span><span><i class="k3"></i><b>3</b> Established</span><span><i class="k4"></i><b>4</b> Scalable</span><span><i class="k4"></i><b>5</b> Optimized</span>
-        </div>
-        <div id="rows"></div>
+      <section class="card" id="secDeep">
+        <h2 class="sec"><span class="n">4</span>Go deeper</h2>
+        <p class="card-sub">How long it's been going on, what they tried, why now, and where they want to be. Write their words down: Call 2 is built on them.</p>
+        <div id="flow"></div>
+        <div class="iflags" data-for="secDeep"></div>
       </section>
 
       <section class="card" id="secFit">
-        <h2 class="sec"><span class="n">5</span>Can PR work for them?</h2>
-        <p class="card-sub">Will the leader talk, do they have a story, and who needs to see them.</p>
-        <div id="fit" class="fields"></div>
-        <details style="margin-top:10px">
-          <summary style="font-size:13px">More: competitors, who helps them now, the money math</summary>
-          <div id="fitMore" class="fields" style="margin-top:10px"></div>
-        </details>
+        <h2 class="sec"><span class="n">5</span><span id="fitTitle">Can PR work for them?</span></h2>
+        <p class="card-sub" id="fitSub"></p>
+        <div id="fitBody"></div>
+        <div class="iflags" data-for="secFit"></div>
       </section>
 
       <section class="card" id="secWrap">
         <h2 class="sec"><span class="n">6</span>Wrap-up</h2>
-        <p class="card-sub">Recap what you heard in their words, get a yes on next steps, and book the next call.</p>
+        <p class="card-sub">The script fills in with their words from your notes. Recap, get a yes on next steps, and book Call 2.</p>
         <div id="wrapBeat"></div>
+        <div class="iflags" data-for="secWrap"></div>
         <label class="f">Internal notes (never on the client one-pager)
           <textarea data-k="internal" rows="3" placeholder="Objections, personalities, what to prep for Call 2"></textarea>
         </label>
       </section>
 
-      <section class="card" id="secAfter">
-        <h2 class="sec"><span class="n">7</span>After the call</h2>
-        <div class="step">
-          <button class="btn primary" id="sendNutshell">Send to Nutshell</button>
-          <div>Saves the lead with all your notes, assigned to
-            <select id="rep" style="width:auto;display:inline-block;padding:3px 6px;font-size:13px;margin-left:4px">
-              <option value="">pick your name</option>
-              <option value="vincent@storygroup.io">Vincent</option>
-              <option value="mmoonan@storygroup.io">McKenna</option>
-              <option value="michelle@storygroup.io">Michelle</option>
-              <option value="aaron@storygroup.io">Aaron</option>
-              <option value="annette@storygroup.io">Annette</option>
-              <option value="lydia@storygroup.io">Lydia</option>
-            </select>
-            <div id="nsStatus" class="muted" style="font-size:12.5px;margin-top:4px"></div>
-          </div>
+      <section class="card" id="secAudit">
+        <h2 class="sec"><span class="n">7</span>Score their business</h2>
+        <p class="card-sub">Score each area 1 to 5 when it comes up, or right after the call. A 1 or 2 is a gap, and the gaps steer the package. Score 6 or more to see their readiness score. <b style="color:var(--pink)">PR</b> marks the areas our PR work fixes directly.</p>
+        <div class="scale-key">
+          <span><i class="k1"></i><b>1</b> Not established</span><span><i class="k2"></i><b>2</b> In progress</span><span><i class="k3"></i><b>3</b> Established</span><span><i class="k4"></i><b>4</b> Scalable</span><span><i class="k4"></i><b>5</b> Optimized</span>
         </div>
-        <div class="step"><button class="btn" id="printReport">Client one-pager</button><div>Prints their readiness score to send them after the call.</div></div>
-        <div class="step"><button class="btn" id="copyBrief">Copy proposal brief</button><div>Paste it into Claude to write their proposal.</div></div>
-        <div class="muted" style="font-size:12.5px;margin-top:10px">Also: <button class="linkbtn" id="copyCrm">copy the notes as text</button> · <button class="linkbtn" id="exportJson">download a backup</button></div>
+        <div id="rows"></div>
       </section>
     </main>
 
@@ -389,13 +445,10 @@
         <div id="results" hidden></div>
       </section>
       <div id="panel">
-        <section class="card" id="askCard"></section>
-        <section class="card" id="flagsCard"></section>
         <section class="card" id="recCard"></section>
         <section class="card" id="covCard"></section>
         <section class="card" id="caseCard"></section>
         <section class="card" id="mediaCard" hidden></section>
-        <section class="card" id="priceCard"></section>
       </div>
     </aside>
   </div>
@@ -412,22 +465,25 @@
   </ol>
   <h3>During the call</h3>
   <ol>
-    <li>Work down the left side, 1 to 6. Each section has a question you can <b>try</b>. A number turns green when that section is done.</li>
-    <li>Click a button when you hear something (click again to undo). Score each business area 1 to 5 as it comes up. The line under each area tells you what you're rating.</li>
-    <li>Glance right: <b>Ask next</b> tells you what to ask, <b>Watch for</b> flags problems, and the package card shows what to recommend and the price to say first.</li>
+    <li>At the top of section 1, pick <b>what brought them in</b>: PR, Leads, Crisis, or Video. The booking link usually sets it. It changes the open's client story, the questions in section 5, the starting package, and the close.</li>
+    <li>Work down the left side, 1 to 6. It follows the trained Call 1: open, why they're here, size and budget, go deeper, the questions for their ad, then the close. Every line is in a pink <b>Try</b> box. A number turns green when that section is done.</li>
+    <li>Warnings show up right under the answer that set them off, with the words to say.</li>
+    <li>At the wrap-up, their own words from your notes show right above the script, so you can say them back.</li>
+    <li>Section 7 is the business audit. Score areas as they come up, or right after the call.</li>
+    <li>Click a button when you hear something (click again to undo).</li>
+    <li>The package card shows what to recommend and the price to say first. Right under it, <b>Price it</b> lets you change the package, type a different price or term, take pieces out, or add à la carte lines. The total updates as you type.</li>
     <li>Tough question? Press <b>/</b> and type it, like "can you guarantee Forbes?" Press <b>Enter</b> for a short answer you can say. It only uses our playbook, so double-check anything that sounds off.</li>
     <li>Want a timer? Click <b>Start call</b> on the right. It's just a clock.</li>
   </ol>
-  <h3>After the call (section 7)</h3>
+  <h3>After the call</h3>
   <ol>
-    <li><b>Send to Nutshell</b> saves the lead with your notes. Pick your name next to it once. Sending again after Call 2 adds the new notes to the same lead. Nutshell is slow, so give it a minute.</li>
-    <li><b>Client one-pager</b> prints their readiness score to send them.</li>
-    <li><b>Copy proposal brief</b> and paste it into Claude to write the proposal.</li>
+    <li>Pick your name and click <b>Send to Nutshell</b> (top right). It saves the lead with your notes and the price you quoted. Sending again after Call 2 adds the new notes to the same lead. Nutshell is slow, so give it a minute.</li>
+    <li><b>More</b> (top right) has the client one-pager, the proposal brief for Claude, a plain-text copy of your notes, and a backup download.</li>
   </ol>
   <h3>Good to know</h3>
   <ul>
     <li>It saves on this computer only. <b>Reset</b> clears everything for a new call, and you get 10 seconds to undo.</li>
-    <li>Use <b>Call 1 · Discovery</b> for first calls and <b>Call 2 · Pitch</b> for the pitch. Call 2 adds the money math and closing lines.</li>
+    <li>Use <b>Call 1 · Discovery</b> for first calls and <b>Call 2 · Pitch</b> for the pitch. Call 2 puts the pitch order and closing lines at the top of the left side.</li>
     <li>Say one package and its first price. The lower prices are only for a real price objection.</li>
   </ul>
   <div class="actions" style="margin-top:14px; justify-content:flex-end"><button class="btn primary" id="helpClose">Got it</button></div>
@@ -541,6 +597,8 @@ const CHIP_GROUPS = [
 const TRIED = [['tried_pr', 'PR firm / freelancer'], ['tried_ads', 'Ads / marketing agency'], ['tried_inhouse', 'In-house hire'], ['tried_diy', 'DIY'], ['tried_none', 'Nothing yet']];
 const ASSETS = [['as_data', 'Proprietary data / research'], ['as_news', 'News in the next 90 days'], ['as_founder', 'Strong founder story'], ['as_opinion', 'Contrarian point of view'], ['as_results', 'Client results they can share'], ['as_visual', 'Pro photo / video ready'], ['as_none', 'None of these yet']];
 const AUDIENCE = [['au_b2b', 'B2B buyers'], ['au_consumer', 'Consumers'], ['au_investors', 'Investors'], ['au_recruits', 'Recruits'], ['au_partners', 'Referral partners'], ['au_community', 'Regulators / community']];
+const CRISIS_WHO = [['cw_customers', 'Customers'], ['cw_team', 'Their team'], ['cw_investors', 'Investors / board'], ['cw_regulators', 'Regulators'], ['cw_media', 'Media']];
+const VIDEO_USE = [['vu_tv', 'TV spot'], ['vu_web', 'Website promo'], ['vu_social', 'Social clips'], ['vu_ads', 'Ads'], ['vu_recruit', 'Recruiting / sales']];
 
 const OPTS = {
   dm: [['', 'Who decides?'], ['solo', 'Just them'], ['partner', '+ partner / co-founder'], ['board', '+ board / leadership'], ['notdm', 'Not the decision maker']],
@@ -551,25 +609,60 @@ const OPTS = {
   spokes: [['', 'Unknown'], ['natural', 'Natural on camera / mic'], ['train', 'Willing, needs media training'], ['no', "Won't do interviews"]],
   time: [['', 'Unknown'], ['ok', 'Can give ~2 hrs/month'], ['thin', 'Stretched thin']],
   reach: [['', 'Unknown'], ['local', 'Local'], ['regional', 'Regional'], ['national', 'National'], ['intl', 'International']],
+  crisisPublic: [['', 'How public is it?'], ['private', 'Not public yet'], ['online', 'Talk online (reviews, Reddit, social)'], ['reporter', 'A reporter has reached out'], ['news', 'Already in the news']],
+  crisisLegal: [['', 'Lawyer on it?'], ['yes', 'Yes'], ['no', 'No'], ['unsure', 'Not sure']],
+  vidFreq: [['', 'One project or ongoing?'], ['once', 'One project'], ['ongoing', 'Ongoing, every month']],
+  vidCam: [['', 'Who\'s on camera?'], ['leader', 'The leader'], ['team', 'The team or customers'], ['unsure', 'Not sure yet']],
+  vidAds: [['', 'Running ads now?'], ['yes', 'Yes'], ['no', 'No']],
 };
 
-// Call note topics (from the v6 Call 1 beats), suggestions only. `done` just marks a topic as covered.
-// `place` puts a topic in its own card on the main screen; the rest go under "Their story".
+// Which ad brought them in. It sets the track (the rep can switch it): the open's client story, the
+// questions in section 5, the starting package, and the close all follow it. Anything that isn't an ad
+// defaults to PR, Story Group's main offer, with no starting package until they say something.
+const TRACKS = {
+  pr: { label: 'PR', focus: 'media' },
+  leads: { label: 'Leads', focus: 'leads' },
+  crisis: { label: 'Crisis', focus: 'crisis' },
+  video: { label: 'Video', focus: 'video' },
+};
+const SOURCE_TRACK = { 'Google Ads: PR': 'pr', 'Google Ads: Crisis comms': 'crisis', 'Google Ads: Video': 'video', 'Google Ads: Growth/Systems': 'leads' };
+function track() { return S.fields.track || SOURCE_TRACK[S.fields.source] || 'pr'; }
+function trackChosen() { return !!(S.fields.track || SOURCE_TRACK[S.fields.source]); }
+
+// Call 1 beats, worded from the v6 discovery script (story-group-discovery-brief) so the scorecard and the
+// brief say the same thing. `say` is the opening line, `then` the follow-ups ([label, text] gets a bold label);
+// either can be a function of the track. `place` puts a beat in its own section; the rest go in "Go deeper".
+// Beat 2 (specific examples) was cut from the scorecard on 10/6. The wrap-up script is filled live (wrapTry).
+const TRIED_WHO = { pr: 'PR firm, freelancer, in-house, anything.', leads: 'An agency, ads, SEO, in-house, anything.', video: 'A production company, a freelancer, in-house, anything.', crisis: 'A PR firm, a lawyer, a statement, anything.' };
 const FLOW = [
-  { id: 'b1', place: 'why', name: 'Pain / background', end: 420, say: '"Walk me through what brought you to this call. What\'s going on right now that made you want to have this conversation?" Then: "Anything else?"',
+  { id: 'b1', place: 'why', name: 'Pain / background', end: 420,
+    say: '"Walk me through what brought you to this call. What\'s going on right now that made you want to have this conversation?"',
+    then: ['Stay quiet and let them talk. Then: "Got it. Anything else?" Ask up to three times.'],
     fields: [['pain', 'textarea', 'In their words: what brought them here']], done: f => !!f.pain },
-  { id: 'b2', name: 'Specific example', end: 660, say: '"Can you give me a recent example of when that happened?" Then: "What did that cost you? A deal, revenue, a missed opportunity?"',
-    fields: [['example', 'textarea', 'A real recent example, and what it cost them']], done: f => !!f.example },
-  { id: 'b3', place: 'size', name: 'Revenue, budget, who decides', end: 840, say: '"Roughly where is the business on annual revenue?" Then: "Besides yourself, who else weighs in on a decision like this?" Then: "Roughly what range: $5–10k a month, $10–20k, or higher?"',
-    fields: [['revenue', 'select'], ['budget', 'select'], ['dm', 'select']], done: f => !!f.dm && !!f.budget },
-  { id: 'b4', name: 'What they tried', end: 1020, say: '"What have you tried? What happened?" Then the big one: "What\'s your own theory of why it didn\'t work?"',
-    fields: [['tried', 'chips', '', TRIED], ['theory', 'textarea', 'Their theory of why it didn\'t work (verbatim, shapes Call 2)']], done: (f, c) => !!f.theory || TRIED.some(([k]) => c[k]) },
-  { id: 'b5', name: 'Why now + cost of waiting', end: 1200, say: '"Why are we talking now? What changed in the last 30–60 days?" Then: "If nothing changes for 6–12 months, what does that cost you?" Then: "Any other reason?"',
-    fields: [['trigger', 'textarea', 'What changed in the last 30–60 days'], ['cost', 'textarea', 'What 6–12 more months of this costs them'], ['reason2', 'textarea', '"Any other reason?" The second answer (usually the emotional one)']], done: f => !!f.trigger && !!f.cost },
-  { id: 'b6', name: 'Goal + what it means to them', end: 1440, say: '"12 months from now you say \'that worked.\' What\'s specifically different?" Then: "What does that mean for YOU personally?"',
-    fields: [['goal', 'textarea', 'What\'s different in 12 months, in numbers'], ['nmg', 'textarea', 'What it means for them personally']], done: f => !!f.goal && !!f.nmg },
-  { id: 'b7', place: 'wrap', name: 'Next steps', end: 1800, say: 'Recap what you heard in their words, then: "If we bring you a plan that hits [their goal], are you ready to make a real decision in the next two weeks?" Get the decision maker on the next call, name one outlet you think is realistic for them, and say you\'ll send a short video recap.',
-    fields: [['commit', 'select'], ['dmCall2', 'select'], ['outlet', 'text', 'One outlet you said you\'d look into (e.g. Forbes)'], ['call2', 'text', 'Next call booked for (day / time)']], done: f => !!f.commit && !!f.outlet },
+  { id: 'b3', place: 'size', name: 'Decision maker, budget, revenue', end: 840,
+    say: '"Quick gear-change. Two questions. First: besides yourself, who else weighs in on a decision like this?"',
+    then: ['"Second: have you set aside a budget for this, or are we still in the figuring-it-out phase?"',
+      '"Roughly what range are you thinking? $5 to 10k a month, $10 to 20k, or higher?"',
+      '"And roughly where is the business on annual revenue?"',
+      ['If they dodge:', '"Totally fair, here\'s why I ask. The work at $5k is different from the work at $20k. I\'m trying to figure out which conversation we\'re having." Then ask again.']],
+    fields: [['dm', 'select'], ['budget', 'select'], ['revenue', 'select']], done: f => !!f.dm && !!f.budget },
+  { id: 'b4', name: 'How long + what they tried', end: 1020,
+    say: t => `"How long has this been a problem? What have you tried? ${TRIED_WHO[t]}"`,
+    then: ['"What happened? Why did it not work?"', ['The big one:', '"What\'s your own theory of why it didn\'t work?" Write it down word for word. It shapes Call 2.']],
+    fields: [['tried', 'chips', '', TRIED], ['theory', 'textarea', 'Their theory of why it didn\'t work, word for word']], done: (f, c) => !!f.theory || TRIED.some(([k]) => c[k]) },
+  { id: 'b5', name: 'Why now + cost of waiting', end: 1200,
+    say: '"Why are we talking now? What changed in the last 30 to 60 days?"',
+    then: ['"If nothing changes for 6 to 12 months, what does that cost you? Not just dollars. Reputation, opportunity, deals."',
+      ['Stay quiet, then:', '"Is there any other reason this matters to you?" The first answer is the rational one. The second is the emotional one, and it closes Call 2.']],
+    fields: [['trigger', 'textarea', 'What changed in the last 30 to 60 days'], ['cost', 'textarea', 'What 6 to 12 more months of this costs them'], ['reason2', 'textarea', 'The other reason it matters (usually the emotional one)']], done: f => !!f.trigger && !!f.cost },
+  { id: 'b6', name: 'Goal + what it means to them', end: 1440,
+    say: t => t === 'crisis' ? '"What would a win look like here?"' : '"Flip the coin. 12 months from now you say \'that worked.\' What\'s specifically different in the business?"',
+    then: t => [t === 'crisis' ? ['Define success early (Aaron):', '"The shortest news cycle possible, on our terms."'] : 'Dig in: "When you say [their answer], what does that cash out as?"',
+      ['Ask permission first:', '"I\'m going to ask you something a little personal. Mind if I ask?" Then: "If that happens, what does that mean for YOU personally? Not the company. You."']],
+    fields: [['goal', 'textarea', 'What\'s different in 12 months, in numbers'], ['nmg', 'textarea', 'What it means for them personally, word for word']], done: f => !!f.goal && !!f.nmg },
+  { id: 'b7', place: 'wrap', name: 'Next steps', end: 1800, say: '', then: [],
+    fields: [['commit', 'select'], ['dmCall2', 'select'], ['outlet', 'text', 'One outlet you said you\'d look into (e.g. Forbes)'], ['call2', 'text', 'Call 2 booked for (day / time)']],
+    done: f => !!f.commit && (!!f.outlet || track() !== 'pr') },
 ];
 
 // Story Group fit: what Michelle's business questions don't cover. Each `hint` is why we ask.
@@ -587,7 +680,7 @@ const FIT = [
 
 // Final 9/18/26 Sales Packages doc (tier_reference.md). Lead with `price`; `alt` only on a legit objection.
 const PACKAGES = {
-  kickstart: { name: 'Kickstart', em: '', price: '$5,500 one-time', monthly: 5500, months: 1, alt: ['$5,000 "Take Action" rate: paid in full, same day only', 'Two payments of $2,750 (same $5,500 total)'], term: 'One-time, 10–30 days', floor: 0,
+  kickstart: { name: 'Kickstart', em: '', price: '$5,500 one-time', monthly: 5500, months: 1, once: true, alt: ['$5,000 "Take Action" rate: paid in full, same day only', 'Two payments of $2,750 (same $5,500 total)'], term: 'One-time, 10–30 days', floor: 0,
     purpose: 'Business foundation, audit, positioning, and a 30/60/90-day roadmap before scaling.' },
   bge: { name: 'Business Growth', em: 'Engagement', price: '$7,500/mo', monthly: 7500, months: 3, alt: ['$6,500/mo', '$5,000/mo (lowest approved)'], term: '3-month commitment', floor: 5000,
     purpose: 'Growth infrastructure, Google Ads, conversion, and qualified inbound leads. No PR.' },
@@ -601,6 +694,8 @@ const PACKAGES = {
     purpose: 'Full Command plus Google Ads, GEO/AEO, website conversion, integrated reporting.' },
   cinema: { name: 'Premium', em: 'Cinema', price: '$20,000/mo', monthly: 20000, months: 12, alt: [], term: '12-month commitment', floor: 20000,
     purpose: 'Ongoing premium video: TV spot, promo video, studio install with bi-annual shoots, up to 6 social clips a week, ad strategy and management (ad budget separate).' },
+  vidphoto: { name: 'Video &', em: 'Photography', price: 'From $30,000 one-time', monthly: 30000, months: 1, once: true, alt: [], term: 'One-time production', floor: 30000,
+    purpose: 'One-time content production. No ad management, no weekly production, no studio installment.' },
   custom: { name: 'Custom', em: 'Enterprise', price: 'Scope-based, above $33,500/mo', monthly: null, months: 12, alt: [], term: 'Scope + price need CEO approval', floor: null,
     purpose: 'Multiple brands, business units, executives, or markets.', note: 'Custom: qualify and capture full scope on the call, never price or discount it live.' },
 };
@@ -670,7 +765,12 @@ const save = () => { S.updated = Date.now(); try { localStorage.setItem(STORE, J
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const money = n => '$' + Math.round(n).toLocaleString('en-US');
-const clip = (s, n) => { s = String(s || '').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
+const clip = (s, n) => {
+  s = String(s || '').trim();
+  if (s.length <= n) return s;
+  const cut = s.slice(0, n - 1), sp = cut.lastIndexOf(' ');
+  return (sp > n * 0.6 ? cut.slice(0, sp) : cut).replace(/[\s,;:.]+$/, '') + '…';
+};
 const toast = m => { const t = $('#toast'); t.textContent = m; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 1600); };
 const pkgName = k => (PACKAGES[k].name + ' ' + PACKAGES[k].em).trim();
 
@@ -687,37 +787,91 @@ const fieldHtml = ([k, type, ph, list]) =>
 
 $('#industry').innerHTML = '<option value="">Unknown / other</option>' + INDUSTRIES.map(i => `<option value="${esc(i)}">${esc(industryLabel(i))}</option>`).join('');
 $('#chips').innerHTML = CHIP_GROUPS.map(g => `<div class="chipgroup"><div class="lbl">${g.label}</div>${chipHtml(g.chips)}</div>`).join('');
-// A placed topic sits alone in its card, so it drops the dot and the name.
-const beatHtml = (b, bare) => `
+// Try boxes: the opening line reads big, follow-ups sit under it. A [label, text] follow-up gets a bold label.
+const tryInner = (label, main, thens = []) => `<span class="try">${esc(label)}</span>${esc(main)}${thens.map(t => `<span class="then">${Array.isArray(t) ? `<b>${esc(t[0])}</b>${esc(t[1])}` : esc(t)}</span>`).join('')}`;
+const tryBox = (label, main, thens, cls = '') => `<div class="trybox ${cls}">${tryInner(label, main, thens)}</div>`;
+const beatSay = b => [typeof b.say === 'function' ? b.say(track()) : b.say, typeof b.then === 'function' ? b.then(track()) : (b.then || [])];
+// A placed beat sits alone in its section, so it drops the dot and the name.
+const beatHtml = (b, bare) => {
+  const [say, then] = beatSay(b);
+  return `
   <div class="beat${bare ? ' bare' : ''}" data-beat="${b.id}">
     ${bare ? '' : '<div class="num"></div>'}
     <div>
       ${bare ? '' : `<div class="bname">${esc(b.name)}</div>`}
-      <div class="say"><span class="try">Try:</span>${esc(b.say)}</div>
+      ${say ? tryBox('Try', say, then) : '<div class="trybox script"></div>'}
       <div class="inputs ${b.fields.length > 2 && b.fields.every(f => f[1] !== 'textarea') ? 'three' : ''}">${b.fields.map(fieldHtml).join('')}</div>
     </div>
   </div>`;
+};
 FLOW.filter(b => b.place).forEach(b => { $(`#${b.place}Beat`).innerHTML = beatHtml(b, true); });
-$('#flow').innerHTML = FLOW.filter(b => !b.place).map(b => beatHtml(b)).join('');
-// The last four fit questions sit behind "More fit questions".
+
+// Section 5 follows the ad. PR keeps the PR-fit questions; the other ads ask what that buyer needs, with the
+// audit areas that matter most for it scored right there. Crisis wording comes from Aaron's crisis playbook
+// (Aaron-Selling-System.md, part 13); video wording from the Premium Cinema and Video & Photography packages.
 const FIT_MORE = new Set(['competitors', 'vendor', 'acv', 'clientsGoal']);
-const fitHtml = ([k, type, label, hint, , list]) => `
-  <label class="f" style="${type === 'chips' ? 'grid-column: 1 / -1' : ''}">${esc(label)}
-    <span class="hint">${esc(hint)}</span>
+const FIT_BY_TRACK = {
+  pr: { title: 'Can PR work for them?', sub: 'Listen for these as they talk. Before you wrap up, ask the ones that haven\'t come up. Interviews is the must-ask: no interviews, no coverage.',
+    main: FIT.filter(([k]) => !FIT_MORE.has(k) || k === 'acv'), more: FIT.filter(([k]) => FIT_MORE.has(k) && k !== 'acv'), moreLabel: 'More: competitors, who helps them now, clients they want', areas: [] },
+  leads: { title: 'Can we grow their leads?', sub: 'Score each area as you hear it. What a client is worth sets up the money math on Call 2.',
+    main: FIT.filter(([k]) => ['acv', 'clientsGoal', 'vendor'].includes(k)), more: [], areas: ['digital', 'web', 'measure'] },
+  crisis: { title: 'How serious is it?', sub: 'In a crisis the whole call changes shape (Aaron): lead with empathy, then get the facts.',
+    main: [
+      ['crisisWhat', 'textarea', 'What happened', 'Their version, in their words.', '"Tell me what happened, in your own words."'],
+      ['crisisPublic', 'select', 'How public it is', 'Sets how fast we move and what goes out first.', '"Is it public yet? Has a reporter or anyone online picked it up?"'],
+      ['crisisNext', 'text', 'What\'s coming next', 'Aaron gets the statement out before the story runs.', '"Is anything coming up: a court date, a filing, a story about to run, an announcement?"'],
+      ['crisisWho', 'chips', 'Who needs to hear from them', 'Investors and the board get their own talking points.', '"Who needs to hear from you: customers, your team, investors or the board, regulators?"', CRISIS_WHO],
+      ['crisisLegal', 'select', 'Lawyer on it', 'We never put out a statement that opens them up civilly.', '"Do you have a lawyer on this?"'],
+    ], more: [], areas: ['rep'] },
+  video: { title: 'What do they need on camera?', sub: 'One project points to Video & Photography (from $30,000, one-time). New content every month points to Premium Cinema.',
+    main: [
+      ['vidUse', 'chips', 'What the video is for', 'Premium Cinema covers a TV spot, a website promo, and up to 6 social clips a week.', '"What would the video be for: ads, your website, social, TV?"', VIDEO_USE],
+      ['vidFreq', 'select', 'One project or ongoing', 'Picks Video & Photography or Premium Cinema.', '"Is this one project, or do you need new content every month?"'],
+      ['vidCam', 'select', 'Who\'s on camera', 'Tells us who we film and coach.', '"Who would be on camera?"'],
+      ['vidAds', 'select', 'Running ads now', 'Premium Cinema includes ad strategy and management. The ad budget is separate.', '"Are you running ads now? Roughly what do you spend?"'],
+    ], more: [], areas: ['content'] },
+};
+const fitHtml = ([k, type, label, hint, q, list]) => `
+  <label class="f" title="${esc(hint)}" style="${type === 'chips' || type === 'textarea' ? 'grid-column: 1 / -1' : ''}">${esc(label)}
+    <span class="trybox sm"><span class="try">Try</span>${esc(q)}</span>
     ${type === 'select' ? selectHtml(k) : type === 'chips' ? chipHtml(list) : fieldHtml([k, type, ''])}
   </label>`;
-$('#fit').innerHTML = FIT.filter(([k]) => !FIT_MORE.has(k)).map(fitHtml).join('');
-$('#fitMore').innerHTML = FIT.filter(([k]) => FIT_MORE.has(k)).map(fitHtml).join('');
-// Each area shows a plain-English line to rate; the question to ask and the guide's statement open on click.
-// The note box shows once scored.
-$('#rows').innerHTML = CATEGORIES.map(c => `
-  <div class="row" data-cat="${c.id}">
-    <div><div class="name">${esc(c.group)}. ${esc(c.name)}${c.pr ? ' <span style="font-size:10px;letter-spacing:.1em;color:var(--pink);border:1px solid var(--pink);border-radius:999px;padding:1px 6px;margin-left:4px">PR</span>' : ''}</div><div class="plain">${esc(c.plain)}</div><details style="margin-top:2px;border:0;padding:0"><summary style="font-size:12px">Question to ask them</summary><div class="ask" style="font-style:italic">"${esc(c.probe[0])}"</div><div class="ask" style="margin-top:4px">Full statement from the audit guide: "${esc(c.ask)}"</div></details></div>
+const PR_TAG = ' <span style="font-size:10px;letter-spacing:.1em;color:var(--pink);border:1px solid var(--pink);border-radius:999px;padding:1px 6px;margin-left:4px">PR</span>';
+// Each area shows a plain-English line to rate. In the full audit the question opens on click and a note box
+// shows once scored; in section 5 the question shows as a Try box.
+const areaRow = (c, inline) => `
+  <div class="row${inline ? ' inline' : ''}" data-cat="${c.id}">
+    <div><div class="name">${inline ? '' : `${esc(c.group)}. `}${esc(c.name)}${c.pr ? PR_TAG : ''}</div>
+      ${inline ? tryBox('Try', `"${c.probe[0]}"`, [], 'sm') + `<div class="plain">${esc(c.plain)}</div>`
+        : `<div class="plain">${esc(c.plain)}</div><details style="margin-top:2px;border:0;padding:0"><summary style="font-size:12px">Question to ask them</summary><div class="ask" style="font-style:italic">"${esc(c.probe[0])}"</div><div class="ask" style="margin-top:4px">Full statement from the audit guide: "${esc(c.ask)}"</div></details>`}</div>
     <div>
       <div class="scores">${[1, 2, 3, 4, 5].map(v => `<button class="sbtn" data-v="${v}">${v}</button>`).join('')}<span class="slabel"></span></div>
-      <textarea rows="1" data-note="${c.id}" placeholder="Why? (goes on their one-pager)" hidden></textarea>
+      ${inline ? '' : `<textarea rows="1" data-note="${c.id}" placeholder="Why? (goes on their one-pager)" hidden></textarea>`}
     </div>
-  </div>`).join('');
+  </div>`;
+$('#rows').innerHTML = CATEGORIES.map(c => areaRow(c, false)).join('');
+$('#trackSeg').innerHTML = Object.entries(TRACKS).map(([k, x]) => `<button data-track="${k}">${esc(x.label)}</button>`).join('');
+// Rebuilt only when the track changes (render checks), never on a keystroke, so typing keeps its focus.
+let builtTrack = null;
+function buildTrack() {
+  const t = track(), cfg = FIT_BY_TRACK[t];
+  builtTrack = t;
+  $('#flow').innerHTML = FLOW.filter(b => !b.place).map(b => beatHtml(b)).join('');
+  $('#fitTitle').textContent = cfg.title;
+  $('#fitSub').textContent = cfg.sub;
+  $('#fitBody').innerHTML = cfg.areas.map(id => areaRow(CATEGORIES.find(x => x.id === id), true)).join('')
+    + (cfg.main.length ? `<div class="fields" style="margin-top:${cfg.areas.length ? 12 : 0}px">${cfg.main.map(fitHtml).join('')}</div>` : '')
+    + (cfg.more.length ? `<details style="margin-top:10px"><summary style="font-size:13px">${esc(cfg.moreLabel)}</summary><div class="fields" style="margin-top:10px">${cfg.more.map(fitHtml).join('')}</div></details>` : '');
+  document.querySelectorAll('#trackSeg button').forEach(b => b.classList.toggle('on', b.dataset.track === t));
+  // In a crisis the facts come first (Aaron), so its questions move up under "why they're here".
+  if (t === 'crisis') $('#secWhy').after($('#secFit')); else $('#secDeep').after($('#secFit'));
+  document.querySelectorAll('#main > section .sec .n').forEach((n, i) => { n.textContent = i + 1; });
+  hydrate();
+}
+document.addEventListener('click', e => {
+  const tb = e.target.closest('[data-track]');
+  if (tb) { S.fields.track = tb.dataset.track; save(); render(); }
+});
 $('#quick').innerHTML = QUICK.map(q => `<button data-quick="${esc(q)}">${esc(q)}</button>`).join('');
 
 function hydrate() {
@@ -729,7 +883,8 @@ function hydrate() {
     const v = S.scores[r.dataset.cat];
     r.querySelectorAll('.sbtn').forEach(b => b.classList.toggle('on', +b.dataset.v === v));
     r.querySelector('.slabel').textContent = v ? SCALE[v] : '';
-    r.querySelector('[data-note]').hidden = !v && !S.notes[r.dataset.cat];
+    const note = r.querySelector('[data-note]');
+    if (note) note.hidden = !v && !S.notes[r.dataset.cat];
   });
   document.querySelectorAll('textarea').forEach(grow);
 }
@@ -797,6 +952,7 @@ function readinessOf(total, n) {
 // Start with the highest appropriate package; if budget pushes back, cut scope before price.
 function analyze() {
   const c = S.chips, f = S.fields, sc = S.scores;
+  const t = track(), prior = trackChosen() ? t : null;
   const n = Object.keys(sc).length, total = Object.values(sc).reduce((a, b) => a + b, 0);
   const gap = id => sc[id] !== undefined && sc[id] <= 2;
   const count = ids => ids.filter(gap).length;
@@ -809,22 +965,34 @@ function analyze() {
   const why = [];
 
   // What they said fills in when few areas are scored yet.
-  const saidGrowth = !!(c.wantLeads || c.noFunnel || c.tried_ads);
-  const saidVis = !!(c.wantMedia || c.wantPods || c.launch || c.competitorsPress);
+  const saidGrowth = !!(c.wantLeads || c.noFunnel || c.tried_ads) || prior === 'leads';
+  const saidVis = !!(c.wantMedia || c.wantPods || c.launch || c.competitorsPress) || prior === 'pr';
   const saidAuth = !!(c.wantExpert || c.wantTv || c.wantSpeak || c.raise);
-  const saidRep = !!(c.crisis || c.repRisk);
+  // On the crisis track, a reporter calling or a story already out counts as an active crisis.
+  const liveCrisis = !!c.crisis || (t === 'crisis' && ['reporter', 'news'].includes(f.crisisPublic));
+  const saidRep = !!(liveCrisis || c.repRisk) || prior === 'crisis';
 
   const needFoundation = count(['brand', 'aud', 'web']) >= 2 || !!c.noStart;
   const needGrowth = gap('digital') || count(['web', 'measure']) >= 2 || saidGrowth;
   const needVis = gap('vis') || gap('media') || saidVis;
   const needAuth = gap('exec') || (gap('content') && gap('rep')) || saidAuth;
-  const needRep = !!c.crisis || (gap('rep') && (gap('media') || gap('exec'))) || (saidRep && established) || (c.repRisk && n < 6);
+  const needRep = liveCrisis || (gap('rep') && (gap('media') || gap('exec'))) || (saidRep && established) || ((c.repRisk || prior === 'crisis') && n < 6);
   const contentGap = gap('content');
-  const needVideo = !!c.wantVideo || contentGap;
+  const needVideo = !!c.wantVideo || contentGap || prior === 'video' || anyOf(VIDEO_USE) || !!f.vidFreq;
 
   // Kickstart is only for small companies or anyone who can't do a monthly engagement yet (Vincent,
   // 10/6, overriding the guide's foundation-gap route). Every monthly package already starts with the
   // audit and positioning work, so weak foundation scores alone never send a real business to Kickstart.
+  // Plain reasons from what they said or scored, so the Why names the evidence.
+  const growthWhy = gap('digital') ? 'lead generation scored low' : count(['web', 'measure']) >= 2 ? 'their website and tracking scored low'
+    : c.wantLeads ? 'they want more leads' : c.noFunnel ? 'they have no real website or funnel' : c.tried_ads ? 'ads haven\'t worked for them'
+    : prior === 'leads' ? 'they came in for leads' : 'they need more leads';
+  const authWhy = c.wantExpert ? 'they want to be seen as THE expert' : c.wantTv ? 'they want TV' : c.wantSpeak ? 'they want stages'
+    : c.raise ? 'they\'re raising capital or planning an exit' : gap('exec') ? 'leadership visibility scored low' : 'their content and reputation scored low';
+  const visWhy = c.wantMedia ? 'they want press' : c.wantPods ? 'they want podcasts' : c.launch ? 'they have a launch or big news coming'
+    : c.competitorsPress ? 'competitors get the press' : gap('vis') ? 'visibility scored low' : gap('media') ? 'earned media scored low'
+    : prior === 'pr' ? 'they came in for PR' : 'their visibility is weak';
+  const cap = x => x.charAt(0).toUpperCase() + x.slice(1);
   let pick = null, route = '';
   if (f.budget === 'u5') { pick = 'kickstart'; route = 'Their budget is under $5K a month.'; }
   else if (c.notMonthly) { pick = 'kickstart'; route = 'They aren\'t ready for a monthly engagement yet.'; }
@@ -832,26 +1000,39 @@ function analyze() {
   else if (c.multiEntity) { pick = 'custom'; route = 'Multiple brands, executives, or markets: beyond a standard package.'; }
   // Lots of gaps drag the score down, so "enterprise scale" also counts $10M+ revenue.
   else if (gap('rep') && count(['vis', 'digital', 'web', 'measure']) >= 3 && (established || bigCo)) { pick = 'cdg'; route = 'Enterprise-level need across reputation and digital growth.'; }
-  else if (needRep && (established || bigCo || c.crisis || n < 6)) { pick = needGrowth ? 'cdg' : 'cmd'; route = needGrowth ? 'Enterprise-level need across reputation and digital growth.' : 'Established organization that needs reputation work and senior counsel.'; }
-  else if (needGrowth && needAuth) { pick = 'ig'; route = 'Needs growth plus stronger authority: leadership and visibility don\'t match their ambition.'; }
-  else if (needGrowth && needVis) { pick = 'ig'; route = 'Needs both lead generation and PR (Influence is the package with both).'; }
-  else if (needAuth && saidAuth) { pick = 'ig'; route = 'Wants authority (TV, stages, being the expert), not just mentions.'; }
-  else if (needVis || needAuth) { pick = 'vis'; route = 'Strong business, weak earned visibility.'; }
-  else if (needGrowth) { pick = 'bge'; route = 'The main issue is digital growth and lead generation.'; }
+  else if (needRep && (established || bigCo || liveCrisis || n < 6)) {
+    pick = needGrowth ? 'cdg' : 'cmd';
+    route = liveCrisis ? 'Active crisis: this needs Command-level counsel. Aaron folds the crisis work into Command at the standard price.'
+      : needGrowth ? 'Enterprise-level need across reputation and digital growth.' : 'Established organization that needs reputation work and senior counsel.';
+  }
+  else if (needGrowth && needAuth) { pick = 'ig'; route = `Influence has both sides: ${growthWhy}, and ${authWhy}.`; }
+  else if (needGrowth && needVis) { pick = 'ig'; route = `Influence is the package with leads and PR: ${growthWhy}, and ${visWhy}.`; }
+  else if (needAuth && saidAuth) { pick = 'ig'; route = `${cap(authWhy)}: Influence adds broadcast, speaking, and executive positioning. Visibility doesn't include broadcast or speaking.`; }
+  else if (needVis || needAuth) { pick = 'vis'; route = `Strong business, weak earned visibility: ${needVis ? visWhy : authWhy}.`; }
+  else if (needGrowth) { pick = 'bge'; route = `The main issue is leads: ${growthWhy}.`; }
   else if (needFoundation) { pick = 'bge'; route = 'The gaps are positioning, audience, and website. Business Growth covers messaging, go-to-market, and conversion.'; }
-  else if (needVideo) { pick = 'cinema'; route = 'Content quality is the main thing holding back how they\'re seen.'; }
+  else if (needVideo) {
+    pick = f.vidFreq === 'once' ? 'vidphoto' : 'cinema';
+    route = f.vidFreq === 'once' ? 'One video project, not ongoing content: Video & Photography is a one-time production.'
+      : f.vidFreq === 'ongoing' ? 'They need new video content every month: Premium Cinema.'
+      : prior === 'video' ? 'They came for video. Premium Cinema if they need content every month; one project is Video & Photography (from $30,000).'
+      : 'Content quality is the main thing holding back how they\'re seen.';
+  }
   else if (n >= 8 && !gaps.length) { pick = established ? 'ig' : 'vis'; route = 'No major gaps: the focus is acceleration, authority, and executive visibility.'; }
 
+  // Before they've said anything, the ad they came from gives a starting point.
+  const heard = Object.values(c).some(Boolean) || n > 0 || !!f.pain;
+  if (prior && pick && !heard) route = `Starting point for a ${TRACKS[prior].label} call. It changes as you click what you hear.`;
   if (route) why.push(route);
   if (gaps.length) why.push(`Scored 1 or 2: ${gaps.map(x => x.name).join(', ')}.`);
   if (ready) why.push(`Readiness: about ${ready.est}/${MAX_SCORE}, ${ready.label}.`);
-  if (c.crisis) why.push('Active crisis: this needs Command-level counsel.');
+  if (liveCrisis && !route.startsWith('Active crisis')) why.push('Active crisis: this needs Command-level counsel.');
 
   // $30K rule: Command & Digital Growth only at $33.5K+.
   if (pick === 'cdg' && f.budget && f.budget !== 'b33') { pick = 'cmd'; why.push('$30K rule: below $33.5K sell Command, not Command & Digital Growth.'); }
 
   // Budget: cut scope (step down a package) before cutting price.
-  let budgetNote = null;
+  let budgetNote = null, stepped = false;
   const max = BUDGET_MAX[f.budget], min = BUDGET_MIN[f.budget];
   if (pick && LADDER.includes(pick) && max !== undefined && PACKAGES[pick].floor !== null && PACKAGES[pick].floor > max) {
     const ideal = pick;
@@ -859,7 +1040,8 @@ function analyze() {
     while (i > 0 && (PACKAGES[LADDER[i]].floor === null || PACKAGES[LADDER[i]].floor > max)) i--;
     pick = LADDER[i];
     budgetNote = `Best fit is ${pkgName(ideal)}, but that's above their budget, so this shows ${pkgName(pick)} (less scope, not a discount).`;
-  } else if (pick && min !== undefined && PACKAGES[pick].floor > min) {
+    stepped = true;
+  } else if (pick && min !== undefined && !PACKAGES[pick].once && PACKAGES[pick].floor > min) {
     budgetNote = `Their budget range starts at ${money(min)}, below this package's lowest price (${money(PACKAGES[pick].floor)}). Check they're at the top of their range.`;
   }
 
@@ -867,7 +1049,7 @@ function analyze() {
   if (pick === 'kickstart') next = needGrowth && needAuth ? 'ig' : needGrowth && needVis ? 'ig' : needVis ? 'vis' : needGrowth ? 'bge' : null;
 
   // On a monthly package, foundation gaps are a talking point (Month 1 covers them), not a reason to sell less.
-  const monthly = !!pick && !['kickstart', 'cinema'].includes(pick);
+  const monthly = !!pick && !['kickstart', 'cinema', 'vidphoto'].includes(pick);
   const foundationLine = needFoundation && monthly
     ? `Their foundation gaps get fixed in Month 1: every package starts with the business audit and positioning work, the same ground Kickstart covers.${gap('web') ? ' A new website or funnel is scoped separately.' : ''}`
     : null;
@@ -879,14 +1061,15 @@ function analyze() {
 
   // Video rides on top: $12.5K with Influence or Command, $20K otherwise.
   let addon = null;
-  if (needVideo && pick && pick !== 'cinema' && pick !== 'kickstart') {
-    addon = pick === 'ig' || pick === 'cmd'
+  if (needVideo && pick && !['cinema', 'kickstart', 'vidphoto'].includes(pick)) {
+    addon = f.vidFreq === 'once' ? 'Video & Photography: from $30,000, one-time production.'
+      : pick === 'ig' || pick === 'cmd'
       ? 'Premium Cinema add-on: $12,500/mo, 12 months.'
       : 'Premium Cinema add-on: $20,000/mo, 12 months. One-time shoot instead: Video & Photography from $30,000.';
   }
   if (pick === 'cinema' && max !== undefined && max < 20000) budgetNote = 'Premium Cinema is $20,000/mo for 12 months. For a one-time shoot: Video & Photography from $30,000.';
 
-  return { pick, next, addon, why, budgetNote, foundationLine, askMoney, monthly, smallCo, realBudget, n, total, ready, gaps, needFoundation, needGrowth, needVis, needAuth, needRep };
+  return { pick, next, addon, why, budgetNote, stepped, liveCrisis, foundationLine, askMoney, monthly, smallCo, realBudget, n, total, ready, gaps, needFoundation, needGrowth, needVis, needAuth, needRep };
 }
 
 function beatDone(b) { return b.done(S.fields, S.chips); }
@@ -894,37 +1077,50 @@ function currentBeat(sec) { return FLOW.find(b => sec < b.end) || null; }
 const elapsed = () => S.timerStart ? Math.floor((Date.now() - S.timerStart) / 1000) : null;
 const anyOf = list => list.some(([k]) => S.chips[k]);
 
+// Warnings show inside the section whose answer set them off (`at`), right where the rep is looking.
 function flags(a) {
-  const c = S.chips, f = S.fields, out = [];
-  const add = (cls, text, script) => out.push({ cls, text, script });
-  if (f.budget === 'u5') add('bad', 'Under $5K a month isn\'t our target client. If it\'s a real business that needs a foundation, offer Kickstart. Otherwise, let them go kindly:', SCRIPTS.d11);
-  if (a.smallCo && a.realBudget) add('', 'Under $150K in revenue but a $10K+ monthly budget. Ask where the money comes from (funding, investors, a parent company) before you build the plan.');
-  if (f.dm === 'notdm' || f.dmCall2 === 'no') add('bad', 'They\'re not the decision maker. Don\'t build a plan until the decision maker is on the next call.', SCRIPTS.d12);
-  if (f.commit === 'hedge') add('', 'They weren\'t sure about deciding within 2 weeks. Find out exactly what they\'d need to decide, or let it go.', SCRIPTS.d10);
-  if (f.commit === 'no') add('bad', 'Not ready to decide. Don\'t build a custom plan yet (no free work before a contract).');
-  if (f.spokes === 'no') add('bad', 'The leader won\'t do interviews, so PR won\'t deliver much. Find another spokesperson, or it\'s not a PR fit.');
-  if (f.spokes === 'train') add('', 'Needs media training first. It\'s required before any TV booking.');
-  if (f.time === 'thin') add('', 'They\'re stretched thin. Set the expectation now: about 2 hours a month for interviews and approvals.');
-  if (c.regulated) add('', 'Regulated industry: legal reviews slow down approvals. Plan for that in the timeline.');
-  if (c.wantsGuarantee) add('', 'They want guarantees. We never guarantee placements. Press / and search "guarantee" for what to say.');
-  if (c.payToPlay) add('', 'They want paid placements. Say: "We can, but anyone can buy those, and as a client you\'d get better rates. Our job is getting you coverage you don\'t pay for." Don\'t say a flat no, and don\'t say yes and walk it back later.');
-  if (c.balked) add('', 'They pushed back on price. Don\'t defend the number; compare it to what it\'s worth to them. Only offer a lower price if they\'re a real fit, and check whether the scope should drop too.');
-  if (c.noTimeline) add('', 'No timeline. Worth asking what waiting another 6–12 months would cost them.');
-  if (c.wantsFree) add('', 'They want our ideas before signing. Show proof (similar clients), not the strategy. The strategy is what they pay for.');
-  if (c.soloSeller && (f.revenue === 'r3' || f.revenue === 'r4')) add('', 'Says $2M+ in revenue, but the founder is the only salesperson. Ask who would handle twice the leads.');
-  if (c.soloSeller && a.needGrowth && !a.needFoundation) add('', 'More leads won\'t help if nobody can take the calls. Bring up sales capacity before selling lead generation.');
-  if (c.techScope) add('', 'Custom website / CRM / AI work isn\'t in any package price. Get the details and quote it separately.');
-  if (c.multiEntity) add('', 'Several brands or companies: either Custom Enterprise, or a separate contract for each company (Aaron\'s usual move).');
-  if (c.tried_pr) add('', 'They tried PR before. Ask what they were promised and what they actually got. Then explain the difference: we pitch as their CEO, and we report what the coverage is worth next to what they pay us.');
-  if (S.chips.as_none && a.needVis) add('', 'Nothing newsworthy yet. The first month goes to finding their story; first placements usually land in weeks 4–12.');
-  if (f.competitors) add('', `Use the competitor: "${clip(f.competitors, 40)} is getting the coverage you want." It creates urgency and tells us which outlets to go after.`);
-  if (a.pick && PACKAGES[a.pick].note) add('', PACKAGES[a.pick].note);
-
+  const c = S.chips, f = S.fields, out = [], t = track();
+  const add = (at, cls, text, script) => out.push({ at, cls, text, script });
+  if (f.budget === 'u5') add('secSize', 'bad', 'Under $5K a month isn\'t our target client. If it\'s a real business that needs a foundation, offer Kickstart. Otherwise, let them go kindly:', SCRIPTS.d11);
+  if (a.smallCo && a.realBudget) add('secSize', '', 'Under $150K in revenue but a $10K+ monthly budget. Ask where the money comes from (funding, investors, a parent company) before you build the plan.');
+  if (f.dm === 'notdm') add('secSize', 'bad', 'They\'re not the decision maker. Don\'t build a plan until the decision maker is on the next call.', SCRIPTS.d12);
+  // The package vs their budget, by the budget answer, with words to say.
+  const BAND = { b5: ['$5k', '$10k'], b10: ['$10k', '$20k'], b20: ['$20k', '$30k'], b30: ['$30k', '$33k'] };
+  if (a.stepped) add('secSize', '', a.budgetNote);
+  else if (a.pick && BAND[f.budget] && !PACKAGES[a.pick].once && PACKAGES[a.pick].floor > BUDGET_MIN[f.budget])
+    add('secSize', '', `${pkgName(a.pick)} starts at ${money(PACKAGES[a.pick].floor)} (lowest approved), above the bottom of their range.`,
+      `"Where in that range are you leaning: closer to ${BAND[f.budget][0]} or closer to ${BAND[f.budget][1]}?"`);
+  if (t === 'crisis' && a.pick && f.budget) add('secSize', '', 'For a crisis, Aaron anchors high on Call 2: "Crisis contracts start at $30 to 35K on the low end."');
+  if (c.soloSeller && (f.revenue === 'r3' || f.revenue === 'r4')) add('secSize', '', 'Says $2M+ in revenue, but the founder is the only salesperson. Ask who would handle twice the leads.');
   const sec = elapsed();
-  if (S.mode === 'c1' && sec !== null) {
-    const b3 = FLOW.find(b => b.id === 'b3');
-    if (sec > 1800 && !beatDone(b3)) add('', 'Heads up: 30+ minutes in and budget / decision maker haven\'t come up yet.');
-  }
+  if (S.mode === 'c1' && sec !== null && sec > 1800 && !beatDone(FLOW.find(b => b.id === 'b3'))) add('secSize', '', 'Heads up: 30+ minutes in and budget / decision maker haven\'t come up yet.');
+
+  if (c.crisis && t !== 'crisis') add('secWhy', 'bad', 'Active crisis. Click Crisis at the top of section 1: the crisis questions move up, right after this section.');
+  if (c.regulated) add('secWhy', '', 'Regulated industry: legal reviews slow down approvals. Plan for that in the timeline.');
+  if (c.wantsGuarantee) add('secWhy', '', 'They want guarantees. We never guarantee placements. Press / and search "guarantee" for what to say.');
+  if (c.payToPlay) add('secWhy', '', 'They want paid placements. Say: "We can, but anyone can buy those, and as a client you\'d get better rates. Our job is getting you coverage you don\'t pay for." Don\'t say a flat no, and don\'t say yes and walk it back later.');
+  if (c.balked) add('secWhy', '', 'They pushed back on price. Don\'t defend the number; compare it to what it\'s worth to them. Only offer a lower price if they\'re a real fit, and check whether the scope should drop too.');
+  if (c.noTimeline) add('secWhy', '', 'No timeline. Worth asking what waiting another 6–12 months would cost them.');
+  if (c.wantsFree) add('secWhy', '', 'They want our ideas before signing. Show proof (similar clients), not the strategy. The strategy is what they pay for.');
+  if (c.soloSeller && a.needGrowth && !a.needFoundation) add('secWhy', '', 'More leads won\'t help if nobody can take the calls. Bring up sales capacity before selling lead generation.');
+  if (c.techScope) add('secWhy', '', 'Custom website / CRM / AI work isn\'t in any package price. Get the details and quote it separately.');
+  if (c.multiEntity) add('secWhy', '', 'Several brands or companies: either Custom Enterprise, or a separate contract for each company (Aaron\'s usual move).');
+
+  if (c.tried_ads) add('secDeep', '', 'They tried an ad agency. Ask what they were promised and what they actually got: cost per lead, and leads that turned into clients. Aaron: "We\'re not here to compete with your marketing team. We understand their frustrations, because that\'s how we started."');
+  if (c.tried_pr) add('secDeep', '', 'They tried PR before. Ask what they were promised and what they actually got. Then explain the difference: we pitch as their CEO, and we report what the coverage is worth next to what they pay us.');
+
+  const cfgFit = FIT_BY_TRACK[t], asked = k => [...cfgFit.main, ...cfgFit.more].some(([x]) => x === k);
+  if (f.spokes === 'no' && asked('spokes')) add('secFit', 'bad', 'The leader won\'t do interviews, so PR won\'t deliver much. Find another spokesperson, or it\'s not a PR fit.');
+  if (f.spokes === 'train' && asked('spokes')) add('secFit', '', 'Needs media training first. It\'s required before any TV booking.');
+  if (f.time === 'thin' && asked('time')) add('secFit', '', 'They\'re stretched thin. Set the expectation now: about 2 hours a month for interviews and approvals.');
+  if (c.as_none && a.needVis && asked('assets')) add('secFit', '', 'Nothing newsworthy yet. The first month goes to finding their story; first placements usually land in weeks 4–12.');
+  if (f.competitors && asked('competitors')) add('secFit', '', `Use the competitor: "${clip(f.competitors, 40)} is getting the coverage you want." It creates urgency and tells us which outlets to go after.`);
+  if (t === 'crisis' && ['reporter', 'news'].includes(f.crisisPublic)) add('secFit', 'bad', 'It\'s live. Aaron\'s first moves: a fact-alignment session, a holding statement with pre-approved answers, and press inquiries routed through us.');
+  if (t === 'crisis' && f.crisisLegal && f.crisisLegal !== 'yes') add('secFit', '', 'No lawyer on it yet. Aaron\'s rule: we never put out a statement that opens them up civilly, and we don\'t put out evidence ("that\'s what courts are for").');
+
+  if (f.commit === 'hedge') add('secWrap', '', 'They weren\'t sure about deciding within 2 weeks. Find out exactly what they\'d need to decide, or let it go.', SCRIPTS.d10);
+  if (f.commit === 'no') add('secWrap', 'bad', 'Not ready to decide. Don\'t build a custom plan yet (no free work before a contract).');
+  if (f.dmCall2 === 'no') add('secWrap', 'bad', 'They won\'t bring the decision maker. Don\'t build a plan until the decision maker is on Call 2.', SCRIPTS.d12);
   return out;
 }
 
@@ -933,6 +1129,7 @@ function tokens(s) { return String(s).toLowerCase().split(/[^a-z]+/).filter(w =>
 function activeTopics() {
   const t = new Set();
   Object.keys(S.chips).filter(k => S.chips[k]).forEach(k => (SIGNAL_TOPICS[k] || []).forEach(x => t.add(x)));
+  if (trackChosen()) t.add(TRACKS[track()].focus);  // the ad they came from leans the story match
   return [...t];
 }
 function rankCases(a, focus) {
@@ -974,7 +1171,8 @@ function popCase(trigger, freshCase = false) {
   const focus = trigger === 'industry' ? null : (SIGNAL_TOPICS[trigger] || [])[0];
   if (trigger !== 'industry' && !focus) return;
   let r = null, m = null;
-  const pool = rankCases(analyze(), focus).filter(x => x.s >= 5 && !(freshCase && popped.has(x.idx)));
+  // Only real matches (same industry, or a neighboring one in the same situation), same rule as the open.
+  const pool = rankCases(analyze(), focus).filter(x => (x.sameInd || (x.adjInd && x.hits.length)) && !(freshCase && popped.has(x.idx)));
   // First choice: a case with a number about exactly what they just said. Then any case in that situation.
   for (const strict of [true, false]) {
     for (const cand of pool) {
@@ -1009,7 +1207,7 @@ function popCase(trigger, freshCase = false) {
   armPopTimer();
 }
 function hidePop() { $('#pop').hidden = true; clearTimeout(popTimer); }
-function armPopTimer() { clearTimeout(popTimer); popTimer = setTimeout(hidePop, 15000); }
+function armPopTimer() { clearTimeout(popTimer); popTimer = setTimeout(hidePop, 10000); }
 $('#pop').addEventListener('mouseenter', () => clearTimeout(popTimer));
 $('#pop').addEventListener('mouseleave', armPopTimer);
 function chipLabel(k) {
@@ -1140,7 +1338,7 @@ function runSearch() {
   if (!q.trim()) { box.hidden = true; panel.hidden = false; sel = -1; answer = null; return; }
   const hits = search(q);
   panel.hidden = true; box.hidden = false; sel = -1;
-  box.innerHTML = answerHtml(q) + (hits.length ? hits.map(({ d }) => {
+  box.innerHTML = answerHtml(q) + (hits.length ? hits.slice(0, 6).map(({ d }) => {
     const snip = hl(snippet(d.b, q), q), full = hl(d.b, q);
     return `<div class="res" data-snip="${esc(snip)}" data-full="${esc(full)}">
       <div class="k">${esc(KIND_LABEL[d.k] || d.k)}${d.g ? ` <span>· ${esc(d.g)}</span>` : ''}</div>
@@ -1190,35 +1388,46 @@ document.addEventListener('keydown', e => {
   if (e.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) { e.preventDefault(); $('#q').focus(); }
 });
 
-// On narrow screens the panel stacks under the form, so bring search to the top.
-const narrow = matchMedia('(max-width: 1000px)');
-function placeSearch() { (narrow.matches ? $('#main') : $('#side')).prepend($('#searchCard')); }
+// On narrow screens the panel stacks under the form, so bring search to the top and the package card up
+// right after size and budget, where it's needed.
+const narrow = matchMedia('(max-width: 820px)');
+function placeSearch() {
+  (narrow.matches ? $('#main') : $('#side')).prepend($('#searchCard'));
+  if (narrow.matches) $('#secSize').after($('#recCard')); else $('#panel').prepend($('#recCard'));
+}
 narrow.addEventListener('change', placeSearch);
+addEventListener('resize', () => { if (narrow.matches !== !!$('#main #recCard')) placeSearch(); });
 placeSearch();
 
 /* ============================================================
    RENDER
    ============================================================ */
 // Rebuild a panel card without snapping shut the sections the rep opened (details[data-keep]).
+// Also keeps the cursor in a price box the rep is typing in.
 function setHtml(el, html) {
   const open = new Set([...el.querySelectorAll('details[data-keep][open]')].map(d => d.dataset.keep));
+  const act = document.activeElement, typing = act && el.contains(act) && (act.dataset.q || act.dataset.qalc)
+    ? { sel: act.dataset.q ? `[data-q="${act.dataset.q}"]` : `[data-qalc="${act.dataset.qalc}"]`, value: act.value, pos: act.selectionStart } : null;
   el.innerHTML = html;
   el.querySelectorAll('details[data-keep]').forEach(d => { if (open.has(d.dataset.keep)) d.open = true; });
+  const box = typing && el.querySelector(typing.sel);
+  if (box) { box.value = typing.value; box.focus(); try { box.setSelectionRange(typing.pos, typing.pos); } catch (e) {} }
 }
 
 // What's done on the left: turns the section numbers green and fills the progress pills.
-const FIT_MAIN = FIT.filter(([k]) => !FIT_MORE.has(k));
 function progress(a) {
-  const f = S.fields;
-  const fitN = FIT_MAIN.filter(([k, type, , , , list]) => type === 'chips' ? anyOf(list) : !!f[k]).length;
+  const f = S.fields, cfg = FIT_BY_TRACK[track()];
+  const fitN = cfg.main.filter(([k, type, , , , list]) => type === 'chips' ? anyOf(list) : !!f[k]).length + cfg.areas.filter(id => S.scores[id]).length;
+  const fitOf = cfg.main.length + cfg.areas.length;
+  const deep = ['b4', 'b5', 'b6'].map(id => beatDone(FLOW.find(b => b.id === id)));
   return [
     { id: 'secProspect', done: !!(f.name || f.company) },
     { id: 'secWhy', label: 'Why they\'re here', done: !!f.pain || CHIP_GROUPS.slice(0, 2).some(g => anyOf(g.chips)) },
     { id: 'secSize', label: 'Size and budget', done: !!f.revenue && !!f.budget && !!f.dm, part: !!(f.revenue || f.budget || f.dm) },
-    { id: 'secAudit', label: `Business ${a.n} of ${CATEGORIES.length}`, done: a.n === CATEGORIES.length, part: a.n > 0 },
-    { id: 'secFit', label: `PR fit ${fitN} of ${FIT_MAIN.length}`, done: fitN === FIT_MAIN.length, part: fitN > 0 },
+    { id: 'secDeep', label: 'Go deeper', done: deep.every(Boolean), part: deep.some(Boolean) },
+    { id: 'secFit', label: `${TRACKS[track()].label} fit ${fitN} of ${fitOf}`, done: fitN === fitOf, part: fitN > 0 },
     { id: 'secWrap', label: 'Wrap-up', done: beatDone(FLOW.find(b => b.id === 'b7')), part: !!(f.commit || f.dmCall2 || f.outlet || f.call2) },
-    { id: 'secAfter', done: !!(S.nutshell && S.nutshell.leadId) },
+    { id: 'secAudit', label: `Business ${a.n} of ${CATEGORIES.length}`, done: a.n === CATEGORIES.length, part: a.n > 0 },
   ];
 }
 document.addEventListener('click', e => {
@@ -1226,7 +1435,9 @@ document.addEventListener('click', e => {
   if (g) document.getElementById(g.dataset.goto).scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
+let lastOpen = '', lastClose = '';
 function render() {
+  if (builtTrack !== track()) buildTrack();
   const a = analyze(), f = S.fields, c = S.chips;
   renderBefore();
   showNutshellState();
@@ -1257,52 +1468,79 @@ function render() {
 
   // Recommendation: the package, the price to say first, and one plain reason up top.
   if (!a.pick) {
-    setHtml($('#recCard'), `<p class="eyebrow">Recommended package</p><div class="empty">Shows up once you click what you hear or score a few business areas.</div>`);
+    setHtml($('#recCard'), `<p class="eyebrow">Recommended package</p><div class="empty">Shows up once you click what you hear or score a few business areas.</div>${priceHtml(a)}`);
   } else {
     const p = PACKAGES[a.pick];
-    const [first, ...rest] = a.why;
+    // When budget pushed the pick down a package, that's the reason to lead with.
+    const [first, ...rest] = a.stepped ? [a.budgetNote, ...a.why] : a.why;
     const head = `<div class="rec-name">${esc(p.name)} ${p.em ? `<em>${esc(p.em)}</em>` : ''}</div>`;
     const next = a.next ? `<div style="margin-top:10px" class="muted">After Kickstart, the next step would be <b style="color:var(--text)">${esc(pkgName(a.next))}</b> (${esc(PACKAGES[a.next].price)})</div>` : '';
-    const budget = a.budgetNote ? `<div class="flag">${esc(a.budgetNote)}</div>` : '';
+    const budget = a.budgetNote && !a.stepped ? `<div class="flag">${esc(a.budgetNote)}</div>` : '';
     const askMoney = a.askMoney ? `<div class="flag">${esc(a.askMoney)}</div>` : '';
     const foundation = a.foundationLine ? `<div class="rule"><b style="color:var(--text)">Foundation:</b> ${esc(a.foundationLine)}</div>` : '';
     const addon = a.addon ? `<div class="rule" style="color:var(--text)"><b>+ ${esc(a.addon)}</b></div>` : '';
-    const kickstartOut = a.monthly ? `<div class="muted" style="font-size:12px;margin-top:6px">If monthly is off the table: Kickstart, ${esc(PACKAGES.kickstart.price)} (audit, positioning, a 30/60/90-day plan), then step up.</div>` : '';
     setHtml($('#recCard'), `<p class="eyebrow">Recommended package</p>${head}
+      <div class="muted" style="font-size:12.5px;margin-top:2px">${esc(p.purpose)}</div>
       <div class="rec-price">Price to say first: <b>${esc(p.price)}</b> · <span class="muted">${esc(p.term)}</span></div>
-      ${askMoney}
+      ${f.spokes === 'no' && ['vis', 'ig', 'cmd', 'cdg'].includes(a.pick) && track() === 'pr' ? '<div class="flag bad">On hold: the leader won\'t do interviews. Only pitch PR if someone else will be the face of it.</div>' : ''}
+      ${askMoney}${budget}${p.note ? `<div class="flag">${esc(p.note)}</div>` : ''}
       ${first ? `<div class="why1"><b>Why:</b> ${esc(first)}</div>` : ''}
-      <div class="muted" style="margin-top:4px">${esc(p.purpose)}</div>${budget}${foundation}${addon}${roiHtml(p)}${next}
+      ${priceHtml(a)}
+      ${foundation}${addon}${roiHtml(p, quote(a))}${next}
       ${S.mode === 'c2' && specialtyLine() ? `<div class="rule"><b style="color:var(--text)">Say it back to them:</b> ${esc(specialtyLine())}</div>` : ''}
       ${rest.length ? `<details data-keep="why"><summary>More on why</summary><ul class="why">${rest.map(w => `<li>${esc(w)}</li>`).join('')}</ul></details>` : ''}
-      ${p.alt.length ? `<details data-keep="alt"><summary>Lower prices (only if they push back on price)</summary><ul class="why">${p.alt.map(x => `<li>${esc(x)}</li>`).join('')}</ul><div class="muted" style="font-size:12px;margin-top:6px">Don't mention these unless they push back. If the price comes down, check whether the scope should come down too.</div>${kickstartOut}</details>` : ''}`);
+      ${a.monthly ? `<div class="muted" style="font-size:12px;margin-top:6px">If monthly is off the table: Kickstart, ${esc(PACKAGES.kickstart.price)} (audit, positioning, a 30/60/90-day plan), then step up.</div>` : ''}`);
   }
 
-  // Flags
+  // Warnings, inside the section that set them off
   const fl = flags(a);
-  $('#flagsCard').hidden = !fl.length;
-  $('#flagsCard').innerHTML = '<p class="eyebrow">Watch for</p>' + fl.map(x => `<div class="flag ${x.cls}">${esc(x.text)}${x.script ? `<div class="script">${esc(x.script)}</div>` : ''}</div>`).join('');
+  document.querySelectorAll('.iflags').forEach(box => {
+    box.innerHTML = fl.filter(x => x.at === box.dataset.for).map(x => `<div class="flag ${x.cls}">${esc(x.text)}${x.script ? `<div class="script">${esc(x.script)}</div>` : ''}</div>`).join('');
+  });
 
-  // Ask next
-  $('#askCard').innerHTML = '<p class="eyebrow">Ask next</p>' + (S.mode === 'c1' ? askNextC1(a) : askNextC2());
+  // Section 2's Try opens with their own booking-form words when we have them.
+  const booked = S.prefill && (S.prefill.answers || []).find(([, v]) => v && v.length > 12);
+  const whyTry = $('#whyBeat .trybox'), bookedKey = booked ? booked[1] : '';
+  if (whyTry.dataset.booked !== bookedKey) {
+    whyTry.dataset.booked = bookedKey;
+    const [main, then] = beatSay(FLOW.find(b => b.id === 'b1'));
+    whyTry.innerHTML = booked
+      ? tryInner('Try · from their booking form', `"When you booked, you wrote: '${clip(booked[1], 110)}'. Walk me through what's going on there."`, ['Then: "Anything else?"'])
+      : tryInner('Try', main, then);
+  }
+
+  // Call 2: the pitch order and closing lines sit at the top of the left side, and the Call 1 wrap-up line steps aside.
+  $('#c2Card').hidden = S.mode !== 'c2';
+  if (S.mode === 'c2') $('#c2Card').innerHTML = callTwoHtml();
+  $('#wrapBeat .trybox').hidden = S.mode === 'c2';
+  $('#wrapBeat [data-k="outlet"]').hidden = track() !== 'pr';
+  // The close, filled with their own words from the notes above.
+  const close = wrapTry();
+  if (close !== lastClose) { lastClose = close; $('#wrapBeat .trybox').innerHTML = close; }
 
   // Proof
   const ranked = rankCases(a, null);
   const chosen = S.caseIdx !== null && CASES[S.caseIdx] ? ranked.find(r => r.idx === S.caseIdx) : ranked[0];
-  const m = pickMetric(chosen.c, null), [fit, weak] = fitLabel(chosen);
-  setHtml($('#caseCard'), `
+  const [fit, weak] = fitLabel(chosen), showCase = realMatch(chosen) || S.caseIdx !== null;
+  const alts = `<div class="alts">${showCase ? 'Other matches' : 'Closest options'}: ${ranked.filter(r => r.idx !== chosen.idx || !showCase).slice(0, 3).map(r => `<a data-case="${r.idx}">${esc(r.c.i.toLowerCase())}</a>`).join(' · ')}${S.caseIdx !== null ? ' · <a data-case="auto">auto-pick</a>' : ''}</div>`;
+  setHtml($('#caseCard'), showCase ? `
     <p class="eyebrow">A client story you can tell${S.caseIdx !== null ? ' · pinned' : ''}</p>
     <div class="case">
       <div class="ind">${esc(chosen.c.i)}${chosen.c.p ? ' · ' + esc(chosen.c.p) : ''}</div>
       <h4>${esc(chosen.c.t)}</h4>
       <div class="fit ${weak}">${esc(fit)}</div>
-      <div class="say">"${esc(sayLine(chosen, m))}"</div>
+      <div class="say">"${esc(sayLine(chosen, storyMetrics(chosen.c)[0]))}"</div>
       <div class="m">${chosen.c.m.map(([k, v]) => `<div>${esc(k)}: <b>${esc(v)}</b></div>`).join('')}</div>
       <details data-keep="situation"><summary>The situation</summary><div style="font-size:13px;margin-top:6px">${esc(chosen.c.c)}</div></details>
     </div>
-    <div class="alts">Other matches: ${ranked.filter(r => r.idx !== chosen.idx).slice(0, 3).map(r => `<a data-case="${r.idx}">${esc(r.c.i.toLowerCase())}</a>`).join(' · ')}${S.caseIdx !== null ? ' · <a data-case="auto">auto-pick</a>' : ''}</div>
-    <div class="muted" style="font-size:12px;margin-top:6px">Only tell it if the match is real (same industry or same situation). If in doubt, skip it.</div>`);
-  renderPrice(a);
+    ${alts}
+    <div class="muted" style="font-size:12px;margin-top:6px">Only tell it if the match is real (same industry or same situation). If in doubt, skip it.</div>`
+    : `<p class="eyebrow">A client story you can tell</p>
+    <div class="empty">${S.fields.industry ? 'No close client match yet. It shows up when a story matches their industry or their situation.' : 'Pick their industry in section 1 to find a client story.'}</div>
+    ${alts}<div class="muted" style="font-size:12px;margin-top:6px">Click one to look, and only tell it if it really fits.</div>`);
+  // Section 1's open: the frame, then the client story only when the match is real.
+  const open = openTry(chosen);
+  if (open !== lastOpen) { lastOpen = open; $('#openTry').innerHTML = open; }
   renderMedia();
 }
 
@@ -1386,7 +1624,12 @@ const PARTS = {
 const GROWTH = new Set(['bgs', 'gads', 'geo', 'aeo', 'conv', 'track', 'seo', 'social']);
 const PRSIDE = new Set(['pr', 'pod', 'bcast', 'speak', 'execpos']);
 
-const BD = () => (S.bd = Object.assign({ pkg: '', out: [], alc: [], open: {} }, S.bd));
+// Fills in missing keys in place, so every caller shares the same S.bd object.
+const BD = () => {
+  const b = S.bd || (S.bd = {});
+  for (const [k, v] of Object.entries({ pkg: '', out: [], alc: [], open: { pkg: true }, price: {}, months: {}, alcAmt: {}, alcUnit: {} })) if (b[k] === undefined) b[k] = v;
+  return b;
+};
 const alcPrice = x => x.amt === null ? '<span class="muted">not priced, scope it</span>'
   : `${x.from ? 'from ' : ''}${money(x.amt)}${x.unit === 'mo' ? '/mo' : ' one-time'}`;
 const sumUp = keys => {
@@ -1411,49 +1654,93 @@ function breakdownAdvice(key, outKeys, keptKeys) {
 }
 
 function scopeNote() {
-  const bd = BD(), out = [];
+  const bd = BD(), out = [], q = quote(analyze());
+  if (q && (q.edited || bd.alc.length)) out.push(`Quoted: ${pkgName(q.key)} ${q.once ? money(q.price) + ' one-time' : `${money(q.price)}/mo × ${q.months} months`} (list ${PACKAGES[q.key].price}). Total ${totalLine(q, true)}`);
   if (bd.key && PARTS[bd.key] && bd.out.length) out.push(`${pkgName(bd.key)} without: ${bd.out.map(i => PARTS[bd.key][i][1]).join('; ')}`);
-  if (bd.alc.length) out.push(`à la carte looked at: ${bd.alc.map(k => ALC_BY[k] && ALC_BY[k].name).filter(Boolean).join('; ')}`);
+  if (bd.alc.length) out.push(`À la carte: ${bd.alc.filter(k => ALC_BY[k]).map(k => { const x = addOn(k); return `${x.name}${x.amt !== null ? ` ${money(x.amt)}${x.unit === 'mo' ? '/mo' : ' one-time'}` : ' (to scope)'}`; }).join('; ')}`);
   return out.join(' | ');
 }
 
-function renderPrice(a) {
-  const bd = BD(), card = $('#priceCard');
-  const key = PARTS[bd.pkg] ? bd.pkg : (PARTS[a.pick] ? a.pick : '');
-  const opts = `<option value="">${a.pick && PARTS[a.pick] ? `Recommended: ${esc(pkgName(a.pick))}` : 'Pick a package'}</option>`
-    + LADDER.filter(k => PARTS[k]).map(k => `<option value="${k}" ${k === bd.pkg ? 'selected' : ''}>${esc(pkgName(k))} · ${esc(PACKAGES[k].price)}</option>`).join('');
-  let pkgHtml = '<div class="empty">Pick a package to see its pieces.</div>';
-  if (key) {
+// The live quote under the recommended package. Starts at list price; the rep can change the package,
+// the price, the months, take pieces out, and add à la carte lines. Approved lower prices are one click.
+// "12k" and "12.5K" mean thousands.
+const num = s => {
+  const t = String(s ?? '').trim().toLowerCase().replace(/[$,\s]/g, ''), k = /k$/.test(t);
+  const n = parseFloat(t.replace(/k$/, ''));
+  return Number.isFinite(n) && n > 0 ? (k ? n * 1000 : n) : null;
+};
+const altPrices = p => p.alt.filter(s => s.startsWith('$')).map(s => [num(s.match(/\$[\d,]+/)[0]), s]);
+const QUOTE_KEYS = [...LADDER, 'cinema', 'vidphoto'];
+const addOn = k => { const bd = BD(), x = ALC_BY[k]; return { ...x, amt: bd.alcAmt[k] ?? x.amt, unit: x.unit || bd.alcUnit[k] || 'once' }; };
+function quote(a) {
+  const bd = BD();
+  const key = QUOTE_KEYS.includes(bd.pkg) ? bd.pkg : QUOTE_KEYS.includes(a.pick) ? a.pick : '';
+  if (!key) return null;
+  const p = PACKAGES[key], once = !!p.once;
+  const price = bd.price[key] ?? p.monthly, months = once ? 1 : (bd.months[key] ?? p.months);
+  let addMo = 0, addOnce = 0, open = 0;
+  bd.alc.filter(k => ALC_BY[k]).map(addOn).forEach(x => { if (x.amt === null) open++; else if (x.unit === 'mo') addMo += x.amt; else addOnce += x.amt; });
+  return { key, p, once, price, months, addMo, addOnce, open, below: !!p.floor && price < p.floor, short: !once && months < p.months, edited: price !== p.monthly || months !== p.months };
+}
+function totalLine(q, plain) {
+  const b = s => plain ? s : `<b>${s}</b>`;
+  const main = q.once ? `${b(money(q.price + q.addOnce))} one-time` + (q.addMo ? ` + ${money(q.addMo)}/mo` : '')
+    : `${b(money(q.price + q.addMo) + '/mo')} × ${q.months} months = ${b(money((q.price + q.addMo) * q.months))}` + (q.addOnce ? ` + ${money(q.addOnce)} one-time` : '');
+  return main + (q.open ? ` + ${q.open} unpriced to scope` : '');
+}
+
+function priceHtml(a) {
+  const bd = BD(), q = quote(a);
+  const opts = QUOTE_KEYS.map(k => `<option value="${k}" ${q && k === q.key ? 'selected' : ''}>${esc(pkgName(k))}${k === a.pick ? ' (recommended)' : ''} · ${esc(PACKAGES[k].price)}</option>`).join('');
+  if (!q) return `<div class="quote"><div class="sub-h">Price it</div><select data-bd="pkg"><option value="">Pick a package</option>${opts}</select></div>`;
+  const { key, p, once } = q;
+  const alts = altPrices(p).map(([v, s]) => `<button class="pchip ${q.price === v ? 'on' : ''}" data-qset="${v}" title="${esc(s)}">${money(v)}</button>`).join('');
+
+  let pieces = '';
+  if (PARTS[key]) {
     if (bd.key !== key) { bd.key = key; bd.out = []; }
     const parts = PARTS[key], out = bd.out;
     const kept = parts.filter((_, i) => !out.includes(i)).map(([k]) => k).filter(Boolean);
     const removed = parts.filter((_, i) => out.includes(i)).map(([k]) => k).filter(Boolean);
     const all = sumUp(parts.map(([k]) => k).filter(Boolean)), cut = sumUp(removed);
-    pkgHtml = parts.map(([k, label], i) => {
+    pieces = `<details data-bdo="pkg" ${bd.open.pkg ? 'open' : ''}><summary>What's in it, piece by piece (${parts.length})</summary>` + parts.map(([k, label], i) => {
       const x = k && ALC_BY[k];
       return `<label class="bdrow ${out.includes(i) ? 'off' : ''}"><input type="checkbox" data-bd-out="${i}" ${out.includes(i) ? '' : 'checked'}>
-        <span>${esc(label)}${x ? `<small class="muted">à la carte: ${esc(x.name)}</small>` : '<small class="muted">no à la carte line</small>'}</span>
-        <b>${x ? alcPrice(x) : '<span class="muted">included</span>'}</b></label>`;
+        <span>${esc(label)}</span><b>${x ? alcPrice(x) : '<span class="muted">included</span>'}</b></label>`;
     }).join('') + `
-      <div class="rule" style="color:var(--text)">Package: <b>${esc(PACKAGES[key].price)}</b> · ${esc(PACKAGES[key].term)}<br>
-        Priced pieces bought separately: <b>${totalText(all)}</b>${all.open ? ` <span class="muted">+ ${all.open} pieces with no doc price</span>` : ''}</div>
-      ${removed.length || out.length ? `<div class="flag">Taking out: ${parts.filter((_, i) => out.includes(i)).map(([, l]) => esc(l)).join('; ')}.
-        ${cut.mo || cut.once ? ` Those are worth <b>${totalText(cut)}</b> on their own.` : ''}${breakdownAdvice(key, removed, kept)}</div>` : ''}`;
+      <div class="muted" style="font-size:12px;margin-top:6px">Priced pieces bought one by one: <b style="color:var(--text)">${totalText(all)}</b>${all.open ? ` + ${all.open} with no doc price` : ''}. Uncheck a piece to see what taking it out means.</div>
+      ${out.length ? `<div class="flag">Taking out: ${parts.filter((_, i) => out.includes(i)).map(([, l]) => esc(l)).join('; ')}.
+        ${cut.mo || cut.once ? ` Those are worth <b>${totalText(cut)}</b> on their own.` : ''}${breakdownAdvice(key, removed, kept)}</div>` : ''}</details>`;
   }
-  const picked = bd.alc.filter(k => ALC_BY[k]), t = sumUp(picked);
-  const covers = picked.length > 1 && LADDER.find(k => PARTS[k] && picked.every(p => PARTS[k].some(([x]) => x === p)));
+
+  const picked = bd.alc.filter(k => ALC_BY[k]);
+  const pickedHtml = picked.map(k => { const x = addOn(k); return `<div class="qadd">
+      <span>${esc(x.name)}</span>
+      <span class="money"><input type="text" inputmode="numeric" data-qalc="${k}" placeholder="scope it" value="${x.amt !== null ? x.amt.toLocaleString('en-US') : ''}"></span>
+      ${ALC_BY[k].unit ? `<span class="muted">${x.unit === 'mo' ? '/mo' : 'one-time'}</span>` : `<select data-qunit="${k}"><option value="once" ${x.unit === 'once' ? 'selected' : ''}>one-time</option><option value="mo" ${x.unit === 'mo' ? 'selected' : ''}>/mo</option></select>`}
+      <a class="skip" data-qrm="${k}" title="Remove">×</a></div>`; }).join('');
+  const covers = picked.length > 1 && LADDER.find(k => PARTS[k] && picked.every(x => PARTS[k].some(([y]) => y === x)));
   const cats = [...new Set(ALC.map(x => x.cat))];
-  const alcHtml = cats.map(c => `<div class="sub-h">${esc(c)}</div>` + ALC.filter(x => x.cat === c).map(x =>
+  const alcList = cats.map(c => `<div class="sub-h">${esc(c)}</div>` + ALC.filter(x => x.cat === c).map(x =>
     `<label class="bdrow ${picked.includes(x.k) ? '' : 'dim'}"><input type="checkbox" data-bd-alc="${x.k}" ${picked.includes(x.k) ? 'checked' : ''}><span>${esc(x.name)}</span><b>${alcPrice(x)}</b></label>`).join('')).join('');
-  const alcSum = picked.length ? `<div class="rule" style="color:var(--text)">Selected: <b>${totalText(t)}</b>${t.open ? ` <span class="muted">+ ${t.open} to scope</span>` : ''}
-      ${picked.length > 1 ? '<br><span class="muted">Doc rule: more than one service? Check the right package before stacking.</span>' : ''}
-      ${covers ? `<br><b>${esc(pkgName(covers))}</b> (${esc(PACKAGES[covers].price)}) already includes all of these.` : ''}
-      <br><span class="muted">Ad spend, software and other third-party costs are always separate.</span> <a data-bd-clear>Clear</a></div>` : '';
-  card.innerHTML = `<p class="eyebrow">Price questions</p>
-    <div class="muted" style="font-size:12.5px">What's in each package, and what the pieces cost on their own.</div>
-    <details data-bdo="pkg" ${bd.open.pkg ? 'open' : ''}><summary>What's in a package, piece by piece</summary>
-      <select data-bd="pkg" style="margin:8px 0">${opts}</select>${pkgHtml}</details>
-    <details data-bdo="alc" ${bd.open.alc ? 'open' : ''}><summary>À la carte prices${picked.length ? ` · ${picked.length} picked` : ''}</summary>${alcSum}${alcHtml}</details>`;
+
+  return `<div class="quote">
+    <div class="sub-h">Price it <span>· type over any number, the total updates</span></div>
+    <select data-bd="pkg">${opts}</select>
+    <div class="qline">
+      <label>${once ? 'Price (one-time)' : 'Per month'}<span class="money"><input type="text" inputmode="numeric" data-q="price" value="${q.price.toLocaleString('en-US')}"></span></label>
+      ${once ? '' : `<label>Months<input type="text" inputmode="numeric" data-q="months" value="${q.months}"></label>`}
+    </div>
+    <div class="pchips">${alts ? `<span class="muted">Lower, only if they push back:</span> ${alts}` : ''}${q.edited ? ` <a class="skip" style="float:none" data-qreset>back to list (${esc(p.price)})</a>` : ''}</div>
+    ${q.below ? `<div class="flag bad">Below the lowest approved price (${money(p.floor)}). Don't offer it without Aaron's OK.</div>` : ''}
+    ${q.short ? `<div class="flag bad">${esc(pkgName(key))} is a ${p.months}-month commitment. A shorter term needs Aaron's OK.</div>` : ''}
+    ${pickedHtml ? `<div class="qadds">${pickedHtml}</div>` : ''}
+    <div class="qtotal">Total: ${totalLine(q)}</div>
+    ${picked.length > 1 ? `<div class="muted" style="font-size:12px">Doc rule: more than one service? Check the right package before stacking.${covers ? ` <b style="color:var(--text)">${esc(pkgName(covers))}</b> (${esc(PACKAGES[covers].price)}) already includes all of these.` : ''}</div>` : ''}
+    ${pieces}
+    <details data-bdo="alc" ${bd.open.alc ? 'open' : ''}><summary>+ Add à la carte${picked.length ? ` (${picked.length} added)` : ''}</summary>
+      <div class="muted" style="font-size:12px;margin-top:6px">Ad spend, software and other third-party costs are always separate.</div>${alcList}</details>
+  </div>`;
 }
 
 document.addEventListener('change', e => {
@@ -1461,11 +1748,28 @@ document.addEventListener('change', e => {
   if (t.dataset.bd === 'pkg') { bd.pkg = t.value; bd.out = []; }
   else if (t.dataset.bdOut !== undefined) { const i = +t.dataset.bdOut; bd.out = t.checked ? bd.out.filter(x => x !== i) : [...bd.out, i]; }
   else if (t.dataset.bdAlc) { const k = t.dataset.bdAlc; bd.alc = t.checked ? [...bd.alc, k] : bd.alc.filter(x => x !== k); }
+  else if (t.dataset.qunit) { bd.alcUnit[t.dataset.qunit] = t.value; }
   else return;
   save(); render();
 });
+document.addEventListener('input', e => {
+  const t = e.target, bd = BD(), q = quote(analyze());
+  if (!q || !(t.dataset.q || t.dataset.qalc)) return;
+  const v = num(t.value);
+  if (t.dataset.q === 'price') { if (v) bd.price[q.key] = v; else delete bd.price[q.key]; }
+  else if (t.dataset.q === 'months') { if (v) bd.months[q.key] = Math.round(v); else delete bd.months[q.key]; }
+  else { if (v !== null) bd.alcAmt[t.dataset.qalc] = v; else delete bd.alcAmt[t.dataset.qalc]; }
+  save(); render();
+});
 document.addEventListener('toggle', e => { const d = e.target; if (d.dataset && d.dataset.bdo) { BD().open[d.dataset.bdo] = d.open; save(); } }, true);
-document.addEventListener('click', e => { if (e.target.closest('[data-bd-clear]')) { BD().alc = []; save(); render(); } });
+document.addEventListener('click', e => {
+  const bd = BD(), q = quote(analyze());
+  const set = e.target.closest('[data-qset]');
+  if (set && q) { bd.price[q.key] = +set.dataset.qset; save(); render(); return; }
+  if (e.target.closest('[data-qreset]') && q) { delete bd.price[q.key]; delete bd.months[q.key]; save(); render(); return; }
+  const rm = e.target.closest('[data-qrm]');
+  if (rm) { bd.alc = bd.alc.filter(x => x !== rm.dataset.qrm); save(); render(); }
+});
 
 function renderMedia() {
   const card = $('#mediaCard'), m = mediaFor(S.fields.industry), tops = topTierFor(S.fields.industry);
@@ -1490,38 +1794,70 @@ function renderMedia() {
     <div class="rule">Say it as targets: "These are the kinds of outlets, shows, and stages we'd go after first. No firm can guarantee a specific one."</div>`);
 }
 
-function askNextC1(a) {
-  const f = S.fields, out = [];
-  const beat = FLOW.find(b => !beatDone(b));
-  const booked = S.prefill && (S.prefill.answers || []).find(([, v]) => v && v.length > 12);
-  if (beat && beat.id === 'b1' && booked) out.push(`<div class="q"><small>Easy opener, from their booking form</small>"When you booked, you wrote: '${esc(clip(booked[1], 110))}'. Walk me through what's going on there."</div>`);
-  else if (beat) out.push(`<div class="q"><small>You could ask · ${esc(beat.name)}</small>${esc(beat.say)}</div>`);
-  const notYet = FLOW.filter(b => !beatDone(b) && b !== beat);
-  if (notYet.length && FLOW.filter(beatDone).length >= 3) out.push(`<div class="muted" style="font-size:12px">Not covered in your notes yet: ${notYet.map(b => esc(b.name.toLowerCase())).join(', ')}</div>`);
-  const weak = CATEGORIES.filter(x => S.scores[x.id] && S.scores[x.id] <= 3).sort((x, y) => S.scores[x.id] - S.scores[y.id]).slice(0, 2);
-  weak.forEach(x => out.push(`<div class="q"><small>${esc(x.name)} scored ${S.scores[x.id]}/5, so you could ask</small>${esc(x.probe[0])}</div>`));
-  const gap = FIT.find(([k, type, , , , list]) => !(type === 'chips' ? anyOf(list) : f[k]));
-  if (gap && (!beat || FLOW.indexOf(beat) >= 3)) out.push(`<div class="q"><small>You could ask · ${esc(gap[2])}</small>${esc(gap[4])}</div>`);
-  const open = CATEGORIES.filter(x => !S.scores[x.id]);
-  if (open.length) out.push(`<div class="muted" style="font-size:12px">Business audit: ${CATEGORIES.length - open.length} of ${CATEGORIES.length} areas scored.</div>`);
-  return out.join('') || '<div class="empty">Everything\'s covered. Recap what you heard and book the next call.</div>';
+// Section 1: the trained open (v6). Crisis leads with empathy (Aaron). The client story only shows when the
+// match is real: same industry, or a neighboring industry in the same situation (the brief's binary rule).
+const FRAME = '"Everything we do is customized based on what people need. So we\'re going to get clarity on what you need, and I\'ll tell you whether this is something we can help with. If it\'s a fit, I\'ll take what we discussed back to our team, we\'ll build out a customized game plan, and we\'ll book another call where I\'ll walk you through exactly how it\'s going to help you. Does that make sense?" Wait for a clear yes.';
+// The two numbers to say for a story: what fits the ad and what they said first. Crisis numbers
+// ("safety incident coverage") only when the call is about a crisis.
+function storyMetrics(c) {
+  const crisisOk = track() === 'crisis' || S.chips.crisis || S.chips.repRisk;
+  const ms = c.m.filter(([k]) => crisisOk || !TOPICS.crisis.test(k));
+  const order = [TRACKS[track()].focus, ...activeTopics()].filter(x => TOPICS[x]);
+  const m1 = order.map(tp => ms.find(([k]) => TOPICS[tp].test(k))).find(Boolean) || ms.find(([k]) => !/media placements/i.test(k)) || ms[0] || c.m[0];
+  return [m1, ms.find(x => x !== m1)].filter(Boolean);
+}
+const realMatch = r => r.sameInd || (r.adjInd && r.hits.length);
+function openTry(r) {
+  const t = track(), real = realMatch(r) || S.caseIdx === r.idx;
+  const ind = r.c.i.toLowerCase().replace(/ & .*/, '');
+  const story = real
+    ? ['Client story:', `"Before we get into your situation: what caught my eye is [one thing they did, from their site or LinkedIn]. We just helped a ${ind} client in a very similar spot. ${storyMetrics(r.c).map(([k, v]) => `${k}: ${v}`).join('. ')}. Made me think there's a version of that we could run for you. Sound fair?"`]
+    : ['Client story:', S.fields.industry ? 'No close client match, so skip it and go straight to why they\'re here.' : 'Pick their industry above to find a client story.'];
+  return t === 'crisis'
+    ? tryBox('Open', '"We exist for good people that have bad days."', [['Normalize it (Aaron):', '"It\'s not a matter of if. It\'s when."'], ['If it fits:', 'our CEO has been through a crisis himself (employee fraud at his company).'], ['The frame:', FRAME], story], 'script')
+    : tryBox('Open', '"I have a limited amount of time. Are we ready to jump in? Do you have something to take notes with?"', [['The frame:', FRAME], story], 'script');
 }
 
-function askNextC2() {
+// Section 6: the v6 close (tie-down, trial commit, decision maker, Call 2 preview, video recap, booking).
+// Their words sit above the script, untouched, so the rep says them back in a natural sentence; the script
+// keeps the trained [blanks] instead of pasting notes into it (notes are first person and run long).
+function wrapTry() {
+  const f = S.fields, t = track();
+  const who = { partner: 'your partner', board: 'your board' }[f.dm];
+  const top = (topTierFor(f.industry)[0] || {}).name || (((mediaFor(f.industry) || {}).publications || [])[0] || {}).name;
+  const outlet = f.outlet ? clip(f.outlet, 40) : top ? `[one outlet, like ${top}]` : '[one outlet, named]';
+  const words = [['Pain', f.pain], ['What changed', f.trigger], ['Goal', f.goal], ['What it means to them', f.nmg]].filter(([, v]) => v);
+  const preview = '"Here\'s what Call 2 looks like. 45 to 60 minutes. I\'ll walk you through specifically what we\'d do, month by month.'
+    + (t === 'pr' ? ` Based on what you told me, I personally believe ${outlet} is on the table for you. I'm not promising it today, but I'm going to come to Call 2 with a real point of view on whether and how we can get you there."` : '"');
+  return (words.length ? `<div class="words"><div class="lbl">Their words, to say back</div>${words.map(([k, v]) => `<div><b>${esc(k)}:</b> "${esc(clip(v, 160))}"</div>`).join('')}</div>` : '')
+    + tryInner('Try', '"Okay, useful conversation. Here\'s where we are. I\'ve got a clear picture of [their pain], [what changed], and what you\'re trying to get to: [their goal], specifically [what it means to them]. Did I get that right?"', [
+      ['Trial commit:', '"Before I put time into building you a tailored plan: if we can bring you a plan that hits [their goal], is this something you\'re ready to make a real decision on in the next two weeks?"'],
+      ...(who ? [['Decision maker:', `"You mentioned ${who} would need to weigh in. The plan I build is going to be specific enough that having them in the room saves a round trip. Any chance we can get them on Call 2 directly?"`]] : []),
+      ['Call 2 preview:', preview],
+      ...(t === 'crisis' ? [['Future-pace it (Aaron):', '"On the tail end of this, there\'s even more opportunity. It\'s going to be a great victory story."']] : []),
+      ['Video recap:', '"Last thing: between now and then I\'m going to record a 90-second video walking through one or two pieces of your situation that stood out. It\'ll save us time on Call 2. Sound good?"'],
+      ['Book it:', '"Two times that make sense: [day] at [time], or [day] at [time]. Which works?"'],
+    ]);
+}
+
+function callTwoHtml() {
   const f = S.fields;
   const goal = f.goal ? `"${clip(f.goal, 90)}"` : 'their goal';
-  return '<div class="rule" style="margin:0 0 8px">Order that works on pitch calls: recap what you heard → the money math → one similar client → what waiting costs → how we work → first 90 days → price last → ask if the plan fits.</div>' + [
+  return `<h2 class="sec">Call 2: the pitch</h2>
+    <p class="card-sub">Order that works: recap what you heard → the money math → one similar client → what waiting costs → how we work → first 90 days → price last → ask if the plan fits.</p>` + [
     ['1 · Check the plan fits (before talking price)', `"Looking at all of this, do you feel this would set you up to hit ${goal}?"`],
     ['2 · If they stall', '"When you\'re making the final decision, what are the top two or three things that will drive it?"'],
     ['3 · If the decision maker isn\'t on the call', '"Would it help to have us walk your team through this directly? Reading a deck loses things in translation."'],
     ['4 · Book the next step', '"Let\'s put a check-in on the calendar for next week so we don\'t lose the press opportunities we should already be chasing."'],
-  ].map(([k, v]) => `<div class="q"><small>${esc(k)}</small>${esc(v)}</div>`).join('');
+  ].map(([k, v]) => tryBox(k, v)).join('');
 }
 
-function roiHtml(p) {
+function roiHtml(p, q) {
   const acv = +S.fields.acv, goal = +S.fields.clientsGoal;
   if (!p.monthly) return '';
-  const total = p.monthly * p.months;
+  // Use the live quote when the rep has priced it differently.
+  if (q && !q.once) p = { ...p, months: q.months };
+  const total = q ? (q.once ? q.price + q.addOnce : (q.price + q.addMo) * q.months + q.addOnce) : p.monthly * p.months;
   if (!acv) return `<div class="roi">Ask: <i>"What's an average client worth to you?"</i> to run the ROI math on ${money(total)}.</div>`;
   const mult = acv / total, need = Math.ceil(total / acv);
   let h = `<div class="roi">One client at <b>${money(acv)}</b> is <b>${mult.toFixed(1)}×</b> the full ${p.months > 1 ? p.months + '-month ' : ''}investment (${money(total)}).`;
@@ -1564,6 +1900,7 @@ function crmNote() {
     `DISCOVERY: ${f.name || '?'}${f.title ? ', ' + f.title : ''} @ ${f.company || '?'}`,
     [f.email, f.website].filter(Boolean).join(' · '),
     `Industry: ${f.industry || '?'} | Revenue: ${optText('revenue', f.revenue) || '?'} | Budget: ${optText('budget', f.budget) || '?'} | Decision maker: ${optText('dm', f.dm) || '?'} | Source: ${f.source || '?'}`,
+    `Call about: ${TRACKS[track()].label}`,
     line('Pain', f.pain), line('Example', f.example), line('Tried', labels(TRIED).join(', ')), line('Their theory', f.theory),
     line('Why now', f.trigger), line('Cost of waiting', f.cost), line('Other reason', f.reason2), line('Goal', f.goal), line('What it means to them', f.nmg),
     line('Ready to decide within 2 weeks', optText('commit', f.commit)), line('Decision maker on next call', optText('dmCall2', f.dmCall2)), line('Outlet we said we\'d look into', f.outlet), line('Next call', f.call2),
@@ -1572,6 +1909,9 @@ function crmNote() {
     line('Will do interviews', optText('spokes', f.spokes)), line('Time for PR', optText('time', f.time)), line('Reach', optText('reach', f.reach)),
     line('Audience', labels(AUDIENCE).join(', ')), line('News hooks', labels(ASSETS).join(', ')), line('Competitors in press', f.competitors), line('Current PR/marketing help', f.vendor),
     line('Avg client value', f.acv && money(f.acv)), line('Clients wanted/yr', f.clientsGoal),
+    line('Crisis, what happened', f.crisisWhat), line('Crisis, how public', optText('crisisPublic', f.crisisPublic)), line('Crisis, coming next', f.crisisNext),
+    line('Crisis, who needs to hear', labels(CRISIS_WHO).join(', ')), line('Crisis, lawyer on it', optText('crisisLegal', f.crisisLegal)),
+    line('Video for', labels(VIDEO_USE).join(', ')), line('Video, how often', optText('vidFreq', f.vidFreq)), line('Video, on camera', optText('vidCam', f.vidCam)), line('Video, running ads', optText('vidAds', f.vidAds)),
     line('What they said', activeChips().join(', ')),
     `Recommended: ${a.pick ? pkgName(a.pick) + ' @ ' + PACKAGES[a.pick].price : 'n/a'}${a.next ? ' → then ' + pkgName(a.next) : ''}`,
     line('Budget note', a.budgetNote), line('Add-on', a.addon), line('Scope changes discussed', scopeNote()), line('Internal', f.internal),
@@ -1601,6 +1941,10 @@ function proposalBrief() {
     labels(ASSETS).length ? `- Story assets: ${labels(ASSETS).join(', ')}` : '',
     f.competitors ? `- Competitors getting press: ${f.competitors}` : '',
     f.spokes ? `- Spokesperson: ${optText('spokes', f.spokes)}` : '',
+    `- What brought them in: the ${TRACKS[track()].label} track`,
+    f.crisisWhat ? `- The crisis, in their words: "${f.crisisWhat}"${f.crisisPublic ? ` (${optText('crisisPublic', f.crisisPublic)})` : ''}` : '',
+    f.crisisNext ? `- Coming next in the crisis: ${f.crisisNext}` : '',
+    labels(VIDEO_USE).length || f.vidFreq ? `- Video: ${[labels(VIDEO_USE).join(', '), optText('vidFreq', f.vidFreq)].filter(Boolean).join('; ')}` : '',
     f.acv ? `- Average client value: ${money(f.acv)}${f.clientsGoal ? `; wants ${f.clientsGoal} new clients/yr` : ''} (use for the ROI line)` : '',
     `- Biggest readiness gaps: ${focusAreas().map(x => `${x.name} ${S.scores[x.id]}/5${S.notes[x.id] ? ' (' + S.notes[x.id] + ')' : ''}`).join('; ') || 'not scored'}`,
     mediaFor(f.industry) ? `- Target outlets for this industry (present as targets we'd pursue, never guaranteed): publications ${mediaFor(f.industry).publications.slice(0, 6).map(x => x.name).join(', ')}; podcasts ${(mediaFor(f.industry).podcasts || []).slice(0, 3).map(x => x.name).join(', ')}; conferences ${(mediaFor(f.industry).conferences || []).slice(0, 3).map(x => x.name).join(', ')}` : '',
@@ -1642,6 +1986,8 @@ function buildReport() {
     </div>`;
 }
 
+// The More menu closes after a pick or a click anywhere else.
+document.addEventListener('click', e => { const m = document.querySelector('details.more'); if (m.open && !e.target.closest('details.more summary')) setTimeout(() => { m.open = false; }); });
 $('#copyCrm').onclick = () => copy(crmNote(), 'CRM note copied');
 $('#copyBrief').onclick = () => copy(proposalBrief(), 'Proposal brief copied');
 $('#printReport').onclick = () => {
@@ -1689,6 +2035,7 @@ const CAMPAIGNS = [
   { re: /crisis|reputation/i, source: 'Google Ads: Crisis comms', chips: ['repRisk'] },
   { re: /video|cinema|production|commercial/i, source: 'Google Ads: Video', chips: ['wantVideo'] },
   { re: /\bpr\b|press|media|publicity|visibility/i, source: 'Google Ads: PR', chips: ['wantMedia'] },
+  { re: /\bleads?\b|growth|systems|marketing/i, source: 'Google Ads: Growth/Systems', chips: ['wantLeads'] },
 ];
 const ANSWER_CHIPS = [
   [/\bleads?\b|new clients|more clients|customers|pipeline/i, 'wantLeads'],
@@ -1874,7 +2221,7 @@ $('#sendNutshell').onclick = async () => {
   const body = {
     name: f.name, email: f.email, title: f.title, company: f.company, website: f.website,
     source: f.source, repEmail: $('#rep').value,
-    packageLine: a.pick ? `${pkgName(a.pick)} ${PACKAGES[a.pick].price}` : '',
+    packageLine: (q => q ? `${pkgName(q.key)} ${q.once ? money(q.price) + ' one-time' : `${money(q.price)}/mo × ${q.months}`}` : '')(quote(a)),
     note: `${S.mode === 'c2' ? 'CALL 2 (PITCH)' : 'CALL 1 (DISCOVERY)'} · via Call Scorecard\n\n${crmNote()}`,
     leadId: n.leadId, contactId: n.contactId, accountId: n.accountId,
   };
