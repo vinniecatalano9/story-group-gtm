@@ -108,6 +108,14 @@
   .suggest a { color: var(--pink); cursor: pointer; text-decoration: underline; margin-left: 4px; }
   .sug-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; font-size: 12.5px; }
   .sug-bar:has(#auditNote:empty):has(#sugAll:empty) { display: none; }
+  .chip.sug:not(.on), select.sug, input.sug { border-style: dashed; border-color: var(--pink); }
+  .suggest.hint { margin: 6px 0 0; }
+  .suggest q { font-style: italic; }
+  #closeout { margin: 16px 0 14px; border-top: 1px solid var(--line); padding-top: 14px; }
+  #closeout h3 { font-size: 15px; margin: 0 0 4px; }
+  #closeAuto { font-size: 13px; display: grid; gap: 4px; margin: 8px 0 12px; }
+  #closeAuto b { color: var(--text); }
+  #closeout .fields .wide { grid-column: 1 / -1; }
   .words { font-size: 13px; border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 8px; }
   .words .lbl { font-size: 10.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
   .words b { color: var(--muted); font-weight: 600; }
@@ -430,6 +438,20 @@
         <p class="card-sub">The script fills in with their words from your notes. Recap, get a yes on next steps, and book Call 2.</p>
         <div id="wrapBeat"></div>
         <div class="iflags" data-for="secWrap"></div>
+        <div id="closeout">
+          <h3>Closeout</h3>
+          <p class="card-sub" style="margin:0">Fill this in before you hang up (Michelle's guide, section 10). It goes in the Nutshell note. Pink dashed boxes are suggestions from what you heard: click "Use it" to keep one.</p>
+          <div id="closeAuto"></div>
+          <div class="sug-bar" style="justify-content:flex-end"><span id="closeAll"></span></div>
+          <div class="fields">
+            <label class="f">Urgency<select data-k="urgency"></select></label>
+            <label class="f">Ready to decide?<select data-k="decide"></select></label>
+            <label class="f">Route<select data-k="route"></select></label>
+            <label class="f wide">Primary business barrier<input type="text" data-k="barBiz" placeholder="The main thing holding the business back" /></label>
+            <label class="f wide">Primary visibility / positioning barrier<input type="text" data-k="barVis" placeholder="Why the market doesn't see them the way it should" /></label>
+            <label class="f wide">Primary revenue / growth barrier<input type="text" data-k="barRev" placeholder="What's capping revenue or leads" /></label>
+          </div>
+        </div>
         <label class="f">Internal notes (never on the client one-pager)
           <textarea data-k="internal" rows="3" placeholder="Objections, personalities, what to prep for Call 2"></textarea>
         </label>
@@ -478,6 +500,9 @@
     <li>Warnings show up right under the answer that set them off, with the words to say.</li>
     <li>The wrap-up recap fills itself in from your notes, turned into "you" language, so you can say it back. Anything blank shows as [brackets].</li>
     <li>Section 7 is the business audit. Score areas as they come up, or right after the call. A dashed number is a suggested score from what they already said: click <b>Use it</b>, or <b>Fill in suggested scores</b> at the top of section 7 to take them all.</li>
+    <li>Anything with a <b>pink dashed border</b> is a suggestion from what you typed or clicked (and their booking form): chips, dropdowns, scores, and the closeout. Nothing fills itself in. Click the chip or <b>Use it</b> to keep it; click a chip twice to say no and it stops suggesting.</li>
+    <li>If anything inside the business looks shaky (who owns what, broken delivery, they can't keep up), click it under <b>BTC check</b> in section 2. The scorecard routes the call to BTC or a joint engagement and tells you to notify Dr. Brown.</li>
+    <li>Before you hang up, do the <b>Closeout</b> at the bottom of section 6. <b>Fill in suggestions</b> takes them all, then fix anything that's off.</li>
     <li>Click a button when you hear something (click again to undo).</li>
     <li>The package card shows what to recommend and the price to say first. Right under it, <b>Price it</b> lets you change the package, type a different price or term, take pieces out, or add à la carte lines. The total updates as you type.</li>
     <li>Tough question? Press <b>/</b> and type it, like "can you guarantee Forbes?" Press <b>Enter</b> for a short answer you can say. It only uses our playbook, so double-check anything that sounds off.</li>
@@ -601,7 +626,14 @@ const CHIP_GROUPS = [
     ['balked', 'Balked at price', 'red'], ['noTimeline', 'No timeline / just exploring', 'red'], ['wantsFree', 'Wants the ideas before signing', 'red'],
     ['wantsGuarantee', 'Wants guaranteed placements', 'red'], ['payToPlay', 'Only wants paid placements', 'red'],
   ]},
+  // BTC check (Michelle's guide, section 8): any one means the business may not handle the growth we'd bring.
+  { label: 'Inside the business: could it handle the growth? (BTC check)', chips: [
+    ['btc_struct', 'Unclear structure / ownership / leaders not aligned', 'red'], ['btc_process', 'Broken processes or delivery', 'red'],
+    ['btc_ops', 'CRM / sales / tech problems are operational', 'red'], ['btc_capacity', 'Growth would break fulfillment or staffing', 'red'],
+    ['btc_systems', 'Leadership lacks the systems to execute', 'red'],
+  ]},
 ];
+const BTC = CHIP_GROUPS[3].chips;
 const TRIED = [['tried_pr', 'PR firm / freelancer'], ['tried_ads', 'Ads / marketing agency'], ['tried_inhouse', 'In-house hire'], ['tried_diy', 'DIY'], ['tried_none', 'Nothing yet']];
 const ASSETS = [['as_data', 'Proprietary data / research'], ['as_news', 'News in the next 90 days'], ['as_founder', 'Strong founder story'], ['as_opinion', 'Contrarian point of view'], ['as_results', 'Client results they can share'], ['as_visual', 'Pro photo / video ready'], ['as_none', 'None of these yet']];
 const AUDIENCE = [['au_b2b', 'B2B buyers'], ['au_consumer', 'Consumers'], ['au_investors', 'Investors'], ['au_recruits', 'Recruits'], ['au_partners', 'Referral partners'], ['au_community', 'Regulators / community']];
@@ -622,6 +654,9 @@ const OPTS = {
   vidFreq: [['', 'One project or ongoing?'], ['once', 'One project'], ['ongoing', 'Ongoing, every month']],
   vidCam: [['', 'Who\'s on camera?'], ['leader', 'The leader'], ['team', 'The team or customers'], ['unsure', 'Not sure yet']],
   vidAds: [['', 'Running ads now?'], ['yes', 'Yes'], ['no', 'No']],
+  urgency: [['', 'Pick one'], ['low', 'Low'], ['moderate', 'Moderate'], ['high', 'High'], ['immediate', 'Immediate']],
+  decide: [['', 'Pick one'], ['exploring', 'Exploring'], ['evaluating', 'Evaluating'], ['ready', 'Ready to act'], ['immediate', 'Immediate need']],
+  route: [['', 'Pick one'], ['sg', 'Story Group'], ['btc', 'BTC (notify Dr. Brown)'], ['joint', 'Joint: BTC + Story Group']],
 };
 
 // Which ad brought them in. It sets the track (the rep can switch it): the open's client story, the
@@ -794,6 +829,7 @@ const fieldHtml = ([k, type, ph, list]) =>
   : `<input type="${type}" data-k="${k}" placeholder="${esc(ph || '')}" ${type === 'number' ? 'min="0" step="1000"' : ''} />`;
 
 $('#industry').innerHTML = '<option value="">Unknown / other</option>' + INDUSTRIES.map(i => `<option value="${esc(i)}">${esc(industryLabel(i))}</option>`).join('');
+document.querySelectorAll('#closeout select').forEach(el => { el.outerHTML = selectHtml(el.dataset.k); });
 $('#chips').innerHTML = CHIP_GROUPS.map(g => `<div class="chipgroup"><div class="lbl">${g.label}</div>${chipHtml(g.chips)}</div>`).join('');
 // Try boxes: the opening line reads big, follow-ups sit under it. A [label, text] follow-up gets a bold label.
 const tryInner = (label, main, thens = []) => `<span class="try">${esc(label)}</span>${esc(main)}${thens.map(t => `<span class="then">${Array.isArray(t) ? `<b>${esc(t[0])}</b>${esc(t[1])}` : esc(t)}</span>`).join('')}`;
@@ -865,20 +901,267 @@ let builtTrack = null;
 // Suggested scores from what they already said, so the audit comes from the conversation instead of a second
 // round of questions. Only a suggestion: the rep keeps it with one click, since scores print on the client one-pager.
 function suggestScore(id) {
+  if (S.scores[id]) return null;
   const c = S.chips, f = S.fields;
   const live = c.crisis || (track() === 'crisis' && ['reporter', 'news'].includes(f.crisisPublic));
   const pick = {
+    rev: f.revenue && /\d/.test(f.goal || '') && !heardIn(SCORE_NOTES.rev[0]) ? [3, 'They know their revenue and gave a number goal'] : null,
     brand: c.reposition ? [2, 'Repositioning / new direction'] : c.noStart ? [2, 'Doesn\'t know where to start'] : null,
     vis: c.competitorsPress ? [2, 'Competitors get the press'] : null,
     media: c.competitorsPress ? [2, 'Competitors get the press'] : c.wantMedia ? [2, 'Press / media'] : null,
     exec: c.wantExpert ? [2, 'Be THE expert'] : c.wantTv ? [2, 'TV / broadcast'] : c.wantSpeak ? [2, 'Speaking / stages'] : null,
-    digital: c.wantLeads ? [2, 'More leads / clients'] : c.tried_ads ? [2, 'Tried an ad agency'] : null,
+    digital: c.wantLeads ? [2, 'More leads / clients'] : c.tried_ads ? [2, 'Tried an ad agency'] : c.noFunnel ? [2, 'No website / funnel'] : null,
     web: c.noFunnel ? [1, 'No website / funnel'] : null,
     content: c.as_none ? [1, 'Nothing newsworthy yet'] : c.wantVideo ? [2, 'Video / content production'] : c.as_visual ? [4, 'Pro photo / video ready'] : null,
     rep: live ? [1, 'Active crisis'] : c.repRisk ? [2, 'Reputation risk ahead'] : null,
   }[id];
-  return pick && !S.scores[id] ? pick : null;
+  if (pick) return pick;
+  // Nothing clicked for this area: look for it in their own words.
+  const [re, v] = SCORE_NOTES[id] || [];
+  const q = re && heardIn(re);
+  return q ? [v, q] : null;
 }
+
+/* ============================================================
+   SUGGESTIONS FROM WHAT THEY SAID
+   Everything the rep has typed (and the booking form) is scanned for chips, dropdown answers, scores, and
+   the closeout. Nothing is set on its own: suggestions show dashed with "Use it", the rep confirms.
+   A chip the rep turned off (false, not just unset) is never suggested again.
+   ============================================================ */
+const NOTE_KEYS = ['pain', 'theory', 'trigger', 'cost', 'reason2', 'goal', 'nmg', 'crisisWhat', 'crisisNext', 'competitors', 'vendor', 'internal'];
+const noteTexts = () => [...NOTE_KEYS.map(k => S.fields[k]), ...((S.prefill && S.prefill.answers) || []).map(([, v]) => v)].filter(Boolean).map(String);
+// The sentence that matched, so the suggestion can quote them.
+const sentenceAt = (t, i) => {
+  const start = Math.max(0, ...['. ', '! ', '? ', '\n'].map(p => { const j = t.lastIndexOf(p, i - 1); return j >= 0 ? j + p.length : 0; }));
+  const ends = ['. ', '! ', '? ', '\n'].map(p => t.indexOf(p, i)).filter(x => x >= 0);
+  return clip(t.slice(start, ends.length ? Math.min(...ends) : t.length).trim().replace(/[.!?]+$/, ''), 90);
+};
+// "We don't want TV" isn't a TV suggestion: skip a match when a no-word sits just before it in the same clause.
+// "Can't" doesn't count ("we can't get press" means they want it). Patterns that are negative on purpose
+// ("no website", "can't keep up") start with the no-word, so the text before them is clean.
+const NEG = /\b(not|no|don'?t|doesn'?t|didn'?t|never|won'?t|wouldn'?t|isn'?t|aren'?t|wasn'?t|without|hate|hates|avoid|rather not|nothing)\b/i;
+function negated(t, i) {
+  const clause = t.slice(0, i).split(/[.!?;,\n]|\bbut\b|\bthough\b/i).pop();
+  return NEG.test(clause.trim().split(/\s+/).slice(-6).join(' '));
+}
+const globalRe = new Map();
+function heardIn(re) {
+  if (!globalRe.has(re)) globalRe.set(re, new RegExp(re.source, re.flags.replace('g', '') + 'g'));
+  const g = globalRe.get(re);
+  for (const t of noteTexts()) {
+    g.lastIndex = 0;
+    let m;
+    while ((m = g.exec(t))) { if (!negated(t, m.index)) return sentenceAt(t, m.index); if (!m[0]) g.lastIndex++; }
+  }
+  return null;
+}
+const SCORE_NOTES = {
+  rev: [/plateau|flat ?lined|\bflat\b|stalled|stuck (at|around)|revenue (is )?(down|dropping|declining)/i, 2],
+  brand: [/hard to explain (what we do|us)|nobody (knows|understands) what we do|commodit|we all look the same|differentiat/i, 2],
+  aud: [/(anyone|everyone|everybody) (who|that|with)|not sure who (our|the|my) (buyer|customer|client)|still figuring out (our|the|my) (market|customer)/i, 2],
+  vis: [/nobody (has heard of|knows) (us|about us)|can'?t find us|don'?t show up|invisible|best[- ]kept secret/i, 2],
+  media: [/never been (featured|in the press|on tv|on a podcast)|no (press|media)( coverage)?\b|zero (press|coverage)/i, 1],
+  exec: [/nobody knows (me|who i am)|no personal brand|not on linkedin/i, 2],
+  digital: [/referrals?\b|word of mouth/i, 2],
+  web: [/website (is )?(old|outdated|terrible|bad|embarrassing|dated)|website doesn'?t convert|need a new (website|site)/i, 2],
+  content: [/(don'?t|never) (post|publish|create content)|no content|haven'?t posted/i, 1],
+  rep: [/bad reviews?|negative (reviews?|press|article)|lawsuit|google (results|search) (is|are|shows)/i, 2],
+  measure: [/(don'?t|do not|can'?t|cannot|couldn'?t) (know|tell|track|measure|see) (what|if|which|where|whether)|no idea (what|if|where|whether)|no (tracking|attribution|analytics)/i, 2],
+};
+const NOTE_CHIPS = {
+  wantLeads: /more (leads|clients|customers|business|sales)|\bpipeline\b|lead flow|new clients/i,
+  wantMedia: /\bpress\b|\bmedia\b|featured|publicity|forbes|wall street journal|\bwsj\b|\binc\b/i,
+  wantPods: /podcast/i,
+  wantTv: /\btv\b|television|broadcast|cnbc|fox (news|business)|bloomberg/i,
+  wantSpeak: /speaking|keynote|\bstages?\b|conferences?|\bpanels?\b/i,
+  wantExpert: /thought leader|go-to (person|expert|name)|\bthe expert\b|authority|known (as|for)|personal brand/i,
+  recruit: /recruit|attract (talent|people|candidates)|\btalent\b/i,
+  raise: /raising|raise (a round|money|capital)|investors?|funding|series [a-d]\b|\bexit\b|acquisition|sell the (company|business)/i,
+  launch: /launch|new product|announce|grand opening|rollout/i,
+  reposition: /rebrand|reposition|pivot|new direction/i,
+  wantVideo: /\bvideos?\b|commercial|promo|content production/i,
+  noStart: /(don'?t|do not|not sure|no idea) (know )?where to (start|begin)|don'?t know (what|how) to/i,
+  soloSeller: /i do (all )?(the )?(sales|selling)|i'?m the only (one selling|salesperson|one who sells)|all (the )?sales (come|go) through me|only (salesperson|seller)/i,
+  noFunnel: /no website|don'?t have a (website|site|funnel|landing page)/i,
+  competitorsPress: /competitors? (are|is|get|gets|keep|keeps) |competition (is|gets) /i,
+  crisis: /lawsuit|scandal|bad press|negative (article|story|press|coverage)|reporter|journalist|\bcrisis\b/i,
+  repRisk: /reputation|bad reviews?|negative reviews?|google (results|search)|what people (say|find)/i,
+  regulated: /\bfinra\b|\bsec\b|\bfda\b|hipaa|compliance|regulat|legal (review|approval)/i,
+  multiEntity: /multiple (brands|companies|businesses|locations|entities)|portfolio compan|several (brands|companies)/i,
+  techScope: /\bcrm\b|\bai\b|custom (site|website|software)|automation/i,
+  notMonthly: /no retainer|not (ready|looking) for a (retainer|monthly)|one[- ]time project|month[- ]to[- ]month/i,
+  balked: /expensive|pricey|cheaper|out of (our|my) budget|can'?t afford/i,
+  noTimeline: /just (looking|exploring|curious)|no rush|someday|down the road|not in a hurry/i,
+  wantsFree: /send (me|us) (some )?ideas|what would you pitch|show me (your|the) (plan|strategy) first/i,
+  wantsGuarantee: /guarantee/i,
+  payToPlay: /paid placement|pay (for|to get) (an? )?(article|feature|placement)|sponsored (article|post|content)|pay[- ]to[- ]play/i,
+  tried_pr: /\bpr (firm|agency|person|company|guy|team)|publicist/i,
+  tried_ads: /(ad|ads|marketing|digital|seo) agency|google ads|facebook ads|meta ads|marketing (firm|company)|ran ads/i,
+  tried_inhouse: /hired (a|an|our own|someone) ?(marketing|pr|social|content|comms)? ?(person|manager|director|coordinator|hire)\b|in-house|marketing (person|hire|manager|director)/i,
+  tried_diy: /(did|done|do|doing|tried) (it )?(myself|ourselves|on (my|our) own)|\bdiy\b/i,
+  tried_none: /(never|haven'?t) (tried|done|hired) (anything|any)|nothing yet/i,
+  as_data: /(our|proprietary) (data|research|survey|study)|we (surveyed|studied)/i,
+  as_news: /announce|launch|milestone|anniversary|coming (up|out) (in|next)/i,
+  as_founder: /(my|the founder'?s?) story|started (this|the company|the business) (in|after|when|because)|immigrant|veteran/i,
+  as_opinion: /contrarian|unpopular opinion|(everyone|the industry) (is wrong|gets it wrong|has it wrong)/i,
+  as_results: /case stud|testimonial|client results|(our|my) clients (saw|got|grew)/i,
+  as_visual: /(professional|pro) (photos|video|footage)|we have (video|footage|b-roll)/i,
+  au_b2b: /\bb2b\b|businesses|enterprise (buyers|clients)|procurement|decision makers/i,
+  au_consumer: /consumers?|\bb2c\b|homeowners|patients|shoppers|families/i,
+  au_investors: /investors?|\bvcs?\b|limited partners/i,
+  au_recruits: /recruit|candidates|job seekers/i,
+  au_partners: /referral (partners|sources)|referrals from|partners refer/i,
+  au_community: /regulators|community|city council|local officials|government/i,
+  cw_customers: /customers|clients/i,
+  cw_team: /(our|my) (team|employees|staff)/i,
+  cw_investors: /investors|\bboard\b/i,
+  cw_regulators: /regulators?|\bsec\b|attorney general/i,
+  cw_media: /reporter|journalist|\bpress\b|\bmedia\b/i,
+  vu_tv: /\btv\b|television|commercial/i,
+  vu_web: /website (video|promo)|homepage video|for (our|the) (website|site)/i,
+  vu_social: /social|instagram|tiktok|reels|shorts|linkedin video/i,
+  vu_ads: /\bads\b|advertis/i,
+  vu_recruit: /recruiting video|sales video|hiring video/i,
+  btc_struct: /(co-?founders?|partners?) (disagree|don'?t agree|aren'?t aligned|are fighting)|not aligned|(nobody|no one) owns|who owns (what|it)|accountab|leadership (turnover|change|shake)/i,
+  btc_process: /process(es)? (is|are) (broken|a mess|messy|manual)|onboarding (is|has been)|delivery (is|has been)|dropping the ball|\bchurn|clients (leave|leaving|are leaving)|quality (issues|problems)/i,
+  btc_ops: /\bcrm\b|spreadsheets?|tech stack|no follow[- ]?up|leads fall through|systems? (is|are) (broken|a mess|outdated)/i,
+  btc_capacity: /can'?t keep up|capacity|overwhelmed|stretched thin|short[- ]?staffed|understaffed|bandwidth|turn(ing)? (work|clients|business|people) away|wait ?list|backlog|couldn'?t handle/i,
+  btc_systems: /everything (runs|goes) through me|i do everything|i'?m the bottleneck|bottleneck|no systems|wear(ing)? (all|every|a lot of) (the )?hats/i,
+};
+// Chips that follow from other chips or answers.
+const CHIP_FROM = {
+  btc_capacity: () => S.chips.soloSeller ? 'Founder is the only seller' : S.fields.time === 'thin' ? 'Stretched thin' : null,
+  btc_ops: () => S.chips.techScope ? 'Needs custom web / CRM / AI' : null,
+};
+function suggestChip(k) {
+  if (S.chips[k] || S.chips[k] === false) return null;  // on, or turned off by the rep
+  return (CHIP_FROM[k] && CHIP_FROM[k]()) || (NOTE_CHIPS[k] && heardIn(NOTE_CHIPS[k])) || null;
+}
+
+// Dollar amounts in their words: "$2M a year" fills revenue, "$10k a month" fills budget.
+function moneySaid() {
+  const out = {};
+  for (const t of noteTexts()) {
+    const re = /\$\s?(\d[\d,.]*)\s?(k|m|mm|million|thousand|grand)?\b|\b(\d[\d,.]*)\s?(k|m|mm|million|thousand|grand)\b/gi;
+    let m;
+    while ((m = re.exec(t))) {
+      const n = parseFloat((m[1] || m[3]).replace(/,/g, '')), u = (m[2] || m[4] || '').toLowerCase();
+      const v = n * (/^(k|thousand|grand)$/.test(u) ? 1e3 : /^(m|mm|million)$/.test(u) ? 1e6 : 1);
+      if (!(v >= 1000)) continue;
+      const near = t.slice(Math.max(0, m.index - 40), m.index + m[0].length + 30).toLowerCase();
+      const quote = sentenceAt(t, m.index);
+      if (!out.budget && /month|\/mo\b|monthly|retainer|budget/.test(near))
+        out.budget = [v < 5000 ? 'u5' : v < 10000 ? 'b5' : v < 20000 ? 'b10' : v < 30000 ? 'b20' : v < 33500 ? 'b30' : 'b33', quote];
+      else if (!out.revenue && /year|annual|revenue|sales|\barr\b|top line|\/yr|run rate|doing about|we do/.test(near))
+        out.revenue = [v < 150e3 ? 'r0' : v < 500e3 ? 'r1' : v < 2e6 ? 'r2' : v < 10e6 ? 'r3' : 'r4', quote];
+    }
+  }
+  return out;
+}
+const SEL_NOTES = {
+  dm: [[/(my|our) (business )?partner|co-?founder|my (wife|husband|spouse)/i, 'partner'], [/\bboard\b|leadership team|run it by (the|our) (team|ceo)/i, 'board']],
+  reach: [[/international|global(ly)?|worldwide/i, 'intl'], [/national(ly)?|nationwide|across the (country|us)/i, 'national'],
+    [/regional|statewide|across the state|southeast|midwest|northeast|west coast|east coast/i, 'regional'], [/\blocal(ly)?\b|in (our|my|the) (city|town|area|community)/i, 'local']],
+  spokes: [[/camera[- ]shy|hate (being on camera|interviews|public speaking)|don'?t want to be the face|behind the scenes/i, 'no'],
+    [/media training|nervous (on camera|in interviews|speaking)/i, 'train'],
+    [/(love|comfortable|great) (being )?(on camera|on tv|doing interviews|speaking|on stage)|done (a lot of )?(interviews|tv|podcasts)/i, 'natural']],
+  time: [[/no time|too busy|stretched thin|swamped|don'?t have (the )?time/i, 'thin']],
+  crisisPublic: [[/already (in the news|ran|published|out)|(article|story) (ran|came out|was published)|on the news/i, 'news'],
+    [/reporter|journalist|for comment/i, 'reporter'], [/not public|nobody knows yet|hasn'?t (come|gotten) out/i, 'private'],
+    [/reviews|reddit|social media|online|twitter|tiktok|facebook/i, 'online']],
+  crisisLegal: [[/(our|my|a) (lawyer|attorney|counsel|legal team)/i, 'yes']],
+  vidFreq: [[/every (month|week)|ongoing|monthly|regular(ly)? (content|videos)/i, 'ongoing'], [/one (video|commercial|shoot|spot)|single (video|shoot)|one[- ]time/i, 'once']],
+  vidCam: [[/(me|myself|the ceo|the founder) on camera|i'?d be on camera/i, 'leader'], [/(team|employees|customers|clients) on camera|testimonials/i, 'team']],
+  vidAds: [[/(running|run|spend(ing)?) (ads|on ads|on google|on facebook|on meta)|ad spend/i, 'yes']],
+};
+
+// The closeout, suggested from everything above. Each returns [value, why] or null.
+const firstBit = s => { const t = String(s || '').trim(); const m = t.match(/^.*?[.!?](?=\s|$)/); return clip(m && m[0].length >= 12 ? m[0] : t, 110); };
+const lowest = (ids, max = 2) => CATEGORIES.filter(x => ids.includes(x.id) && S.scores[x.id] && S.scores[x.id] <= max).sort((x, y) => S.scores[x.id] - S.scores[y.id])[0];
+const btcOn = () => BTC.filter(([k]) => S.chips[k]);
+function suggestClose(k, a) {
+  const c = S.chips, f = S.fields, live = a.liveCrisis;
+  const byScore = ids => {
+    const x = lowest(ids);
+    if (x) return [`${x.name}${S.notes[x.id] ? ` (${S.notes[x.id]})` : ''}`, `scored ${S.scores[x.id]}`];
+    const g = CATEGORIES.filter(y => ids.includes(y.id) && !S.scores[y.id] && suggestScore(y.id) && suggestScore(y.id)[0] <= 2)[0];
+    return g && [`${g.name} (${suggestScore(g.id)[1]})`, `suggested score ${suggestScore(g.id)[0]}`];
+  };
+  if (k === 'urgency') return live ? ['immediate', 'active crisis']
+    : track() === 'crisis' && f.crisisNext ? ['high', `something's coming: ${clip(f.crisisNext, 40)}`]
+    : c.noTimeline || f.commit === 'no' ? ['low', c.noTimeline ? 'no timeline' : 'not ready to decide']
+    : c.launch || c.as_news ? ['high', 'launch or news coming']
+    : f.commit === 'yes' && f.trigger ? ['high', 'something changed and they\'ll decide in 2 weeks']
+    : f.trigger || f.cost ? ['moderate', 'they named what changed or what waiting costs'] : null;
+  if (k === 'decide') return live ? ['immediate', 'active crisis']
+    : f.commit === 'no' || c.noTimeline ? ['exploring', f.commit === 'no' ? 'not ready to decide in 2 weeks' : 'no timeline']
+    : f.commit === 'hedge' || c.balked || c.wantsFree ? ['evaluating', f.commit === 'hedge' ? 'unsure about 2 weeks' : c.balked ? 'pushed back on price' : 'wants ideas first']
+    : f.commit === 'yes' && (['partner', 'board'].includes(f.dm) && !['on', 'self'].includes(f.dmCall2)) ? ['evaluating', 'yes, but the other decision maker isn\'t on Call 2 yet']
+    : f.commit === 'yes' ? ['ready', 'will decide within 2 weeks'] : null;
+  if (k === 'route') {
+    const on = btcOn();
+    if (!on.length) return Object.values(c).some(Boolean) || a.n ? ['sg', 'no BTC warning signs checked'] : null;
+    const sgNeed = a.needVis || a.needGrowth || a.needAuth || a.needRep;
+    return on.length >= 3 || !sgNeed ? ['btc', `${on.length} BTC sign${on.length > 1 ? 's' : ''}: fix the inside first`]
+      : ['joint', 'BTC signs plus a real visibility or growth need'];
+  }
+  if (k === 'barBiz') {
+    const b = btcOn()[0];
+    return b ? [b[1], 'BTC check'] : c.soloSeller ? ['The founder is the only seller', 'Situation chip']
+      : c.techScope ? ['Needs custom web / CRM / AI work', 'Situation chip'] : f.pain ? [firstBit(f.pain), 'their words in section 2'] : null;
+  }
+  if (k === 'barVis') return byScore(['brand', 'vis', 'media', 'exec', 'content', 'rep'])
+    || (live ? ['Active crisis / bad press', 'crisis'] : c.competitorsPress ? ['Competitors get the press they want', 'Situation chip']
+    : c.reposition ? ['Repositioning: the market still sees them the old way', 'Goals chip'] : c.as_none ? ['Nothing newsworthy yet', 'section 5']
+    : c.repRisk ? ['Reputation risk ahead', 'Situation chip'] : null);
+  if (k === 'barRev') return byScore(['rev', 'aud', 'digital', 'web', 'measure'])
+    || (c.noFunnel ? ['No real website or funnel', 'Situation chip'] : c.tried_ads ? ['Ads haven\'t turned into clients', 'what they tried']
+    : c.wantLeads ? ['Not enough qualified leads', 'Goals chip'] : a.smallCo ? ['Under $150K in revenue', 'section 3']
+    : f.theory ? [firstBit(f.theory), 'their theory in section 4'] : null);
+  return null;
+}
+const CLOSE_KEYS = ['urgency', 'decide', 'route', 'barBiz', 'barVis', 'barRev'];
+function suggestSel(k, a) {
+  if (S.fields[k]) return null;
+  if (CLOSE_KEYS.includes(k)) return suggestClose(k, a);
+  if (k === 'budget' || k === 'revenue') { const m = moneySaid()[k]; return m ? [m[0], `"${m[1]}"`] : null; }
+  for (const [re, v] of SEL_NOTES[k] || []) { const q = heardIn(re); if (q) return [v, `"${q}"`]; }
+  return null;
+}
+// Paints every suggestion on the page: dashed chips and dropdowns, with a "Use it" line under each.
+function renderHints(a) {
+  const sugLine = (el, html) => {
+    let box = el.nextElementSibling;
+    if (!box || !box.classList.contains('hint')) { box = document.createElement('div'); box.className = 'suggest hint'; el.after(box); }
+    if (box.innerHTML !== html) box.innerHTML = html;
+  };
+  document.querySelectorAll('.chips').forEach(box => {
+    const sugs = [...box.querySelectorAll('[data-chip]')].map(el => {
+      const q = suggestChip(el.dataset.chip);
+      el.classList.toggle('sug', !!q);
+      el.title = q ? `Suggested: "${q}"` : '';
+      return q && [el.dataset.chip, q];
+    }).filter(Boolean);
+    sugLine(box, sugs.length ? `Suggested from what they said: ${sugs.map(([k, q]) => `<b>${esc(chipLabel(k))}</b> <q>${esc(q)}</q>`).join(' · ')}. <a data-sugchips="${sugs.map(([k]) => k).join(',')}">Use ${sugs.length > 1 ? 'all' : 'it'}</a>` : '');
+  });
+  document.querySelectorAll('select[data-k], #closeout input[data-k]').forEach(el => {
+    const k = el.dataset.k, sug = (OPTS[k] || CLOSE_KEYS.includes(k)) && suggestSel(k, a);
+    el.classList.toggle('sug', !!sug);
+    const shown = sug && (OPTS[k] ? optText(k, sug[0]) : sug[0]);
+    sugLine(el, sug ? `Suggested: <b>${esc(shown)}</b> · from ${esc(sug[1])}. <a data-sugsel="${k}">Use it</a>` : '');
+  });
+  const n = CLOSE_KEYS.filter(k => suggestSel(k, a)).length;
+  const all = n ? `<button class="btn primary" data-sugclose>Fill in suggestions (${n})</button>` : '';
+  if ($('#closeAll').innerHTML !== all) $('#closeAll').innerHTML = all;
+}
+document.addEventListener('click', e => {
+  const ch = e.target.closest('[data-sugchips]'), sel = e.target.closest('[data-sugsel]'), cl = e.target.closest('[data-sugclose]');
+  if (!ch && !sel && !cl) return;
+  if (ch) ch.dataset.sugchips.split(',').forEach(k => { S.chips[k] = true; });
+  const a = analyze();
+  (sel ? [sel.dataset.sugsel] : cl ? CLOSE_KEYS : []).forEach(k => { const s = suggestSel(k, a); if (s) S.fields[k] = s[0]; });
+  hydrate(); save(); render();
+});
 function renderSuggestions() {
   document.querySelectorAll('.row').forEach(r => {
     const id = r.dataset.cat, sug = suggestScore(id);
@@ -1139,6 +1422,11 @@ function flags(a) {
   const sec = elapsed();
   if (S.mode === 'c1' && sec !== null && sec > 1800 && !beatDone(FLOW.find(b => b.id === 'b3'))) add('secSize', '', 'Heads up: 30+ minutes in and budget / decision maker haven\'t come up yet.');
 
+  const btc = btcOn();
+  if (btc.length) {
+    const r = f.route || suggestClose('route', a)[0];
+    add('secWhy', 'bad', `${r === 'btc' ? 'Route: BTC first' : r === 'sg' ? 'BTC warning signs, but you routed to Story Group only. Double-check that' : 'Route: Joint (BTC + Story Group)'}. Internally notify Dr. Brown. Don't try to fix an operations problem with a visibility package: more demand would land on a business that can't handle it.`);
+  }
   if (c.crisis && t !== 'crisis') add('secWhy', 'bad', 'Active crisis. Click Crisis at the top of section 1: the crisis questions move up, right after this section.');
   if (c.regulated) add('secWhy', '', 'Regulated industry: legal reviews slow down approvals. Plan for that in the timeline.');
   if (c.wantsGuarantee) add('secWhy', '', 'They want guarantees. We never guarantee placements. Press / and search "guarantee" for what to say.');
@@ -1162,6 +1450,8 @@ function flags(a) {
   if (t === 'crisis' && ['reporter', 'news'].includes(f.crisisPublic)) add('secFit', 'bad', 'It\'s live. Aaron\'s first moves: a fact-alignment session, a holding statement with pre-approved answers, and press inquiries routed through us.');
   if (t === 'crisis' && f.crisisLegal && f.crisisLegal !== 'yes') add('secFit', '', 'No lawyer on it yet. Aaron\'s rule: we never put out a statement that opens them up civilly, and we don\'t put out evidence ("that\'s what courts are for").');
 
+  if (f.route === 'btc') add('secWrap', 'bad', 'Routed to BTC. Notify Dr. Brown before anything else. Don\'t book a Story Group Call 2 until the inside of the business is ready.');
+  if (f.route === 'joint') add('secWrap', '', 'Joint engagement: notify Dr. Brown. On Call 2, say who owns what and in what order. BTC handles systems, process, and capacity; Story Group handles positioning, media, and growth.');
   if (f.commit === 'hedge') add('secWrap', '', 'They weren\'t sure about deciding within 2 weeks. Find out exactly what they\'d need to decide, or let it go.', SCRIPTS.d10);
   if (f.commit === 'no') add('secWrap', 'bad', 'Not ready to decide. Don\'t build a custom plan yet (no free work before a contract).');
   if (f.dmCall2 === 'no') add('secWrap', 'bad', 'They won\'t bring the decision maker. Don\'t build a plan until the decision maker is on Call 2.', SCRIPTS.d12);
@@ -1480,6 +1770,38 @@ document.addEventListener('click', e => {
 });
 
 let lastOpen = '', lastClose = '';
+const routeOf = a => S.fields.route || (btcOn().length ? suggestClose('route', a)[0] : null);
+const ROUTE_TEXT = { sg: 'Story Group', btc: 'BTC (notify Dr. Brown)', joint: 'Joint: BTC + Story Group (notify Dr. Brown)' };
+// The closeout's automatic lines: score, gaps, cost of waiting, package and reason.
+function closeGaps() {
+  const scored = CATEGORIES.filter(x => S.scores[x.id]).sort((x, y) => S.scores[x.id] - S.scores[y.id]).slice(0, 3).map(x => [x, S.scores[x.id], false]);
+  const sug = CATEGORIES.filter(x => !S.scores[x.id] && suggestScore(x.id)).map(x => [x, suggestScore(x.id)[0], true]).sort((p, q) => p[1] - q[1]);
+  return [...scored, ...sug].sort((p, q) => p[1] - q[1]).slice(0, 3);
+}
+function closeoutData(a) {
+  const f = S.fields, pick = a.pick && PACKAGES[a.pick];
+  const val = k => f[k] ? [f[k], false] : (s => s ? [s[0], true] : ['', false])(suggestSel(k, a));
+  return {
+    score: a.n ? `${a.total} of ${a.n * 5} (${a.n} of ${CATEGORIES.length} areas scored)${a.ready ? `, about ${a.ready.est}/${MAX_SCORE}: ${a.ready.label}` : ''}` : '',
+    gaps: closeGaps(),
+    cost: f.cost ? firstBit(f.cost) : '',
+    pkg: pick ? `${pkgName(a.pick)}, ${pick.price}${a.addon ? ' + ' + a.addon : ''}` : '',
+    reason: pick ? (a.stepped ? a.budgetNote : a.why[0] || '') : '',
+    ...Object.fromEntries(CLOSE_KEYS.map(k => [k, val(k)])),
+  };
+}
+function renderCloseout(a) {
+  const d = closeoutData(a);
+  const line = (k, v, empty) => `<div><span class="muted">${k}:</span> ${v ? v : `<span class="muted">${empty}</span>`}</div>`;
+  setHtml($('#closeAuto'), [
+    line('Readiness score', d.score && `<b>${esc(d.score)}</b>`, 'score areas in section 7'),
+    line('Top 3 gaps', d.gaps.map(([x, v, s]) => `<b>${esc(x.name)}</b> ${v}${s ? ' <span class="muted">(suggested)</span>' : ''}`).join(' · '), 'shows once areas are scored or suggested'),
+    line('Cost of waiting 6 to 12 months', d.cost && `<q>${esc(d.cost)}</q>`, 'not asked yet. "If nothing changes for 6 to 12 months, what does that cost you?"'),
+    line('Package', d.pkg && `<b>${esc(d.pkg)}</b>`, 'shows once you click what you hear'),
+    line('Why', d.reason && esc(d.reason), '...'),
+  ].join(''));
+}
+
 function render() {
   if (builtTrack !== track()) buildTrack();
   const a = analyze(), f = S.fields, c = S.chips;
@@ -1527,6 +1849,7 @@ function render() {
       <div class="muted" style="font-size:12.5px;margin-top:2px">${esc(p.purpose)}</div>
       <div class="rec-price">Price to say first: <b>${esc(p.price)}</b> · <span class="muted">${esc(p.term)}</span></div>
       ${f.spokes === 'no' && ['vis', 'ig', 'cmd', 'cdg'].includes(a.pick) && track() === 'pr' ? '<div class="flag bad">On hold: the leader won\'t do interviews. Only pitch PR if someone else will be the face of it.</div>' : ''}
+      ${['btc', 'joint'].includes(routeOf(a)) ? `<div class="flag bad">${routeOf(a) === 'btc' ? 'BTC first: the business can\'t handle more growth yet. Notify Dr. Brown.' : 'Joint with BTC: they fix the inside, we fix visibility. Notify Dr. Brown.'}</div>` : ''}
       ${askMoney}${budget}${p.note ? `<div class="flag">${esc(p.note)}</div>` : ''}
       ${first ? `<div class="why1"><b>Why:</b> ${esc(first)}</div>` : ''}
       ${priceHtml(a)}
@@ -1537,6 +1860,8 @@ function render() {
   }
 
   renderSuggestions();
+  renderHints(a);
+  renderCloseout(a);
 
   // Warnings, inside the section that set them off
   const fl = flags(a);
@@ -1970,10 +2295,26 @@ function crmNote() {
     line('Crisis, who needs to hear', labels(CRISIS_WHO).join(', ')), line('Crisis, lawyer on it', optText('crisisLegal', f.crisisLegal)),
     line('Video for', labels(VIDEO_USE).join(', ')), line('Video, how often', optText('vidFreq', f.vidFreq)), line('Video, on camera', optText('vidCam', f.vidCam)), line('Video, running ads', optText('vidAds', f.vidAds)),
     line('What they said', activeChips().join(', ')),
+    ...closeoutLines(a),
     `Recommended: ${a.pick ? pkgName(a.pick) + ' @ ' + PACKAGES[a.pick].price : 'n/a'}${a.next ? ' → then ' + pkgName(a.next) : ''}`,
     line('Budget note', a.budgetNote), line('Add-on', a.addon), line('Scope changes discussed', scopeNote()), line('Internal', f.internal),
     ...(S.prefill && S.prefill.answers || []).map(([q, v]) => `Booking form: ${q} ${v}`),
   ].filter(Boolean).join('\n');
+}
+
+// Michelle's section 10 closeout for the Nutshell note. Anything the rep didn't confirm is marked (suggested).
+function closeoutLines(a) {
+  const d = closeoutData(a), t = ([v, s], text) => v ? `${text ? text(v) : v}${s ? ' (suggested)' : ''}` : '';
+  const line = (k, v) => (v ? `  ${k}: ${v}` : '');
+  return ['CLOSEOUT',
+    line('Readiness score', d.score),
+    line('Top 3 gaps', d.gaps.map(([x, v, s]) => `${x.name} ${v}${s ? ' (suggested)' : ''}`).join('; ')),
+    line('Primary business barrier', t(d.barBiz)), line('Primary visibility / positioning barrier', t(d.barVis)), line('Primary revenue / growth barrier', t(d.barRev)),
+    line('Cost of waiting 6 to 12 months', d.cost),
+    line('Urgency', t(d.urgency, v => optText('urgency', v))), line('Decision readiness', t(d.decide, v => optText('decide', v))),
+    line('Route', t(d.route, v => ROUTE_TEXT[v])), line('BTC warning signs', btcOn().map(([, l]) => l).join('; ')),
+    line('Package', d.pkg), line('Reason', d.reason),
+  ].filter(Boolean);
 }
 
 function proposalBrief() {
@@ -1999,6 +2340,7 @@ function proposalBrief() {
     f.competitors ? `- Competitors getting press: ${f.competitors}` : '',
     f.spokes ? `- Spokesperson: ${optText('spokes', f.spokes)}` : '',
     `- What brought them in: the ${TRACKS[track()].label} track`,
+    ['btc', 'joint'].includes(routeOf(a)) ? `- Route: ${ROUTE_TEXT[routeOf(a)]}. BTC owns internal systems, process, and capacity; Story Group owns positioning, media, and growth. Show who owns what and the order.` : '',
     f.crisisWhat ? `- The crisis, in their words: "${f.crisisWhat}"${f.crisisPublic ? ` (${optText('crisisPublic', f.crisisPublic)})` : ''}` : '',
     f.crisisNext ? `- Coming next in the crisis: ${f.crisisNext}` : '',
     labels(VIDEO_USE).length || f.vidFreq ? `- Video: ${[labels(VIDEO_USE).join(', '), optText('vidFreq', f.vidFreq)].filter(Boolean).join('; ')}` : '',
