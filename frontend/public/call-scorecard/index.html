@@ -101,6 +101,13 @@
   .track { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 6px 0 14px; }
   .track .lbl { font-size: 12.5px; color: var(--muted); }
   .iflags:empty { display: none; }
+  .sbtn.sug { border-style: dashed; border-color: var(--pink); }
+  .suggest { font-size: 12px; color: var(--muted); margin: -2px 0 6px; }
+  .suggest:empty { display: none; }
+  .suggest b { color: var(--text); }
+  .suggest a { color: var(--pink); cursor: pointer; text-decoration: underline; margin-left: 4px; }
+  .sug-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; font-size: 12.5px; }
+  .sug-bar:has(#auditNote:empty):has(#sugAll:empty) { display: none; }
   .words { font-size: 13px; border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 8px; }
   .words .lbl { font-size: 10.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
   .words b { color: var(--muted); font-weight: 600; }
@@ -434,6 +441,7 @@
         <div class="scale-key">
           <span><i class="k1"></i><b>1</b> Not established</span><span><i class="k2"></i><b>2</b> In progress</span><span><i class="k3"></i><b>3</b> Established</span><span><i class="k4"></i><b>4</b> Scalable</span><span><i class="k4"></i><b>5</b> Optimized</span>
         </div>
+        <div class="sug-bar"><span id="auditNote" class="muted"></span><span id="sugAll"></span></div>
         <div id="rows"></div>
       </section>
     </main>
@@ -468,8 +476,8 @@
     <li>At the top of section 1, pick <b>what brought them in</b>: PR, Leads, Crisis, or Video. The booking link usually sets it. It changes the open's client story, the questions in section 5, the starting package, and the close.</li>
     <li>Work down the left side, 1 to 6. It follows the trained Call 1: open, why they're here, size and budget, go deeper, the questions for their ad, then the close. Every line is in a pink <b>Try</b> box. A number turns green when that section is done.</li>
     <li>Warnings show up right under the answer that set them off, with the words to say.</li>
-    <li>At the wrap-up, their own words from your notes show right above the script, so you can say them back.</li>
-    <li>Section 7 is the business audit. Score areas as they come up, or right after the call.</li>
+    <li>The wrap-up recap fills itself in from your notes, turned into "you" language, so you can say it back. Anything blank shows as [brackets].</li>
+    <li>Section 7 is the business audit. Score areas as they come up, or right after the call. A dashed number is a suggested score from what they already said: click <b>Use it</b>, or <b>Fill in suggested scores</b> at the top of section 7 to take them all.</li>
     <li>Click a button when you hear something (click again to undo).</li>
     <li>The package card shows what to recommend and the price to say first. Right under it, <b>Price it</b> lets you change the package, type a different price or term, take pieces out, or add à la carte lines. The total updates as you type.</li>
     <li>Tough question? Press <b>/</b> and type it, like "can you guarantee Forbes?" Press <b>Enter</b> for a short answer you can say. It only uses our playbook, so double-check anything that sounds off.</li>
@@ -656,8 +664,8 @@ const FLOW = [
       ['Stay quiet, then:', '"Is there any other reason this matters to you?" The first answer is the rational one. The second is the emotional one, and it closes Call 2.']],
     fields: [['trigger', 'textarea', 'What changed in the last 30 to 60 days'], ['cost', 'textarea', 'What 6 to 12 more months of this costs them'], ['reason2', 'textarea', 'The other reason it matters (usually the emotional one)']], done: f => !!f.trigger && !!f.cost },
   { id: 'b6', name: 'Goal + what it means to them', end: 1440,
-    say: t => t === 'crisis' ? '"What would a win look like here?"' : '"Flip the coin. 12 months from now you say \'that worked.\' What\'s specifically different in the business?"',
-    then: t => [t === 'crisis' ? ['Define success early (Aaron):', '"The shortest news cycle possible, on our terms."'] : 'Dig in: "When you say [their answer], what does that cash out as?"',
+    say: t => t === 'crisis' ? '"What would a win look like here?"' : '"12 months from now you say \'that worked.\' What\'s specifically different in the business?"',
+    then: t => [t === 'crisis' ? ['Define success early (Aaron):', '"The shortest news cycle possible, on our terms."'] : ['If it\'s vague:', '"What would that look like in numbers?"'],
       ['Ask permission first:', '"I\'m going to ask you something a little personal. Mind if I ask?" Then: "If that happens, what does that mean for YOU personally? Not the company. You."']],
     fields: [['goal', 'textarea', 'What\'s different in 12 months, in numbers'], ['nmg', 'textarea', 'What it means for them personally, word for word']], done: f => !!f.goal && !!f.nmg },
   { id: 'b7', place: 'wrap', name: 'Next steps', end: 1800, say: '', then: [],
@@ -846,6 +854,7 @@ const areaRow = (c, inline) => `
         : `<div class="plain">${esc(c.plain)}</div><details style="margin-top:2px;border:0;padding:0"><summary style="font-size:12px">Question to ask them</summary><div class="ask" style="font-style:italic">"${esc(c.probe[0])}"</div><div class="ask" style="margin-top:4px">Full statement from the audit guide: "${esc(c.ask)}"</div></details>`}</div>
     <div>
       <div class="scores">${[1, 2, 3, 4, 5].map(v => `<button class="sbtn" data-v="${v}">${v}</button>`).join('')}<span class="slabel"></span></div>
+      <div class="suggest"></div>
       ${inline ? '' : `<textarea rows="1" data-note="${c.id}" placeholder="Why? (goes on their one-pager)" hidden></textarea>`}
     </div>
   </div>`;
@@ -853,6 +862,38 @@ $('#rows').innerHTML = CATEGORIES.map(c => areaRow(c, false)).join('');
 $('#trackSeg').innerHTML = Object.entries(TRACKS).map(([k, x]) => `<button data-track="${k}">${esc(x.label)}</button>`).join('');
 // Rebuilt only when the track changes (render checks), never on a keystroke, so typing keeps its focus.
 let builtTrack = null;
+// Suggested scores from what they already said, so the audit comes from the conversation instead of a second
+// round of questions. Only a suggestion: the rep keeps it with one click, since scores print on the client one-pager.
+function suggestScore(id) {
+  const c = S.chips, f = S.fields;
+  const live = c.crisis || (track() === 'crisis' && ['reporter', 'news'].includes(f.crisisPublic));
+  const pick = {
+    brand: c.reposition ? [2, 'Repositioning / new direction'] : c.noStart ? [2, 'Doesn\'t know where to start'] : null,
+    vis: c.competitorsPress ? [2, 'Competitors get the press'] : null,
+    media: c.competitorsPress ? [2, 'Competitors get the press'] : c.wantMedia ? [2, 'Press / media'] : null,
+    exec: c.wantExpert ? [2, 'Be THE expert'] : c.wantTv ? [2, 'TV / broadcast'] : c.wantSpeak ? [2, 'Speaking / stages'] : null,
+    digital: c.wantLeads ? [2, 'More leads / clients'] : c.tried_ads ? [2, 'Tried an ad agency'] : null,
+    web: c.noFunnel ? [1, 'No website / funnel'] : null,
+    content: c.as_none ? [1, 'Nothing newsworthy yet'] : c.wantVideo ? [2, 'Video / content production'] : c.as_visual ? [4, 'Pro photo / video ready'] : null,
+    rep: live ? [1, 'Active crisis'] : c.repRisk ? [2, 'Reputation risk ahead'] : null,
+  }[id];
+  return pick && !S.scores[id] ? pick : null;
+}
+function renderSuggestions() {
+  document.querySelectorAll('.row').forEach(r => {
+    const id = r.dataset.cat, sug = suggestScore(id);
+    r.querySelectorAll('.sbtn').forEach(b => b.classList.toggle('sug', !!sug && +b.dataset.v === sug[0]));
+    r.querySelector('.suggest').innerHTML = sug ? `Suggested <b>${sug[0]}</b> (${esc(SCALE[sug[0]])}): they said "${esc(sug[1])}". <a data-sugok="${id}">Use it</a>` : '';
+  });
+  const shown = new Set([...document.querySelectorAll('.row')].filter(r => suggestScore(r.dataset.cat)).map(r => r.dataset.cat));
+  $('#sugAll').innerHTML = shown.size ? `<button class="btn primary" data-sugall>Fill in suggested scores (${shown.size})</button>` : '';
+}
+document.addEventListener('click', e => {
+  const one = e.target.closest('[data-sugok]'), all = e.target.closest('[data-sugall]');
+  if (!one && !all) return;
+  (one ? [one.dataset.sugok] : CATEGORIES.map(x => x.id)).forEach(id => { const sug = suggestScore(id); if (sug) S.scores[id] = sug[0]; });
+  hydrate(); save(); render();
+});
 function buildTrack() {
   const t = track(), cfg = FIT_BY_TRACK[t];
   builtTrack = t;
@@ -863,6 +904,9 @@ function buildTrack() {
     + (cfg.main.length ? `<div class="fields" style="margin-top:${cfg.areas.length ? 12 : 0}px">${cfg.main.map(fitHtml).join('')}</div>` : '')
     + (cfg.more.length ? `<details style="margin-top:10px"><summary style="font-size:13px">${esc(cfg.moreLabel)}</summary><div class="fields" style="margin-top:10px">${cfg.more.map(fitHtml).join('')}</div></details>` : '');
   document.querySelectorAll('#trackSeg button').forEach(b => b.classList.toggle('on', b.dataset.track === t));
+  // Areas scored in section 5 aren't repeated in the full audit.
+  document.querySelectorAll('#rows .row').forEach(r => { r.hidden = cfg.areas.includes(r.dataset.cat); });
+  $('#auditNote').textContent = cfg.areas.length ? `Scored in section 5, not repeated here: ${cfg.areas.map(id => CATEGORIES.find(x => x.id === id).name).join(', ')}.` : '';
   // In a crisis the facts come first (Aaron), so its questions move up under "why they're here".
   if (t === 'crisis') $('#secWhy').after($('#secFit')); else $('#secDeep').after($('#secFit'));
   document.querySelectorAll('#main > section .sec .n').forEach((n, i) => { n.textContent = i + 1; });
@@ -1492,6 +1536,8 @@ function render() {
       ${a.monthly ? `<div class="muted" style="font-size:12px;margin-top:6px">If monthly is off the table: Kickstart, ${esc(PACKAGES.kickstart.price)} (audit, positioning, a 30/60/90-day plan), then step up.</div>` : ''}`);
   }
 
+  renderSuggestions();
+
   // Warnings, inside the section that set them off
   const fl = flags(a);
   document.querySelectorAll('.iflags').forEach(box => {
@@ -1524,7 +1570,7 @@ function render() {
   const [fit, weak] = fitLabel(chosen), showCase = realMatch(chosen) || S.caseIdx !== null;
   const alts = `<div class="alts">${showCase ? 'Other matches' : 'Closest options'}: ${ranked.filter(r => r.idx !== chosen.idx || !showCase).slice(0, 3).map(r => `<a data-case="${r.idx}">${esc(r.c.i.toLowerCase())}</a>`).join(' · ')}${S.caseIdx !== null ? ' · <a data-case="auto">auto-pick</a>' : ''}</div>`;
   setHtml($('#caseCard'), showCase ? `
-    <p class="eyebrow">A client story you can tell${S.caseIdx !== null ? ' · pinned' : ''}</p>
+    <p class="eyebrow">A client story you can tell (optional)${S.caseIdx !== null ? ' · pinned' : ''}</p>
     <div class="case">
       <div class="ind">${esc(chosen.c.i)}${chosen.c.p ? ' · ' + esc(chosen.c.p) : ''}</div>
       <h4>${esc(chosen.c.t)}</h4>
@@ -1535,7 +1581,7 @@ function render() {
     </div>
     ${alts}
     <div class="muted" style="font-size:12px;margin-top:6px">Only tell it if the match is real (same industry or same situation). If in doubt, skip it.</div>`
-    : `<p class="eyebrow">A client story you can tell</p>
+    : `<p class="eyebrow">A client story you can tell (optional)</p>
     <div class="empty">${S.fields.industry ? 'No close client match yet. It shows up when a story matches their industry or their situation.' : 'Pick their industry in section 1 to find a client story.'}</div>
     ${alts}<div class="muted" style="font-size:12px;margin-top:6px">Click one to look, and only tell it if it really fits.</div>`);
   // Section 1's open: the frame, then the client story only when the match is real.
@@ -1811,27 +1857,38 @@ function openTry(r) {
   const t = track(), real = realMatch(r) || S.caseIdx === r.idx;
   const ind = r.c.i.toLowerCase().replace(/ & .*/, '');
   const story = real
-    ? ['Client story:', `"Before we get into your situation: what caught my eye is [one thing they did, from their site or LinkedIn]. We just helped a ${ind} client in a very similar spot. ${storyMetrics(r.c).map(([k, v]) => `${k}: ${v}`).join('. ')}. Made me think there's a version of that we could run for you. Sound fair?"`]
-    : ['Client story:', S.fields.industry ? 'No close client match, so skip it and go straight to why they\'re here.' : 'Pick their industry above to find a client story.'];
+    ? ['Client story (optional):', `"Before we get into your situation: what caught my eye is [one thing they did, from their site or LinkedIn]. We just helped a ${ind} client in a very similar spot. ${storyMetrics(r.c).map(([k, v]) => `${k}: ${v}`).join('. ')}. Made me think there's a version of that we could run for you. Sound fair?"`]
+    : ['Client story (optional):', S.fields.industry ? 'No close client match, so skip it and go straight to why they\'re here.' : 'Pick their industry above to find a client story.'];
   return t === 'crisis'
     ? tryBox('Open', '"We exist for good people that have bad days."', [['Normalize it (Aaron):', '"It\'s not a matter of if. It\'s when."'], ['If it fits:', 'our CEO has been through a crisis himself (employee fraud at his company).'], ['The frame:', FRAME], story], 'script')
     : tryBox('Open', '"I have a limited amount of time. Are we ready to jump in? Do you have something to take notes with?"', [['The frame:', FRAME], story], 'script');
 }
 
 // Section 6: the v6 close (tie-down, trial commit, decision maker, Call 2 preview, video recap, booking).
-// Their words sit above the script, untouched, so the rep says them back in a natural sentence; the script
-// keeps the trained [blanks] instead of pasting notes into it (notes are first person and run long).
+// The recap fills itself in from the notes: the first sentence of each, turned from "I/we/our" to "you/your",
+// in a "What I heard: ..." shape that reads right whether the rep typed a quote, a clause, or shorthand.
+const TO_YOU = [[/\bI'm\b/g, "you're"], [/\bI've\b/g, "you've"], [/\bI'd\b/g, "you'd"], [/\bI'll\b/g, "you'll"], [/\bI\b/g, 'you'],
+  [/\bwe're\b/gi, "you're"], [/\bwe've\b/gi, "you've"], [/\bwe'd\b/gi, "you'd"], [/\bwe'll\b/gi, "you'll"], [/\bwe\b/gi, 'you'],
+  [/\bmyself\b/gi, 'yourself'], [/\bourselves\b/gi, 'yourselves'], [/\bmine\b/gi, 'yours'], [/\bours\b/gi, 'yours'],
+  [/\bmy\b/gi, 'your'], [/\bour\b/gi, 'your'], [/\bme\b/gi, 'you'], [/\bus\b/g, 'you']];
+function sayBack(v, blank) {
+  let t = String(v || '').trim().replace(/\s+/g, ' ');
+  if (!t) return blank;
+  const first = t.match(/^.*?[.!?](?=\s|$)/);
+  if (first && first[0].length >= 12) t = first[0];
+  t = clip(t, 150);
+  TO_YOU.forEach(([re, to]) => { t = t.replace(re, to); });
+  return t.replace(/[.!?…]+$/, '').replace(/^[A-Z](?=[a-z])/, x => x.toLowerCase());
+}
 function wrapTry() {
   const f = S.fields, t = track();
   const who = { partner: 'your partner', board: 'your board' }[f.dm];
   const top = (topTierFor(f.industry)[0] || {}).name || (((mediaFor(f.industry) || {}).publications || [])[0] || {}).name;
   const outlet = f.outlet ? clip(f.outlet, 40) : top ? `[one outlet, like ${top}]` : '[one outlet, named]';
-  const words = [['Pain', f.pain], ['What changed', f.trigger], ['Goal', f.goal], ['What it means to them', f.nmg]].filter(([, v]) => v);
   const preview = '"Here\'s what Call 2 looks like. 45 to 60 minutes. I\'ll walk you through specifically what we\'d do, month by month.'
     + (t === 'pr' ? ` Based on what you told me, I personally believe ${outlet} is on the table for you. I'm not promising it today, but I'm going to come to Call 2 with a real point of view on whether and how we can get you there."` : '"');
-  return (words.length ? `<div class="words"><div class="lbl">Their words, to say back</div>${words.map(([k, v]) => `<div><b>${esc(k)}:</b> "${esc(clip(v, 160))}"</div>`).join('')}</div>` : '')
-    + tryInner('Try', '"Okay, useful conversation. Here\'s where we are. I\'ve got a clear picture of [their pain], [what changed], and what you\'re trying to get to: [their goal], specifically [what it means to them]. Did I get that right?"', [
-      ['Trial commit:', '"Before I put time into building you a tailored plan: if we can bring you a plan that hits [their goal], is this something you\'re ready to make a real decision on in the next two weeks?"'],
+  return tryInner('Try', `"Okay, useful conversation. Here's where we are. What I heard: ${sayBack(f.pain, '[their pain]')}. What changed: ${sayBack(f.trigger, '[what changed]')}. Where you want to get to: ${sayBack(f.goal, '[their goal]')}. And what that would mean for you: ${sayBack(f.nmg, '[what it means to them]')}. Did I get that right?"`, [
+      ['Trial commit:', '"Before I put time into building you a tailored plan: if we can bring you a plan that gets you there, is this something you\'re ready to make a real decision on in the next two weeks?"'],
       ...(who ? [['Decision maker:', `"You mentioned ${who} would need to weigh in. The plan I build is going to be specific enough that having them in the room saves a round trip. Any chance we can get them on Call 2 directly?"`]] : []),
       ['Call 2 preview:', preview],
       ...(t === 'crisis' ? [['Future-pace it (Aaron):', '"On the tail end of this, there\'s even more opportunity. It\'s going to be a great victory story."']] : []),
