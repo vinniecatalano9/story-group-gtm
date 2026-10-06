@@ -129,10 +129,10 @@ const TIER_FACTS = `STORY GROUP PACKAGES (final 9/18/2026 package doc, the only 
 - Kickstart $5,500 one-time: audit, positioning, messaging, 30/60/90 roadmap. No PR outreach.
 - Business Growth Engagement $7,500/mo, 3 months: Google Ads, conversion, qualified leads. No PR.
 - Visibility $10,000/mo, 6 months: PR and earned media, proactive pitching, podcast bookings, newsjacking, monitoring. No digital growth.
-- Influence & Growth $20,000/mo, 6 months: growth engine plus multiple narratives, top-tier outreach, broadcast and speaking pitching, executive positioning.
+- Influence $20,000/mo, 6 months: growth engine plus multiple narratives, top-tier outreach, broadcast and speaking pitching, executive positioning.
 - Command $30,000/mo, 12 months: senior strategist, premium and national media, reputation, crisis readiness and counsel.
 - Command & Digital Growth $33,500/mo, 12 months: Command plus digital growth.
-- Premium Cinema add-on $20,000/mo, 12 months ($12,500/mo with Influence & Growth or Command): TV spot, promo video, studio, weekly social clips.
+- Premium Cinema add-on $20,000/mo, 12 months ($12,500/mo with Influence or Command): TV spot, promo video, studio, weekly social clips.
 Recommend ONE package at its Start-here price. Never quote lower ladder prices or promise placement counts.`;
 
 /** Calendar invite text without links, dial-ins, and scheduler boilerplate: what's left is what they told us. */
