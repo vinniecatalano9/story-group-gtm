@@ -300,29 +300,30 @@
       </section>
 
       <section class="card">
-        <p class="eyebrow">What they said (click what you hear)</p>
-        <div id="chips"></div>
-      </section>
-
-      <section class="card">
-        <p class="eyebrow">Call notes</p>
-        <p class="card-sub">Jot what they say, in any order, in their words. Skip what doesn't come up. The suggested questions are only there if you want them.</p>
-        <div id="flow"></div>
-      </section>
-
-      <section class="card">
-        <p class="eyebrow">Story Group fit</p>
-        <p class="card-sub">What the business questions miss: can PR actually work for them, and what's the money math.</p>
-        <div id="fit" class="fields"></div>
-      </section>
-
-      <section class="card">
-        <p class="eyebrow">Readiness scorecard</p>
+        <p class="eyebrow">Business audit · 11 areas</p>
+        <p class="card-sub">For each area: how true is the statement for them? Ask the question under it if you need to. Anything scored 1 or 2 is a real gap and drives the recommendation.</p>
         <div class="scale-key">
           <span><b>1</b> Not established</span><span><b>2</b> In progress</span><span><b>3</b> Established</span><span><b>4</b> Scalable</span><span><b>5</b> Optimized</span>
         </div>
         <div id="rows"></div>
       </section>
+
+      <section class="card">
+        <p class="eyebrow">What they said (click what you hear)</p>
+        <div id="chips"></div>
+      </section>
+
+      <details class="card" id="moreNotes">
+        <summary style="font-size:13px">More notes (optional): their words, budget, decision maker, next steps, PR fit</summary>
+        <div style="margin-top:12px">
+          <p class="eyebrow">Call notes</p>
+          <p class="card-sub">Jot what they say, in any order, in their words. Skip what doesn't come up.</p>
+          <div id="flow"></div>
+          <p class="eyebrow" style="margin-top:16px">Story Group fit</p>
+          <p class="card-sub">Can PR actually work for them, and what's the money math.</p>
+          <div id="fit" class="fields"></div>
+        </div>
+      </details>
 
       <section class="card">
         <p class="eyebrow">Internal notes (not on the client one-pager)</p>
@@ -363,7 +364,7 @@
     <li>Click <b>Start call</b> if you want a timer. It's just a clock.</li>
     <li>When they say something, click the matching button under <b>What they said</b>. Click again to undo.</li>
     <li>Jot what they say in <b>Call notes</b>, in any order. Skip anything that doesn't come up. Each topic has a suggested question tucked under it if you want one.</li>
-    <li>Score the business 1–5 in <b>Readiness scorecard</b> (1 = not set up, 5 = running great).</li>
+    <li>Score the 11 areas in <b>Business audit</b> 1–5: how true is each statement for them? Anything at 1 or 2 is a real gap, and the gaps decide the recommended package.</li>
     <li>Watch the right side: the <b>recommended package and price</b>, <b>Watch for</b> warnings, <b>Ideas for what to ask</b>, and a <b>case study</b> you can mention. Case studies also pop up when you click something.</li>
     <li>Tough question? Press <b>/</b> and type it, like "can you guarantee Forbes?" You'll see matching playbook entries right away. Press <b>Enter</b> (or <b>Ask</b>) and a short answer you can say comes back in a few seconds. It only uses our playbook and your notes, so double-check anything that sounds off.</li>
   </ol>
@@ -405,38 +406,57 @@
 
 // Readiness categories are PLACEHOLDERS until Michelle sends the Story Group
 // question doc. Swap `ask`/`probe` text freely; keep the `id`s, the rules use them.
+// The 11 dimensions of the Story Group Business Audit & Diagnostic (Michelle's team guide, BTC + Story Group).
+// `ask` is the statement the score rates, `probe` her discovery prompt, `client` the one-pager line.
 const CATEGORIES = [
-  { id: 'rev',   group: 'growth',     name: 'Revenue & Growth',        ask: 'Do you know current revenue, target revenue, and what it takes to get there?',
-    client: 'Know your numbers: current revenue, your target, and what it takes to get there.',
-    probe: ['What does next year look like in revenue, and what has to be true to hit it?', 'Where has growth stalled, and when did it start?'] },
-  { id: 'icp',   group: 'foundation', name: 'Ideal Client & Market',   ask: 'Can they clearly name who they sell to and why those people buy?',
-    client: 'Get precise about who you sell to and why they buy.',
-    probe: ['Who is your best client, and how many more of them could you handle?', 'If you lost your top 3 clients, where does the next one come from?'] },
-  { id: 'msg',   group: 'foundation', name: 'Messaging & Positioning', ask: 'Is there one clear message for what they do and why they are different?',
-    client: 'One clear message for what you do and why you\'re different.',
-    probe: ['In one sentence, why do clients pick you over the next option?', 'Does your team describe the company the same way you do?'] },
-  { id: 'brand', group: 'foundation', name: 'Brand, Content & Social', ask: 'Is content consistent and on-message, or scattered?',
-    client: 'Consistent, on-message content your market sees regularly.',
-    probe: ['Who owns content today, and how often does it go out?', 'What has actually driven a conversation or lead from social?'] },
-  { id: 'web',   group: 'growth',     name: 'Website & Funnel',        ask: 'Is there a website, funnel, or lead magnet actually generating leads?',
-    client: 'A website and funnel that turn visitors into leads.',
-    probe: ['When someone lands on your site, what are they supposed to do next?', 'How many leads came from the website last month?'] },
-  { id: 'mkt',   group: 'growth',     name: 'Marketing System',        ask: 'Are ads, email, and SEO connected and measured, or one-off attempts?',
-    client: 'Connected, measured marketing (ads, email, SEO) instead of one-off efforts.',
-    probe: ['What have you tried in marketing, and what happened?', 'Do you know your cost per lead or cost per client?'] },
-  { id: 'sales', group: 'growth',     name: 'Sales Team & Process',    ask: 'Could they handle 2× the inbound tomorrow? Who sells?',
-    client: 'A sales process that can handle more demand.',
-    probe: ['How many people sell today, and what is your close rate?', 'If we doubled your leads next month, who would take those calls?'] },
-  { id: 'vis',   group: 'visibility', name: 'Market Visibility & Media', ask: 'Does their market know they exist? Any earned media, podcasts, press?',
-    client: 'Get in front of your market: press, podcasts, and search.',
-    probe: ['Where have you been featured in the last year?', 'When prospects Google you, what do they find?'] },
-  { id: 'auth',  group: 'authority',  name: 'Executive Authority',     ask: 'Is the leader seen as the go-to voice in their space?',
-    client: 'Position your leader as the go-to voice in your space.',
-    probe: ['What do you want to be known for that you are not known for today?', 'Have you been asked to speak or comment as an expert?'] },
-  { id: 'rep',   group: 'reputation', name: 'Reputation & Risk',       ask: 'Any exposure: bad press, reviews, legal, industry risk? Plan in place?',
-    client: 'Protect your reputation with a plan before you need one.',
-    probe: ['If a reporter called tomorrow about a problem, who handles it?', 'Is there anything online you would rather a prospect not find?'] },
+  { id: 'rev', group: '1', name: 'Revenue & Growth',
+    ask: 'We understand our current revenue, revenue target, profitability, and the growth needed to reach our next stage.',
+    probe: ['What is the company trying to achieve over the next 12 months? What needs to change for that target to become realistic?'],
+    client: 'Know your numbers: current revenue, your target, and what it takes to get there.' },
+  { id: 'brand', group: '2', name: 'Brand Positioning & Messaging',
+    ask: 'We have a clear market position, a compelling brand story, and messaging that says why our audience should choose us.',
+    probe: ['What do you want to be known for? Is the market seeing you that way? What makes you meaningfully different from competitors?'],
+    client: 'A clear position and message that says why your audience should choose you.' },
+  { id: 'aud', group: '3', name: 'Ideal Audience & Market',
+    ask: 'We know who we need to reach, what drives their decisions, where they get information, and how to talk to them.',
+    probe: ['Who is your highest-value audience? Which markets, industries, or areas matter most?'],
+    client: 'Know exactly who you need to reach and where they pay attention.' },
+  { id: 'vis', group: '4', name: 'Visibility & Discoverability',
+    ask: 'Our company and leaders show up consistently where our audience searches, reads, and makes buying decisions.',
+    probe: ['When someone searches your company, your leaders, or your services, are you happy with what they find?'],
+    client: 'Show up where your buyers search, read, and decide.' },
+  { id: 'media', group: '5', name: 'Earned Media & PR',
+    ask: 'We have a proactive PR strategy that creates media coverage, interviews, podcasts, speaking, and industry recognition.',
+    probe: ['Where have you been featured? Where would you like to be? Is your media coverage intentional or mostly inbound?'],
+    client: 'A proactive PR strategy that earns coverage, interviews, podcasts, and stages.' },
+  { id: 'exec', group: '6', name: 'Leadership & Executive Visibility',
+    ask: 'Our executives and experts have a public presence that builds the company\'s credibility and reputation.',
+    probe: ['Is the CEO or leadership team part of the growth strategy? Are they recognized as experts outside the company?'],
+    client: 'Leaders who are recognized as experts outside the company.' },
+  { id: 'digital', group: '7', name: 'Digital Growth & Lead Generation',
+    ask: 'We have measurable digital channels that consistently bring in qualified leads, inquiries, or appointments.',
+    probe: ['Where are leads coming from today? What are you spending? Which channels produce measurable revenue?'],
+    client: 'Digital channels that consistently bring in qualified leads.' },
+  { id: 'web', group: '8', name: 'Website & Conversion',
+    ask: 'Our website clearly communicates our position, builds credibility, and turns visitors into real opportunities.',
+    probe: ['Is the website generating leads? Can you track what visitors do? Does it reflect the company you are today?'],
+    client: 'A website that builds credibility and turns visitors into leads.' },
+  { id: 'content', group: '9', name: 'Content & Brand Storytelling',
+    ask: 'We consistently share stories, insights, proof, and expertise that shape how the company and its leaders are seen.',
+    probe: ['Are you publishing consistently? Do you have strong video, photography, executive content, case studies, or customer stories?'],
+    client: 'Consistent stories, proof, and content that shape how you\'re seen.' },
+  { id: 'rep', group: '10', name: 'Reputation & Market Authority',
+    ask: 'Our reputation, third-party credibility, search presence, and customer proof match the company we\'re becoming.',
+    probe: ['Is there a gap between how strong the company is and how strong it looks publicly? Is anything online weakening trust?'],
+    client: 'A public reputation that matches how strong your company really is.' },
+  { id: 'measure', group: '11', name: 'Measurement & Performance',
+    ask: 'We can measure the business impact of our PR, marketing, digital, website, lead generation, and sales efforts.',
+    probe: ['What KPIs do you review? Can you connect visibility and marketing to leads, pipeline, or revenue?'],
+    client: 'Measure what your PR and marketing actually produce in leads and revenue.' },
 ];
+// Her score bands, out of 55.
+const READINESS = [[45, 'Advanced'], [34, 'Growth Ready'], [23, 'Developing'], [0, 'Critical Gaps']];
+const MAX_SCORE = 55;
 const SCALE = { 1: 'Not established', 2: 'In progress', 3: 'Established', 4: 'Scalable', 5: 'Optimized' };
 
 const CHIP_GROUPS = [
@@ -620,7 +640,7 @@ $('#fit').innerHTML = FIT.map(([k, type, label, hint, , list]) => `
   </label>`).join('');
 $('#rows').innerHTML = CATEGORIES.map(c => `
   <div class="row" data-cat="${c.id}">
-    <div><div class="grp">${c.group}</div><div class="name">${esc(c.name)}</div><div class="ask">${esc(c.ask)}</div></div>
+    <div><div class="name">${esc(c.group)}. ${esc(c.name)}</div><div class="ask">"${esc(c.ask)}"</div><details style="margin-top:4px;border:0;padding:0"><summary style="font-size:12px">Question to ask</summary><div class="ask" style="font-style:italic">${esc(c.probe[0])}</div></details></div>
     <div>
       <div class="scores">${[1, 2, 3, 4, 5].map(v => `<button class="sbtn" data-v="${v}">${v}</button>`).join('')}<span class="slabel"></span></div>
       <textarea rows="1" data-note="${c.id}" placeholder="Why that score? (goes on the client one-pager)"></textarea>
@@ -693,45 +713,64 @@ function avg(ids) {
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
 }
 
+function readinessOf(total, n) {
+  if (n < 6) return null;  // too few areas scored to call it
+  const est = Math.round(total / n * CATEGORIES.length);
+  return { est, label: READINESS.find(([min]) => est >= min)[1] };
+}
+
+// Routing from Michelle's guide: a 1 or 2 is a material gap, the cluster of gaps picks the
+// package, the total sets readiness, and what the prospect says they want breaks ties.
+// Start with the highest appropriate package; if budget pushes back, cut scope before price.
 function analyze() {
-  const c = S.chips, f = S.fields;
-  const F = avg(['icp', 'msg', 'brand']);
-  const G = avg(['rev', 'web', 'mkt', 'sales']);
-  const V = S.scores.vis ?? null, R = S.scores.rep ?? null;
-  const n = Object.keys(S.scores).length, total = Object.values(S.scores).reduce((a, b) => a + b, 0);
+  const c = S.chips, f = S.fields, sc = S.scores;
+  const n = Object.keys(sc).length, total = Object.values(sc).reduce((a, b) => a + b, 0);
+  const gap = id => sc[id] !== undefined && sc[id] <= 2;
+  const count = ids => ids.filter(gap).length;
+  const gaps = CATEGORIES.filter(x => gap(x.id));
+  const ready = readinessOf(total, n);
+  const established = !!ready && (ready.label === 'Growth Ready' || ready.label === 'Advanced');
+  const bigCo = f.revenue === 'r4';
   const why = [];
 
-  const needFoundation = (F !== null && F <= 2) || !!c.noStart;
-  const needGrowth = (G !== null && G <= 2.5) || !!(c.wantLeads || c.noFunnel || c.tried_ads);
-  const needVis = (V !== null && V <= 2) || !!(c.wantMedia || c.wantPods || c.launch || c.competitorsPress);
-  const needAuth = !!(c.wantExpert || c.wantTv || c.wantSpeak || c.raise);
-  const needRep = !!(c.crisis || c.repRisk) || (R !== null && R <= 1);
-  const needVideo = !!c.wantVideo;
+  // What they said fills in when few areas are scored yet.
+  const saidGrowth = !!(c.wantLeads || c.noFunnel || c.tried_ads);
+  const saidVis = !!(c.wantMedia || c.wantPods || c.launch || c.competitorsPress);
+  const saidAuth = !!(c.wantExpert || c.wantTv || c.wantSpeak || c.raise);
+  const saidRep = !!(c.crisis || c.repRisk);
 
-  if (needFoundation) why.push(F !== null && F <= 2 ? `Their basics are weak (messaging, target client, brand: ${F.toFixed(1)}/5 average). Fix those before spending on growth or PR.` : 'They don\'t know where to start. Clarity comes before growth.');
-  if (needGrowth) why.push(G !== null && G <= 2.5 ? `Their lead-generation setup is weak (${G.toFixed(1)}/5 average).` : 'They want more leads.');
-  if (needVis) why.push(V !== null && V <= 2 ? `Their market doesn't know them (visibility ${V}/5).` : 'They asked for press, podcasts, or a launch moment.');
-  if (needAuth) why.push('They want authority: TV, stages, being the expert, or investor credibility.');
-  if (needRep) why.push(c.crisis ? 'Active crisis: this needs Command-level counsel.' : 'They have a reputation risk to protect.');
-  if (c.multiEntity) why.push('Multiple brands / executives / markets don\'t fit a standard package.');
-  if (needVideo) why.push('They want video or ongoing content.');
+  const needFoundation = count(['brand', 'aud', 'web']) >= 2 || !!c.noStart;
+  const needGrowth = gap('digital') || count(['web', 'measure']) >= 2 || saidGrowth;
+  const needVis = gap('vis') || gap('media') || saidVis;
+  const needAuth = gap('exec') || (gap('content') && gap('rep')) || saidAuth;
+  const needRep = !!c.crisis || (gap('rep') && (gap('media') || gap('exec'))) || (saidRep && established) || (c.repRisk && n < 6);
+  const contentGap = gap('content');
+  const needVideo = !!c.wantVideo || contentGap;
 
-  let pick = null;
-  if (f.budget === 'u5') pick = 'kickstart';
-  else if (c.multiEntity) pick = 'custom';
-  else if (needRep) pick = needGrowth ? 'cdg' : 'cmd';
-  else if (needFoundation) pick = 'kickstart';
-  else if (needAuth) pick = 'ig';
-  else if (needGrowth && needVis) pick = 'gv';
-  else if (needVis) pick = 'vis';
-  else if (needGrowth) pick = 'bge';
-  else if (n >= 6 && total / n >= 3.5) { pick = 'ig'; why.push('Strong across the board. The next step up is authority.'); }
-  else if (needVideo) pick = 'cinema';
+  let pick = null, route = '';
+  if (f.budget === 'u5') { pick = 'kickstart'; route = 'Their budget is under $5K a month.'; }
+  else if (c.multiEntity) { pick = 'custom'; route = 'Multiple brands, executives, or markets: beyond a standard package.'; }
+  // Lots of gaps drag the score down, so "enterprise scale" also counts $10M+ revenue.
+  else if (gap('rep') && count(['vis', 'digital', 'web', 'measure']) >= 3 && (established || bigCo)) { pick = 'cdg'; route = 'Enterprise-level need across reputation and digital growth.'; }
+  else if (needRep && (established || bigCo || c.crisis || n < 6)) { pick = needGrowth ? 'cdg' : 'cmd'; route = needGrowth ? 'Enterprise-level need across reputation and digital growth.' : 'Established organization that needs reputation work and senior counsel.'; }
+  else if (needFoundation) { pick = 'kickstart'; route = 'Foundation is unclear or fragmented (positioning, audience, website). Clarity before a larger engagement.'; }
+  else if (needGrowth && needAuth) { pick = 'ig'; route = 'Needs growth plus stronger authority: leadership and visibility don\'t match their ambition.'; }
+  else if (needGrowth && needVis) { pick = 'gv'; route = 'Needs both lead generation and PR.'; }
+  else if (needAuth && saidAuth) { pick = 'ig'; route = 'Wants authority (TV, stages, being the expert), not just mentions.'; }
+  else if (needVis || needAuth) { pick = 'vis'; route = 'Strong business, weak earned visibility.'; }
+  else if (needGrowth) { pick = 'bge'; route = 'The main issue is digital growth and lead generation.'; }
+  else if (needVideo) { pick = 'cinema'; route = 'Content quality is the main thing holding back how they\'re seen.'; }
+  else if (n >= 8 && !gaps.length) { pick = established ? 'ig' : 'vis'; route = 'No major gaps: the focus is acceleration, authority, and executive visibility.'; }
+
+  if (route) why.push(route);
+  if (gaps.length) why.push(`Scored 1 or 2: ${gaps.map(x => x.name).join(', ')}.`);
+  if (ready) why.push(`Readiness: about ${ready.est}/${MAX_SCORE}, ${ready.label}.`);
+  if (c.crisis) why.push('Active crisis: this needs Command-level counsel.');
 
   // $30K rule: Command & Digital Growth only at $33.5K+.
   if (pick === 'cdg' && f.budget && f.budget !== 'b33') { pick = 'cmd'; why.push('$30K rule: below $33.5K sell Command, not Command & Digital Growth.'); }
 
-  // Budget gate: step down the ladder when they can't reach the floor.
+  // Budget: cut scope (step down a package) before cutting price.
   let budgetNote = null;
   const max = BUDGET_MAX[f.budget], min = BUDGET_MIN[f.budget];
   if (pick && LADDER.includes(pick) && max !== undefined && PACKAGES[pick].floor !== null && PACKAGES[pick].floor > max) {
@@ -739,24 +778,24 @@ function analyze() {
     let i = LADDER.indexOf(pick);
     while (i > 0 && (PACKAGES[LADDER[i]].floor === null || PACKAGES[LADDER[i]].floor > max)) i--;
     pick = LADDER[i];
-    budgetNote = `Best fit is ${pkgName(ideal)}, but that's above their budget, so this shows ${pkgName(pick)} instead.`;
+    budgetNote = `Best fit is ${pkgName(ideal)}, but that's above their budget, so this shows ${pkgName(pick)} (less scope, not a discount).`;
   } else if (pick && min !== undefined && PACKAGES[pick].floor > min) {
     budgetNote = `Their budget range starts at ${money(min)}, below this package's lowest price (${money(PACKAGES[pick].floor)}). Check they're at the top of their range.`;
   }
 
   let next = null;
-  if (pick === 'kickstart') next = needAuth ? 'ig' : needGrowth && needVis ? 'gv' : needVis ? 'vis' : needGrowth ? 'bge' : null;
+  if (pick === 'kickstart') next = needGrowth && needAuth ? 'ig' : needGrowth && needVis ? 'gv' : needVis ? 'vis' : needGrowth ? 'bge' : null;
 
-  // Video rides on top of whatever they buy: $12.5K with Influence & Growth or Command, $20K otherwise.
+  // Video rides on top: $12.5K with Influence & Growth or Command, $20K otherwise.
   let addon = null;
-  if (needVideo && pick && pick !== 'cinema') {
+  if (needVideo && pick && pick !== 'cinema' && pick !== 'kickstart') {
     addon = pick === 'ig' || pick === 'cmd'
       ? 'Premium Cinema add-on: $12,500/mo, 12 months.'
       : 'Premium Cinema add-on: $20,000/mo, 12 months. One-time shoot instead: Video & Photography from $30,000.';
   }
   if (pick === 'cinema' && max !== undefined && max < 20000) budgetNote = 'Premium Cinema is $20,000/mo for 12 months. For a one-time shoot: Video & Photography from $30,000.';
 
-  return { pick, next, addon, why, budgetNote, F, G, V, R, n, total, needFoundation, needGrowth, needVis, needAuth, needRep };
+  return { pick, next, addon, why, budgetNote, n, total, ready, gaps, needFoundation, needGrowth, needVis, needAuth, needRep };
 }
 
 function beatDone(b) { return b.done(S.fields, S.chips); }
@@ -1085,8 +1124,8 @@ function render() {
       <button class="btn" id="timerBtn">${sec === null ? 'Start call' : 'Stop'}</button>
       <span class="where">Call timer</span>
     </div>
-    <div class="cov"><span class="meta" style="margin:0">Covered: ${FLOW.filter(beatDone).length} of ${FLOW.length} note topics · ${a.n} of 10 scores · ${fitDone} of ${FIT.length} fit questions</span></div>
-    <div class="total"><span class="n">${a.total}</span><span class="of">/ ${a.n ? a.n * 5 : 50} readiness</span></div>
+    <div class="cov"><span class="meta" style="margin:0">Covered: ${FLOW.filter(beatDone).length} of ${FLOW.length} note topics · ${a.n} of ${CATEGORIES.length} scores · ${fitDone} of ${FIT.length} fit questions</span></div>
+    <div class="total"><span class="n">${a.total}</span><span class="of">/ ${a.n ? a.n * 5 : MAX_SCORE}${a.ready ? ` · about ${a.ready.est}/${MAX_SCORE} overall: <b style="color:var(--text)">${a.ready.label}</b>` : ''}</span></div>
     <details><summary>Score by category</summary><div class="bars">${CATEGORIES.map(x => {
       const v = S.scores[x.id] || 0;
       return `<span class="muted">${esc(x.name.split(' ')[0])}</span><span class="bar"><i style="width:${v * 20}%"></i></span><span>${v || '–'}</span>`;
@@ -1163,7 +1202,7 @@ function askNextC1(a) {
   const gap = FIT.find(([k, type, , , , list]) => !(type === 'chips' ? anyOf(list) : f[k]));
   if (gap && (!beat || FLOW.indexOf(beat) >= 3)) out.push(`<div class="q"><small>You could ask · ${esc(gap[2])}</small>${esc(gap[4])}</div>`);
   const open = CATEGORIES.filter(x => !S.scores[x.id]);
-  if (open.length) out.push(`<div class="muted" style="font-size:12px">Readiness scorecard: ${10 - open.length} of 10 scored.</div>`);
+  if (open.length) out.push(`<div class="muted" style="font-size:12px">Business audit: ${CATEGORIES.length - open.length} of ${CATEGORIES.length} areas scored.</div>`);
   return out.join('') || '<div class="empty">Everything\'s covered. Recap what you heard and book the next call.</div>';
 }
 
@@ -1227,7 +1266,7 @@ function crmNote() {
     line('Pain', f.pain), line('Example', f.example), line('Tried', labels(TRIED).join(', ')), line('Their theory', f.theory),
     line('Why now', f.trigger), line('Cost of waiting', f.cost), line('Other reason', f.reason2), line('Goal', f.goal), line('What it means to them', f.nmg),
     line('Ready to decide within 2 weeks', optText('commit', f.commit)), line('Decision maker on next call', optText('dmCall2', f.dmCall2)), line('Outlet we said we\'d look into', f.outlet), line('Next call', f.call2),
-    `Readiness: ${a.total}/${a.n * 5 || 50} (${a.n}/10 scored)`,
+    `Business audit: ${a.total}/${a.n * 5 || MAX_SCORE} (${a.n}/${CATEGORIES.length} areas scored)${a.ready ? `, about ${a.ready.est}/${MAX_SCORE}: ${a.ready.label}` : ''}`,
     ...CATEGORIES.filter(x => S.scores[x.id]).map(x => `  ${x.name}: ${S.scores[x.id]}${S.notes[x.id] ? ' | ' + S.notes[x.id] : ''}`),
     line('Will do interviews', optText('spokes', f.spokes)), line('Time for PR', optText('time', f.time)), line('Reach', optText('reach', f.reach)),
     line('Audience', labels(AUDIENCE).join(', ')), line('News hooks', labels(ASSETS).join(', ')), line('Competitors in press', f.competitors), line('Current PR/marketing help', f.vendor),
@@ -1279,7 +1318,8 @@ function buildReport() {
   const f = S.fields, a = analyze();
   const date = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const pct = a.total / (a.n * 5);
-  const verdict = pct >= .8 ? 'ready to scale' : pct >= .6 ? 'close. A few gaps are holding you back' : pct >= .4 ? 'in progress, with clear gaps to close' : 'at the foundation stage';
+  const verdict = a.ready ? { 'Advanced': 'advanced: the focus is acceleration', 'Growth Ready': 'growth ready, with specific gaps to close', 'Developing': 'developing: real foundations, with gaps limiting growth', 'Critical Gaps': 'at the foundation stage' }[a.ready.label]
+    : pct >= .8 ? 'ready to scale' : pct >= .6 ? 'close. A few gaps are holding you back' : pct >= .4 ? 'in progress, with clear gaps to close' : 'at the foundation stage';
   $('#report').innerHTML = `
     <div class="rp">
       <div class="topbar"></div>
