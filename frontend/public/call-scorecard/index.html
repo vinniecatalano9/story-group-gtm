@@ -1102,8 +1102,8 @@ function suggestClose(k, a) {
     const on = btcOn();
     if (!on.length) return Object.values(c).some(Boolean) || a.n ? ['sg', 'no BTC warning signs checked'] : null;
     const sgNeed = a.needVis || a.needGrowth || a.needAuth || a.needRep;
-    return on.length >= 3 || !sgNeed ? ['btc', `${on.length} BTC sign${on.length > 1 ? 's' : ''}: fix the inside first`]
-      : ['joint', 'BTC signs plus a real visibility or growth need'];
+    // BTC signs never take a budget off the table: with any Story Group need it's joint, not BTC alone.
+    return !sgNeed ? ['btc', 'BTC signs and no visibility or growth need'] : ['joint', 'BTC signs plus a real visibility or growth need'];
   }
   if (k === 'barBiz') {
     const b = btcOn()[0];
@@ -1307,8 +1307,10 @@ function analyze() {
   const contentGap = gap('content');
   const needVideo = !!c.wantVideo || contentGap || prior === 'video' || anyOf(VIDEO_USE) || !!f.vidFreq;
 
-  // Kickstart is only for small companies or anyone who can't do a monthly engagement yet (Vincent,
-  // 10/6, overriding the guide's foundation-gap route). Every monthly package already starts with the
+  // Kickstart only when the budget is under $5K a month or they won't do a monthly engagement (Vincent,
+  // 10/6). A $5K+ budget beats low revenue, weak foundations, and BTC warning signs: Kickstart's work is
+  // already Month 1 of every monthly package, so someone who wants press, podcasts, or a launch never gets
+  // Kickstart on its own. Every monthly package already starts with the
   // audit and positioning work, so weak foundation scores alone never send a real business to Kickstart.
   // Plain reasons from what they said or scored, so the Why names the evidence.
   const growthWhy = gap('digital') ? 'lead generation scored low' : count(['web', 'measure']) >= 2 ? 'their website and tracking scored low'
@@ -1323,7 +1325,6 @@ function analyze() {
   let pick = null, route = '';
   if (f.budget === 'u5') { pick = 'kickstart'; route = 'Their budget is under $5K a month.'; }
   else if (c.notMonthly) { pick = 'kickstart'; route = 'They aren\'t ready for a monthly engagement yet.'; }
-  else if (smallCo && !realBudget) { pick = 'kickstart'; route = 'Early-stage company (under $150K in revenue): build the foundation before a monthly engagement.'; }
   else if (c.multiEntity) { pick = 'custom'; route = 'Multiple brands, executives, or markets: beyond a standard package.'; }
   // Lots of gaps drag the score down, so "enterprise scale" also counts $10M+ revenue.
   else if (gap('rep') && count(['vis', 'digital', 'web', 'measure']) >= 3 && (established || bigCo)) { pick = 'cdg'; route = 'Enterprise-level need across reputation and digital growth.'; }
@@ -1382,9 +1383,10 @@ function analyze() {
     : null;
   // Revenue and budget decide Kickstart vs monthly, so until they're asked the pick is by need only.
   let askMoney = null;
-  if (monthly && !f.budget && !f.revenue) askMoney = 'Revenue and budget not asked yet, so this is the best fit by need only. Ask both before you name a price. Under $150K in revenue or under $5K a month means Kickstart.';
+  if (monthly && !f.budget && smallCo) askMoney = 'Under $150K in revenue, budget not asked yet. Ask it: $5K+ a month means this package; under $5K means Kickstart.';
+  else if (monthly && !f.budget && !f.revenue) askMoney = 'Revenue and budget not asked yet, so this is the best fit by need only. Ask both before you name a price. Under $5K a month means Kickstart.';
   else if (monthly && !f.budget) askMoney = 'Budget not asked yet, so this is the best fit by need only. Ask before you name a price: "Roughly what range: $5–10K a month, $10–20K, or higher?"';
-  else if (monthly && !f.revenue) askMoney = 'Revenue not asked yet. Under $150K in revenue means Kickstart first.';
+  else if (monthly && !f.revenue) askMoney = 'Revenue not asked yet. Ask it: it sizes the plan (the budget already picks the package).';
 
   // Video rides on top: $12.5K with Influence or Command, $20K otherwise.
   let addon = null;
@@ -1425,7 +1427,7 @@ function flags(a) {
   const btc = btcOn();
   if (btc.length) {
     const r = f.route || suggestClose('route', a)[0];
-    add('secWhy', 'bad', `${r === 'btc' ? 'Route: BTC first' : r === 'sg' ? 'BTC warning signs, but you routed to Story Group only. Double-check that' : 'Route: Joint (BTC + Story Group)'}. Internally notify Dr. Brown. Don't try to fix an operations problem with a visibility package: more demand would land on a business that can't handle it.`);
+    add('secWhy', 'bad', `${r === 'btc' ? 'Route: BTC' : r === 'sg' ? 'BTC warning signs, but you routed to Story Group only. Double-check that' : 'Route: Joint (BTC + Story Group)'}. Internally notify Dr. Brown. Don't try to fix an operations problem with a visibility package: more demand would land on a business that can't handle it.`);
   }
   if (c.crisis && t !== 'crisis') add('secWhy', 'bad', 'Active crisis. Click Crisis at the top of section 1: the crisis questions move up, right after this section.');
   if (c.regulated) add('secWhy', '', 'Regulated industry: legal reviews slow down approvals. Plan for that in the timeline.');
@@ -1450,7 +1452,7 @@ function flags(a) {
   if (t === 'crisis' && ['reporter', 'news'].includes(f.crisisPublic)) add('secFit', 'bad', 'It\'s live. Aaron\'s first moves: a fact-alignment session, a holding statement with pre-approved answers, and press inquiries routed through us.');
   if (t === 'crisis' && f.crisisLegal && f.crisisLegal !== 'yes') add('secFit', '', 'No lawyer on it yet. Aaron\'s rule: we never put out a statement that opens them up civilly, and we don\'t put out evidence ("that\'s what courts are for").');
 
-  if (f.route === 'btc') add('secWrap', 'bad', 'Routed to BTC. Notify Dr. Brown before anything else. Don\'t book a Story Group Call 2 until the inside of the business is ready.');
+  if (f.route === 'btc') add('secWrap', 'bad', 'Routed to BTC. Notify Dr. Brown. If they also want visibility or leads and have the budget, make it Joint instead.');
   if (f.route === 'joint') add('secWrap', '', 'Joint engagement: notify Dr. Brown. On Call 2, say who owns what and in what order. BTC handles systems, process, and capacity; Story Group handles positioning, media, and growth.');
   if (f.commit === 'hedge') add('secWrap', '', 'They weren\'t sure about deciding within 2 weeks. Find out exactly what they\'d need to decide, or let it go.', SCRIPTS.d10);
   if (f.commit === 'no') add('secWrap', 'bad', 'Not ready to decide. Don\'t build a custom plan yet (no free work before a contract).');
@@ -1849,7 +1851,7 @@ function render() {
       <div class="muted" style="font-size:12.5px;margin-top:2px">${esc(p.purpose)}</div>
       <div class="rec-price">Price to say first: <b>${esc(p.price)}</b> · <span class="muted">${esc(p.term)}</span></div>
       ${f.spokes === 'no' && ['vis', 'ig', 'cmd', 'cdg'].includes(a.pick) && track() === 'pr' ? '<div class="flag bad">On hold: the leader won\'t do interviews. Only pitch PR if someone else will be the face of it.</div>' : ''}
-      ${['btc', 'joint'].includes(routeOf(a)) ? `<div class="flag bad">${routeOf(a) === 'btc' ? 'BTC first: the business can\'t handle more growth yet. Notify Dr. Brown.' : 'Joint with BTC: they fix the inside, we fix visibility. Notify Dr. Brown.'}</div>` : ''}
+      ${['btc', 'joint'].includes(routeOf(a)) ? `<div class="flag bad">${routeOf(a) === 'btc' ? 'Routed to BTC. Notify Dr. Brown.' : 'Joint with BTC: they fix the inside, we fix visibility. Notify Dr. Brown.'}</div>` : ''}
       ${askMoney}${budget}${p.note ? `<div class="flag">${esc(p.note)}</div>` : ''}
       ${first ? `<div class="why1"><b>Why:</b> ${esc(first)}</div>` : ''}
       ${priceHtml(a)}
