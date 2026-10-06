@@ -309,19 +309,21 @@
       </section>
 
       <section class="card">
+        <p class="eyebrow">PR fit</p>
+        <p class="card-sub">Can PR actually work for them: will the leader talk, is there a story, who needs to see them, and what's the money math.</p>
+        <div id="fit" class="fields"></div>
+      </section>
+
+      <section class="card">
         <p class="eyebrow">What they said (click what you hear)</p>
         <div id="chips"></div>
       </section>
 
       <details class="card" id="moreNotes">
-        <summary style="font-size:13px">More notes (optional): their words, budget, decision maker, next steps, PR fit</summary>
+        <summary style="font-size:13px">More notes (optional): their words, budget, decision maker, next steps</summary>
         <div style="margin-top:12px">
-          <p class="eyebrow">Call notes</p>
           <p class="card-sub">Jot what they say, in any order, in their words. Skip what doesn't come up.</p>
           <div id="flow"></div>
-          <p class="eyebrow" style="margin-top:16px">Story Group fit</p>
-          <p class="card-sub">Can PR actually work for them, and what's the money math.</p>
-          <div id="fit" class="fields"></div>
         </div>
       </details>
 
@@ -421,15 +423,15 @@ const CATEGORIES = [
     ask: 'We know who we need to reach, what drives their decisions, where they get information, and how to talk to them.',
     probe: ['Who is your highest-value audience? Which markets, industries, or areas matter most?'],
     client: 'Know exactly who you need to reach and where they pay attention.' },
-  { id: 'vis', group: '4', name: 'Visibility & Discoverability',
+  { id: 'vis', pr: true, group: '4', name: 'Visibility & Discoverability',
     ask: 'Our company and leaders show up consistently where our audience searches, reads, and makes buying decisions.',
     probe: ['When someone searches your company, your leaders, or your services, are you happy with what they find?'],
     client: 'Show up where your buyers search, read, and decide.' },
-  { id: 'media', group: '5', name: 'Earned Media & PR',
+  { id: 'media', pr: true, group: '5', name: 'Earned Media & PR',
     ask: 'We have a proactive PR strategy that creates media coverage, interviews, podcasts, speaking, and industry recognition.',
     probe: ['Where have you been featured? Where would you like to be? Is your media coverage intentional or mostly inbound?'],
     client: 'A proactive PR strategy that earns coverage, interviews, podcasts, and stages.' },
-  { id: 'exec', group: '6', name: 'Leadership & Executive Visibility',
+  { id: 'exec', pr: true, group: '6', name: 'Leadership & Executive Visibility',
     ask: 'Our executives and experts have a public presence that builds the company\'s credibility and reputation.',
     probe: ['Is the CEO or leadership team part of the growth strategy? Are they recognized as experts outside the company?'],
     client: 'Leaders who are recognized as experts outside the company.' },
@@ -441,11 +443,11 @@ const CATEGORIES = [
     ask: 'Our website clearly communicates our position, builds credibility, and turns visitors into real opportunities.',
     probe: ['Is the website generating leads? Can you track what visitors do? Does it reflect the company you are today?'],
     client: 'A website that builds credibility and turns visitors into leads.' },
-  { id: 'content', group: '9', name: 'Content & Brand Storytelling',
+  { id: 'content', pr: true, group: '9', name: 'Content & Brand Storytelling',
     ask: 'We consistently share stories, insights, proof, and expertise that shape how the company and its leaders are seen.',
     probe: ['Are you publishing consistently? Do you have strong video, photography, executive content, case studies, or customer stories?'],
     client: 'Consistent stories, proof, and content that shape how you\'re seen.' },
-  { id: 'rep', group: '10', name: 'Reputation & Market Authority',
+  { id: 'rep', pr: true, group: '10', name: 'Reputation & Market Authority',
     ask: 'Our reputation, third-party credibility, search presence, and customer proof match the company we\'re becoming.',
     probe: ['Is there a gap between how strong the company is and how strong it looks publicly? Is anything online weakening trust?'],
     client: 'A public reputation that matches how strong your company really is.' },
@@ -640,7 +642,7 @@ $('#fit').innerHTML = FIT.map(([k, type, label, hint, , list]) => `
   </label>`).join('');
 $('#rows').innerHTML = CATEGORIES.map(c => `
   <div class="row" data-cat="${c.id}">
-    <div><div class="name">${esc(c.group)}. ${esc(c.name)}</div><div class="ask">"${esc(c.ask)}"</div><details style="margin-top:4px;border:0;padding:0"><summary style="font-size:12px">Question to ask</summary><div class="ask" style="font-style:italic">${esc(c.probe[0])}</div></details></div>
+    <div><div class="name">${esc(c.group)}. ${esc(c.name)}${c.pr ? ' <span style="font-size:10px;letter-spacing:.1em;color:var(--pink);border:1px solid var(--pink);border-radius:999px;padding:1px 6px;margin-left:4px">PR</span>' : ''}</div><div class="ask">"${esc(c.ask)}"</div><details style="margin-top:4px;border:0;padding:0"><summary style="font-size:12px">Question to ask</summary><div class="ask" style="font-style:italic">${esc(c.probe[0])}</div></details></div>
     <div>
       <div class="scores">${[1, 2, 3, 4, 5].map(v => `<button class="sbtn" data-v="${v}">${v}</button>`).join('')}<span class="slabel"></span></div>
       <textarea rows="1" data-note="${c.id}" placeholder="Why that score? (goes on the client one-pager)"></textarea>
