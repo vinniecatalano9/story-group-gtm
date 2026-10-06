@@ -80,7 +80,8 @@ function fromPrMastery(html) {
     for (const [q, a] of ind.objs || []) docs.push({ k: 'Objection', g: ind.name, h: clean(q), b: clean(a) });
   }
   // MEDIA_VERT was [name, list] pairs; since 2026-10 it's objects (sn, more, door, pod, list, ai, speak). Read both.
-  for (const v of get('MEDIA_VERT')) {
+  const vert = get('MEDIA_VERT');
+  for (const v of vert) {
     if (Array.isArray(v)) { docs.push({ k: 'Outlets', g: v[0], h: `Target outlets: ${v[0]}`, b: clean(v[1]) }); continue; }
     const rows = [['Trades', v.sn], ['More trades', v.more], ['National', v.door], ['Podcasts', v.pod], ['Lists / awards', v.list], ['Cited by AI', v.ai], ['Speaking', v.speak]];
     docs.push({ k: 'Outlets', g: v.name, h: `Target outlets: ${v.name}`, b: clean(rows.filter(([, x]) => x).map(([k, x]) => `${k}: ${x}`).join('\n')) });
@@ -89,7 +90,7 @@ function fromPrMastery(html) {
 
   const m = html.match(/<script[^>]*id="casesData"[^>]*>([\s\S]*?)<\/script>/);
   const cases = m ? JSON.parse(m[1]) : (console.warn('! PR Mastery: casesData not found'), []);
-  return { docs, cases };
+  return { docs, cases, vert: vert.filter(v => !Array.isArray(v)) };
 }
 
 /* ---------- Markdown → one doc per bullet / table row / paragraph ---------- */
@@ -180,9 +181,24 @@ for (const [ind, m] of Object.entries(media.data || {})) {
 }
 const docs = all.filter(d => !isRetired(d));
 
+// Top tier per industry, straight from PR Mastery's MEDIA_VERT. media.vert maps each
+// dropdown industry to its verticals; verticals nothing maps to become their own options.
+const vertData = Object.fromEntries(pr.vert.map(v => [v.name, { sn: v.sn, more: v.more, door: v.door, pod: v.pod, list: v.list, ai: v.ai, speak: v.speak }]));
+const vertMap = { ...(media.vert || {}) };
+const extra = [...(media.extra || [])], labels = { ...(media.labels || {}) };
+for (const [ind, names] of Object.entries(vertMap)) {
+  const bad = names.filter(n => !vertData[n]);
+  if (bad.length) console.warn(`! ${ind}: no PR Mastery vertical named ${bad.join(', ')}`);
+}
+const mapped = new Set(Object.values(vertMap).flat());
+for (const name of Object.keys(vertData).filter(n => !mapped.has(n))) {
+  const key = name.toUpperCase();
+  vertMap[key] = [name]; extra.push(key); labels[key] = key;
+}
+
 const json = v => JSON.stringify(v).replace(/<\//g, '<\\/');
 let out = page;
-for (const [id, data] of [['kbData', docs], ['casesData', cases], ['mediaData', { map: media.map, extra: media.extra, labels: media.labels, data: media.data }]]) {
+for (const [id, data] of [['kbData', docs], ['casesData', cases], ['mediaData', { map: media.map, extra, labels, data: media.data, vert: vertMap, vdata: vertData }]]) {
   const re = new RegExp(`(<script type="application/json" id="${id}">)[\\s\\S]*?(</script>)`);
   if (!re.test(out)) { console.error(`x #${id} block missing from the page`); process.exit(1); }
   out = out.replace(re, (_, a, b) => a + json(data) + b);
