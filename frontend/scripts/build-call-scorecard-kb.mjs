@@ -79,7 +79,12 @@ function fromPrMastery(html) {
     if (ind.angles?.length) docs.push({ k: 'Industry', g: ind.name, h: `${ind.name}: lines that land`, b: clean(ind.angles.join('\n\n')) });
     for (const [q, a] of ind.objs || []) docs.push({ k: 'Objection', g: ind.name, h: clean(q), b: clean(a) });
   }
-  for (const [v, list] of get('MEDIA_VERT')) docs.push({ k: 'Outlets', g: v, h: `Target outlets: ${v}`, b: clean(list) });
+  // MEDIA_VERT was [name, list] pairs; since 2026-10 it's objects (sn, more, door, pod, list, ai, speak). Read both.
+  for (const v of get('MEDIA_VERT')) {
+    if (Array.isArray(v)) { docs.push({ k: 'Outlets', g: v[0], h: `Target outlets: ${v[0]}`, b: clean(v[1]) }); continue; }
+    const rows = [['Trades', v.sn], ['More trades', v.more], ['National', v.door], ['Podcasts', v.pod], ['Lists / awards', v.list], ['Cited by AI', v.ai], ['Speaking', v.speak]];
+    docs.push({ k: 'Outlets', g: v.name, h: `Target outlets: ${v.name}`, b: clean(rows.filter(([, x]) => x).map(([k, x]) => `${k}: ${x}`).join('\n')) });
+  }
   for (const [t, d] of get('GLOSS')) docs.push({ k: 'Glossary', h: clean(t), b: clean(d) });
 
   const m = html.match(/<script[^>]*id="casesData"[^>]*>([\s\S]*?)<\/script>/);
