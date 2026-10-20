@@ -1,5 +1,8 @@
 const express = require('express');
 const { classifyReply } = require('../services/replyClassifier');
+const { evaluateReply, fetchConversation } = require('../services/autoReply');
+const { threadFacts, config: autoReplyConfig } = require('../lib/autoReplyPolicy');
+const { findMeetingSlots, peopleFromNote } = require('../services/calendar');
 const axios = require('axios');
 const router = express.Router();
 
@@ -12,6 +15,12 @@ function headers() {
 }
 
 function todayISO() { return new Date().toISOString().slice(0, 10); }
+
+// findMeetingSlots() result -> the {amSlot, pmSlot} shape the drafter reads.
+function toDraftSlots(open) {
+  if (!open || !open.day) return null;
+  return { amSlot: `${open.day} at ${open.time1} EST`, pmSlot: `${open.day} at ${open.time2} EST` };
+}
 
 function isoDate(d) {
   const dt = new Date(d);
@@ -340,6 +349,21 @@ router.post('/redraft', express.json(), async (req, res) => {
     if (!doc.exists) return res.status(404).json({ error: 'reply not found' });
     const d = doc.data();
 
+    // Times come from Vincent's calendar. "Make sure me and McKenna are free"
+    // (or Aaron) adds their calendar and only shared free times are offered.
+    // A calendar we can't read is said out loud, never guessed.
+    const people = peopleFromNote(feedback);
+    const open = await findMeetingSlots({ people }).catch(e => ({ day: null, unreadable: [], error: e.message }));
+    const cap = p => p.charAt(0).toUpperCase() + p.slice(1);
+    const missing = (open.unreadable || []).map(u => cap(u.person));
+    let calendarNote = '';
+    if (missing.length) {
+      const seen = (open.people || []).map(cap);
+      calendarNote = `Couldn't see ${missing.join(' and ')}'s calendar, so these times are from ${seen.length ? seen.join(' and ') + "'s calendar" : 'no calendar'} only.`;
+    } else if (!open.day) {
+      calendarNote = people.length > 1 ? `No time in the next week when ${people.map(cap).join(' and ')} are all free.` : '';
+    }
+
     const cls = await classifyReply({
       channel: d.source === 'heyreach' || d.source === 'ulinc' ? 'linkedin' : 'email',
       email: d.email || null,
@@ -347,7 +371,8 @@ router.post('/redraft', express.json(), async (req, res) => {
       headline: d.headline || '',
       replyText: d.reply_text || '',
       firstName: d.first_name || (d.full_name || '').split(' ')[0] || '',
-      slots: null,
+      slots: toDraftSlots(open),
+      lane: d.lane || '',
       feedback: String(feedback).trim(),
       previousDraft: d.draft_response || '',
     });
@@ -358,7 +383,7 @@ router.post('/redraft', express.json(), async (req, res) => {
       draft_response: cls.draft_response || '',
       classification: cls.classification || d.classification || 'other',
       suggested_macro: cls.suggested_macro || d.suggested_macro || '',
-      suggested_action: cls.suggested_action || '',
+      suggested_action: [cls.suggested_action || '', calendarNote].filter(Boolean).join(' '),
       tag: cls.tag || d.tag || '',
       subsequence: cls.subsequence || d.subsequence || '',
       followups_recommended: Number(cls.followups_recommended) || d.followups_recommended || 0,
@@ -372,6 +397,29 @@ router.post('/redraft', express.json(), async (req, res) => {
     res.json({ ok: true, ...update, reclassified_at: undefined });
   } catch (e) {
     console.error('[heyreach redraft] Error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/**
+ * GET /api/heyreach/autoreply/log?limit=100
+ *
+ * What the shadow auto-reply would have done, newest first, with counts by
+ * decision. Nothing in this log was sent.
+ */
+router.get('/autoreply/log', async (req, res) => {
+  try {
+    const { db } = require('../services/db');
+    const limit = Math.min(Number(req.query.limit) || 100, 500);
+    const snap = await db.collection('auto_reply_log').orderBy('created_at', 'desc').limit(limit).get();
+    const items = snap.docs.map(doc => {
+      const x = doc.data();
+      return { id: doc.id, ...x, gates: undefined, created_at: x.created_at && x.created_at.toDate ? x.created_at.toDate().toISOString() : null };
+    });
+    const summary = {};
+    for (const x of items) summary[x.decision] = (summary[x.decision] || 0) + 1;
+    res.json({ mode: autoReplyConfig().mode, summary, items });
+  } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
@@ -636,13 +684,20 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
     // Fire-and-forget classify-and-draft using the shared playbook
     (async () => {
       try {
+        // Thread and open times first, so the draft knows the lane (referral
+        // partner or not) and offers real times from Vincent's calendar.
+        const convo = await fetchConversation({ conversationId: replyDoc.heyreach_conversation_id, name: fullName, accountId });
+        const lane = convo ? threadFacts({ messages: convo.messages || [], accountId }).lane : '';
+        const open = await findMeetingSlots().catch(e => { console.warn('[heyreach webhook] slots:', e.message); return null; });
+        const draftSlots = toDraftSlots(open);
         const cls = await classifyReply({
           channel: 'linkedin',
           email: null,
           company: companyName,
           replyText,
           firstName,
-          slots: null,
+          slots: draftSlots,
+          lane,
         });
         const update = {
           classification: cls.classification || 'other',
@@ -657,6 +712,7 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
           tag: cls.tag || '',
           subsequence: cls.subsequence || '',
           followups_recommended: Number(cls.followups_recommended) || 0,
+          lane,
         };
         // Heyreach auto-tagged this lead Interested — never let it land without
         // a draft. Fall back to the playbook's INTERESTED soft ask (LinkedIn split).
@@ -668,9 +724,10 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
           update.suggested_action = 'Reply with two specific times. No link on LinkedIn.';
           update.tag = 'Interested';
           update.subsequence = 'Call Time Sent';
-          update.draft_response =
-            `Message 1: Hey ${fn}, glad to hear it. We pitch founders' stories straight to reporters and producers who cover your space and earn the coverage, no paid placement.\n\n` +
-            `Message 2: Does Tuesday at 10am EST or Wednesday at 2pm EST work?`;
+          // Vincent's own line, one message, real times when the calendar answered.
+          update.draft_response = open && open.day
+            ? `Message 1: Great. Are you free ${open.day} at ${open.time1} or ${open.time2} EST?`
+            : `Message 1: Great. Are you free [day] at [time] or [time] EST?`;
         }
         // A no never reaches the board. Classified, tagged and closed in one
         // step, so nobody spends attention on a conversation that is over.
@@ -687,6 +744,10 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
         }
         await ref.update(update);
         console.log(`[heyreach webhook] Classified ${ref.id} as ${cls.classification}${update.handled ? ' (auto-closed)' : ''}`);
+        // Shadow auto-reply: records what it would have done. Never sends.
+        if (autoReplyConfig().mode !== 'off') {
+          await evaluateReply({ ref, reply: { ...replyDoc, ...update }, conversation: convo });
+        }
       } catch (e) {
         console.error(`[heyreach webhook] Classify failed for ${ref.id}:`, e.message);
       }

@@ -569,6 +569,18 @@ function LinkedInCard({ reply, api, onHandled, onStatusChange }) {
         </p>
       )}
 
+      {/* Shadow auto-reply: what it would have done. Nothing here was sent. */}
+      {reply.auto_reply && (
+        <p className="text-xs text-white/60">
+          <span className="font-medium text-amber-300/90">Auto-reply (shadow, not sent):</span>{' '}
+          {reply.auto_reply.decision === 'SEND_TEMPLATE'
+            ? <>would send "{reply.auto_reply.would_send}"</>
+            : reply.auto_reply.decision === 'SKIP_AND_TAG'
+              ? <>would tag {reply.auto_reply.tag || 'it'} and send nothing</>
+              : <>needs you{(reply.auto_reply.failed_gates || []).length ? ` (${reply.auto_reply.failed_gates.slice(0, 3).join(', ').replace(/_/g, ' ')})` : ''}</>}
+        </p>
+      )}
+
       {draft && !showReply && (
         <div className="text-sm">
           <span className="font-medium text-white/75">Suggested Reply:</span>
