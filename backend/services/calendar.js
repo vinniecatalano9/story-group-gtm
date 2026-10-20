@@ -222,4 +222,125 @@ async function getEventsWindow({ daysBack = 7, daysAhead = 14 } = {}) {
   }));
 }
 
-module.exports = { getAvailableSlots, getTodaysEvents, getEventsWindow };
+// ── Meeting slots in Vincent's format ──────────────────────────────────────
+//
+// His times line is "Great. Are you free [day] at [time] or [time] EST?": one
+// day, a morning and an afternoon time, Eastern. Times come from Vincent's
+// calendar by default. When he asks for someone else to be free too ("make
+// sure me and McKenna are free"), their calendar is checked as well and only
+// times when everyone is free are offered. A calendar the service account
+// can't read is reported in `unreadable`, never guessed.
+
+const ET = 'America/New_York';
+const PEOPLE = () => ({
+  vincent: process.env.CALENDAR_ID_VINCENT || process.env.GOOGLE_CALENDAR_ID,
+  mckenna: process.env.CALENDAR_ID_MCKENNA,
+  aaron: process.env.CALENDAR_ID_AARON,
+});
+// His most-used times, in the order he reaches for them.
+const AM_TIMES = [[11, 0], [11, 30], [10, 30], [10, 0], [12, 0]];
+const PM_TIMES = [[15, 0], [15, 30], [14, 0], [14, 30], [16, 0], [13, 0]];
+const MEETING_MINUTES = 30;
+
+function etParts(date) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
+    timeZone: ET, year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', hourCycle: 'h23',
+  }).formatToParts(date).map(x => [x.type, x.value]));
+  return { y: +p.year, m: +p.month, d: +p.day, h: +p.hour };
+}
+
+// The instant that is h:min Eastern on y-m-d, daylight time or not.
+function etInstant(y, m, d, h, min) {
+  for (const off of [4, 5]) {
+    const t = new Date(Date.UTC(y, m - 1, d, h + off, min));
+    if (etParts(t).h === h) return t;
+  }
+  return new Date(Date.UTC(y, m - 1, d, h + 5, min));
+}
+
+function fmtTime(h, min) {
+  const hh = h > 12 ? h - 12 : h;
+  return `${hh}${min ? `:${String(min).padStart(2, '0')}` : ''} ${h >= 12 ? 'PM' : 'AM'}`;
+}
+
+/**
+ * Business days starting `startInDays` calendar days out (48 hours of runway
+ * by default), `count` of them, as {y, m, d, dow} in Eastern time.
+ */
+function etBusinessDays(now, startInDays, count) {
+  const t = etParts(now);
+  const out = [];
+  for (let i = startInDays; out.length < count && i < startInDays + 14; i++) {
+    const noon = new Date(Date.UTC(t.y, t.m - 1, t.d + i, 12));
+    const dow = noon.getUTCDay();
+    if (dow === 0 || dow === 6) continue;
+    out.push({ y: noon.getUTCFullYear(), m: noon.getUTCMonth() + 1, d: noon.getUTCDate(), dow });
+  }
+  return out;
+}
+
+/**
+ * @param {string[]} people  'vincent' (default), plus 'mckenna' or 'aaron' when he asks.
+ * @returns {{day, time1, time2, people, unreadable}} day is null when nothing fits.
+ */
+async function findMeetingSlots({ people = ['vincent'], startInDays = 2, searchDays = 5, now = new Date() } = {}) {
+  const ids = PEOPLE();
+  const unreadable = [];
+  const readable = [];
+  for (const person of [...new Set(people)]) {
+    if (ids[person]) readable.push({ person, id: ids[person] });
+    else unreadable.push({ person, reason: 'no calendar id configured' });
+  }
+  if (!readable.length) return { day: null, time1: null, time2: null, people: [], unreadable };
+
+  const days = etBusinessDays(now, startInDays, searchDays);
+  const first = days[0];
+  const last = days[days.length - 1];
+  const res = await getCalendar().freebusy.query({
+    requestBody: {
+      timeMin: etInstant(first.y, first.m, first.d, 0, 0).toISOString(),
+      timeMax: etInstant(last.y, last.m, last.d, 23, 59).toISOString(),
+      timeZone: ET,
+      items: readable.map(r => ({ id: r.id })),
+    },
+  });
+
+  const busy = [];
+  const checked = [];
+  for (const r of readable) {
+    const cal = res.data.calendars && res.data.calendars[r.id];
+    if (!cal || (cal.errors && cal.errors.length)) {
+      unreadable.push({ person: r.person, reason: (cal && cal.errors && cal.errors[0] && cal.errors[0].reason) || 'not returned' });
+      continue;
+    }
+    checked.push(r.person);
+    for (const b of cal.busy || []) busy.push({ start: new Date(b.start), end: new Date(b.end) });
+  }
+  if (!checked.length) return { day: null, time1: null, time2: null, people: [], unreadable };
+
+  const free = (day, [h, min]) => {
+    const start = etInstant(day.y, day.m, day.d, h, min);
+    const end = new Date(start.getTime() + MEETING_MINUTES * 60000);
+    return !busy.some(b => start < b.end && end > b.start);
+  };
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  for (const day of days) {
+    const am = AM_TIMES.find(t => free(day, t));
+    const pm = PM_TIMES.find(t => free(day, t));
+    if (am && pm) {
+      // Always under a week out, so the day name alone is unambiguous (SOP Rule 8).
+      return { day: dayNames[day.dow], time1: fmtTime(...am), time2: fmtTime(...pm), people: checked, unreadable };
+    }
+  }
+  return { day: null, time1: null, time2: null, people: checked, unreadable };
+}
+
+/** Which people a free-text note asks to be free too ("me and McKenna"). */
+function peopleFromNote(note) {
+  const people = ['vincent'];
+  if (/\bmc ?kenna\b/i.test(note || '')) people.push('mckenna');
+  if (/\baaron\b/i.test(note || '')) people.push('aaron');
+  return people;
+}
+
+module.exports = { getAvailableSlots, getTodaysEvents, getEventsWindow, findMeetingSlots, peopleFromNote };

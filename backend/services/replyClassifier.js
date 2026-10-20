@@ -21,6 +21,14 @@
 //       we don't owe, day name OR date but never both, end on a question.
 //     - Output now carries the Instantly tag and sub-sequence, because the Jul 27
 //       data had 27 replies untagged and 0 of 11 positives in a sub-sequence.
+//
+// v5 (2026-10-20): Vincent's real voice. Built from every LinkedIn reply he
+//   actually sent (VOICE_GUIDE.md in the engine repo, auto-reply/). LinkedIn
+//   now defaults to ONE short message (81% of his referral replies are one),
+//   the first positive reply offers two real times in his exact line, a no
+//   gets his close line, and a referral partner lane (Aaron's partner
+//   campaign) carries how he answers partnership questions. The "6-month
+//   minimum" line is gone: term length depends on the package.
 //   Pricing note: v3's personalized-first framing is kept. When they press, the
 //   numbers are the Start-here prices from the final 9/18/2026 package doc:
 //   PR from $10K/mo, growth-only from $7.5K/mo, Kickstart $5.5K one-time.
@@ -64,14 +72,23 @@ function stripDashes(text) {
     .split(KEEP).join('-');
 }
 
-function buildPrompt({ channel, email, company, replyText, firstName, slots, todayDow, caseBlock, feedback, previousDraft }) {
+function buildPrompt({ channel, email, company, replyText, firstName, slots, todayDow, caseBlock, feedback, previousDraft, lane }) {
   const isLinkedIn = channel === 'linkedin';
 
   const channelGuidance = isLinkedIn
     ? `CHANNEL: LinkedIn. LinkedIn is text messaging, not email.
-Split the reply into 2-3 short back-to-back messages. Message 1 = answer / acknowledgment. Message 2 = proof point or detail. Message 3 (optional) = the ask.
+Default to ONE short message, about 20 words. That is how Vincent actually writes: most of his replies are a single message. Split into 2 or 3 short back-to-back messages only when you are answering a real question (Message 1 = the answer, Message 2 = the ask).
 No email-style paragraph breaks inside a message. That shape is the tell that it was written as an email.
-In the JSON output, draft_response must contain ALL messages separated by blank lines, each prefixed "Message 1:", "Message 2:", "Message 3:".`
+In the JSON output, prefix each message "Message 1:", "Message 2:" and separate them with blank lines, even when there is only one message.
+
+=== VINCENT'S VOICE (from the replies he actually sent; this beats any macro wording below) ===
+- Open with one acknowledgment word, then get to it: "Great." "Sounds great." "Perfect." "Absolutely." "No worries."
+- On the first positive reply, offer two real times on one day, Eastern, in his line: "Great. Are you free [day] at [time] or [time] EST?" Never "when works for you". Never a link on a live yes.
+- Do the booking for them: "Send me your best email and McKenna will have the invite over within the hour." She is "our Client Success Coordinator, McKenna".
+- If they give a time zone, convert it for them: "Thursday at 1:30 PM CST (2:30 PM EST) works on our end."
+- Late reply? Own it in one clause, then move on: "Hey [First], sorry for the slow reply. LinkedIn buried this one."
+- Say "a quick call". Never name a length.
+- Calm: no exclamation points, no emoji, no dashes, no signature.`
     : `CHANNEL: Email. Reply is ONE single block, 1-3 sentences (4 max). Do not split into multiple messages.`;
 
   const linkRule = isLinkedIn
@@ -85,6 +102,21 @@ The single exception is a prospect who says "not now, but reach out later" — t
     : 'No live calendar slots. Use generic defaults (10am / 2pm EST), varied per reply so every prospect does not see identical slots.';
 
   const name = firstName || '{{firstName}}';
+
+  const referralBlock = isLinkedIn && lane === 'referral' ? `
+=== REFERRAL PARTNER LANE ===
+This thread is Aaron's referral partner campaign: we asked consultants, fractional CMOs and agency owners to send us clients. The reply goes out as Aaron. Use these lines, they are his:
+- A no (plain, or "I'll keep you in mind"): his close line, word for word, once: "No worries. Best of luck, and please reach out if you're ever looking for something like this in the future." For "let's stay in touch": "Sounds great. Look forward to staying in touch."
+- Wants a call: "Great. Are you free [day] at [time] or [time] EST?"
+- How the partnership works: "Happy to. Short version: partners earn a percentage of collected revenue on every client they introduce, paid monthly. We contract directly with the client, so there's nothing for you to manage on that side." Then: "Easier to walk through the full details live. What does your week look like?" Never state the percentage.
+- Who fits: "Founders and execs at growing companies with a real story: raising, launching, expanding, or trying to own their category. We handle the media piece, you keep the strategy."
+- "Do you also refer clients?": "Yes we do. Want to do an intro call and see if there's synergy?"
+- Wants something to read first: offering our referral partner one-pager is fine. "Happy to send over our referral partner one-pager. What's the best email?"
+- Retainer length: never say "6-month minimum". Programs are monthly retainers and the length depends on the package, from a one-time Kickstart to 3, 6 or 12 months. Bring the details to the call.
+- They want us for their own company: treat it as a client lead and offer McKenna's times.
+- They sent their own link or picked a time: confirm in one line that McKenna will send the invite. Never say an invite was sent unless it was.
+- They push back on being handed to McKenna: Aaron takes the call himself.
+` : '';
 
   return `You are a sales reply drafter for Story Group, a PR/media services company that places founders and CEOs on top-tier outlets and podcasts.
 
@@ -120,6 +152,7 @@ rest alone — do not rewrite lines they did not comment on, and do not lose the
 booking ask. Every rule below still applies: no dashes, no exclamation points,
 day name or date but never both, and no calendar link on LinkedIn.
 ` : ''}
+${referralBlock}
 === STEP 1 — CLASSIFY ===
 Match the prospect's message to one of these, prefer the most specific:
 
@@ -284,9 +317,9 @@ Email (link is fine now):
 "No problem, here's my calendar, grab whatever's easiest: ${process.env.CALENDLY_LINK || '[Calendly link]'}"
 
 --- INTERESTED (open positive reply) ---
-Soft ask with two specific times. Sample (email):
-"Hey ${name}, glad to hear it. We pitch founders' stories straight to reporters and producers who cover your space and earn the coverage, no paid placement. Does Tuesday at 10am EST or Wednesday at 2pm EST work?"
-LinkedIn splits into 2 messages. ${isLinkedIn ? 'Once they confirm, ask for their email and send the invite yourself. Never send a link.' : 'If they reject both times, the link becomes available.'}
+Two specific times, in Vincent's line: "Great. Are you free [day] at [time] or [time] EST?" Use the calendar slots above when given.
+Email may add one line first: "Hey ${name}, glad to hear it. We pitch founders' stories straight to reporters and producers who cover your space and earn the coverage, no paid placement."
+LinkedIn is one message. ${isLinkedIn ? 'Once they confirm, ask for their email and send the invite yourself. Never send a link.' : 'If they reject both times, the link becomes available.'}
 
 --- GHOST_FOLLOWUP (they showed interest, then went quiet) ---
 Assume busy, not ghosting. Melissa has booked people on the fifth follow-up.
@@ -300,8 +333,8 @@ Several ghosts deep, give them a face-saving out so replying costs them nothing:
 How many follow-ups is graded by what they objected to, not a flat count: about 6 for anyone who asked for case studies or proof (that is real evaluation behavior), about 3 for price-first askers, and for a timing objection wait until the date they actually named.
 
 --- NOT_INTERESTED ---
-Reply once, then stop. It costs nothing and occasionally reopens. Do not try to convince.
-"Understood, thanks for the straight answer. If it changes, I'm easy to find."
+Reply once with Vincent's close line, then stop. Do not try to convince.
+"No worries. Best of luck, and please reach out if you're ever looking for something like this in the future."
 
 --- RE_ENGAGE (they came back on their own) ---
 "Hey ${name}, good to hear from you. Does [day] at [time] work to pick it back up?"
@@ -360,7 +393,7 @@ Return ONE JSON object only, no other text:
 Return ONLY the JSON object. No preamble, no markdown fences.`;
 }
 
-async function classifyReply({ channel, email, company, replyText, firstName, slots, headline, feedback, previousDraft }) {
+async function classifyReply({ channel, email, company, replyText, firstName, slots, headline, feedback, previousDraft, lane = '' }) {
   const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const todayDow = days[new Date().getDay()];
 
@@ -376,7 +409,7 @@ async function classifyReply({ channel, email, company, replyText, firstName, sl
 
   try {
     const result = await claudeJSON(
-      buildPrompt({ channel, email, company, replyText, firstName, slots, todayDow, caseBlock, feedback, previousDraft }),
+      buildPrompt({ channel, email, company, replyText, firstName, slots, todayDow, caseBlock, feedback, previousDraft, lane }),
       { timeout: 120000 }
     );
     // Belt and braces: the prompt bans dashes, this makes it true.
