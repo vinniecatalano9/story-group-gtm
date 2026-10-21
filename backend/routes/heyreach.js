@@ -1,7 +1,7 @@
 const express = require('express');
 const { classifyReply } = require('../services/replyClassifier');
 const { evaluateReply, fetchConversation, markSeen } = require('../services/autoReply');
-const { offerReply } = require('../services/replyApprovals');
+const { offerReply, paidMisread } = require('../services/replyApprovals');
 const { threadFacts, config: autoReplyConfig } = require('../lib/autoReplyPolicy');
 const { findMeetingSlots, peopleFromNote, holdSlots, releaseHolds, draftOffersSlots } = require('../services/calendar');
 const axios = require('axios');
@@ -739,10 +739,7 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
         // step, so nobody spends attention on a conversation that is over.
         // Rejecting PAID placement is exempt — that is the earned-not-paid
         // misread and it stays for a human.
-        const PAY = /\b(pay|paying|paid|pay for)\b/i;
-        const PLACEMENT = /\b(?:media|press|placement\w*|feature\w*|coverage|publicity|appearance\w*|article\w*|interview\w*|podcast\w*|magazine\w*|pay[- ]to[- ]play)/i;
-        const paidMisread = PAY.test(replyText) && PLACEMENT.test(replyText);
-        if ((update.classification === 'not_interested' || update.tag === 'Not Interested') && !paidMisread) {
+        if ((update.classification === 'not_interested' || update.tag === 'Not Interested') && !paidMisread(replyText)) {
           update.handled = true;
           update.handled_reason = 'closed_hard_no_or_no_budget';
           update.tag = 'Not Interested';

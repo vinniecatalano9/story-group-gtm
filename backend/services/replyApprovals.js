@@ -120,6 +120,12 @@ function verifyInitData(initData, maxAgeSec = 24 * 3600) {
  * @param reply   the replies doc data after classification
  * @param shadow  evaluateReply()'s log entry, or null
  */
+// "We don't pay for placement" reads like a no but is the earned-not-paid
+// misread, so it stays for a human.
+const PAY = /\b(pay|paying|paid|pay for)\b/i;
+const PLACEMENT = /\b(?:media|press|placement\w*|feature\w*|coverage|publicity|appearance\w*|article\w*|interview\w*|podcast\w*|magazine\w*|pay[- ]to[- ]play)/i;
+const paidMisread = (text) => PAY.test(text || '') && PLACEMENT.test(text || '');
+
 async function offerReply({ ref, reply, shadow = null, force = false }) {
   if (!isOn()) return null;
   try {
@@ -151,7 +157,16 @@ async function offerReply({ ref, reply, shadow = null, force = false }) {
     // A flat no gets no answer and no card (Vincent, 2026-10-20). A no that
     // leaves the door open ("not now, let's keep in touch") comes through
     // quietly with the close line, one tap.
-    const isNo = !force && reply.handled === true && reply.handled_reason === 'closed_hard_no_or_no_budget';
+    // The classifier misses a no that never says "no" ("Aaron, I do the exact
+    // same thing you do" came through as other, 2026-10-21). A confident
+    // plain_no label closes it the same way. Paid-placement pushback stays.
+    if (!force && type === 'plain_no' && (shadow.label?.confidence ?? 0) >= 0.9 && !paidMisread(reply.reply_text)) {
+      const { db } = require('./db');
+      await db.collection('replies').doc(ref.id).update({ handled: true, handled_reason: 'closed_hard_no_or_no_budget', handled_at: new Date(), tag: 'Not Interested', subsequence: '' }).catch(() => {});
+      console.log(`[replyPhone] Flat no from ${reply.full_name || ref.id} (label): closed, no card`);
+      return null;
+    }
+    const isNo =!force && reply.handled === true && reply.handled_reason === 'closed_hard_no_or_no_budget';
     if (isNo && type !== 'soft_no') return null;
     const kind = isNo ? 'close_no' : 'draft';
     let draft = isNo ? TEMPLATES.close_no() : cleanDraft(reply.draft_response);
@@ -358,4 +373,4 @@ async function reviveDue() {
   return n;
 }
 
-module.exports = { snoozeReply, reviveDue, parseReturnDate, offerReply, verifyInitData, markCard, cleanDraft, isOn, tg, buildCard };
+module.exports = { snoozeReply, reviveDue, parseReturnDate, offerReply, verifyInitData, markCard, cleanDraft, isOn, tg, buildCard, paidMisread };
