@@ -27,6 +27,9 @@ const INST_BASE = 'https://api.instantly.ai/api/v2';
 const CT = 'America/Chicago';
 const TEAM_DOMAINS = ['storygroup.io', 'winningrepublicans.com', 'fireflies.ai', 'group.calendar.google.com', 'resource.calendar.google.com'];
 const INTERNAL_TITLES = /l10|leadership|standup|team meeting|one on one|1:1|internal|sameer|web team|invoicing|sync up/i;
+// Board meetings and community groups have many outside people but aren't deals.
+const GROUP_TITLES = /board meeting|bible study|strategy meeting|webinar|town hall|mixer/i;
+const isGroupCall = (title, externalCount) => externalCount > 3 || GROUP_TITLES.test(title || '') || INTERNAL_TITLES.test(title || '');
 const VINCENT_NUTSHELL_ID = 3;
 const STATE = () => db.collection('feed_state').doc('digest');
 
@@ -133,6 +136,7 @@ async function callsBetween(start, end) {
   const snap = await transcripts.where('date', '>=', start.toISOString()).where('date', '<', end.toISOString()).orderBy('date', 'desc').limit(50).get();
   return snap.docs.map(d => d.data()).map(t => ({
     title: clip(t.title, 90), date: (t.date || '').slice(0, 10),
+    external_count: (t.participants || []).map(p => String(p).toLowerCase().trim()).filter(isExternal).length,
     minutes: t.duration ? Math.round(t.duration > 300 ? t.duration / 60 : t.duration) : null,
     external: (t.participants || []).map(p => String(p).toLowerCase().trim()).filter(isExternal).slice(0, 3),
   }));
@@ -161,13 +165,18 @@ async function digestFacts() {
     nutshell.isConfigured() ? safe('Nutshell leads', () => nutshellNewLeads(state.last_lead_id), null) : null,
   ]);
 
+  // findMetButStalled returns one item per outside person; 4+ from one call = a group meeting.
+  const perCall = {};
+  for (const s of stalled) perCall[s.ref.path] = (perCall[s.ref.path] || 0) + 1;
+  const realStalled = stalled.filter(s => !isGroupCall(s.title, perCall[s.ref.path]));
+
   const facts = {
     kind: 'digest', date: today, weekday: new Date().toLocaleDateString('en-US', { timeZone: CT, weekday: 'long' }),
     replies_waiting: board.slice(0, 12).map(b => ({ name: b.name, company: clip(b.company, 50), email: b.email || null, channel: b.channel === 'heyreach' ? 'LinkedIn' : 'Email', type: b.classification, hot: b.hot, draft_ready: b.hasDraft, said: clip(b.reply, 160) })),
     replies_waiting_total: board.length,
     // Older than 3 weeks is a dead thread, not a nudge.
     followups_quiet: nudges.filter(n => n.ageDays <= 21).map(n => ({ path: n.ref.path, to: n.d.to, call: clip(n.t.title, 80), call_date: (n.t.date || '').slice(0, 10), followup_subject: clip(n.d.subject, 100), days_since_followup: n.ageDays })),
-    met_but_stalled: stalled.map(s => ({ path: s.ref.path, email: s.email, call: clip(s.title, 80), days_since_call: s.daysAgo, last_contact: s.lastContactWhat, whose_move: s.lastContactWhat === 'we emailed' ? 'theirs' : 'ours', action_items: clip(s.actionItems, 180) || null }))
+    met_but_stalled: realStalled.map(s => ({ path: s.ref.path, email: s.email, call: clip(s.title, 80), days_since_call: s.daysAgo, last_contact: s.lastContactWhat, whose_move: s.lastContactWhat === 'we emailed' ? 'theirs' : 'ours', action_items: clip(s.actionItems, 180) || null }))
       .sort((a, b) => (a.whose_move === 'ours' ? 0 : 1) - (b.whose_move === 'ours' ? 0 : 1) || a.days_since_call - b.days_since_call),
     interested_not_booked: notBooked.map(r => ({ path: `replies/${r.id}`, email: r.email, name: r.full_name || null, company: clip(r.company_name, 50) || null, replied: r.created_at?.toDate ? dayCT(r.created_at.toDate()) : null })),
     calls_today: calls,
@@ -179,7 +188,7 @@ async function digestFacts() {
     sources_down: [
       !hr && 'HeyReach', !em7 && 'Instantly', tasks === null && 'Nutshell tasks', newLeads === null && 'Nutshell leads',
     ].filter(Boolean),
-    _mark: { last_lead_id: newLeads ? newLeads.maxId : state.last_lead_id || null },
+    _mark: { last_lead_id: newLeads ? newLeads.maxId : state.last_lead_id || null, group_calls: [...new Set(stalled.filter(s => !realStalled.includes(s)).map(s => s.ref.path))] },
   };
 
   const covered = new Set();
@@ -265,7 +274,7 @@ async function weeklyFacts() {
   const positives = WINNABLE.reduce((n, c) => n + (mix[c] || 0), 0);
   // Fireflies logs no-shows and re-joins as their own short calls: under 10 min
   // doesn't count as held, and one person counts once.
-  const prospectCalls = held.filter(c => c.external.length && !INTERNAL_TITLES.test(c.title));
+  const prospectCalls = held.filter(c => c.external_count && !isGroupCall(c.title, c.external_count));
   const heldPeople = new Set(prospectCalls.filter(c => (c.minutes || 0) >= 10).map(c => c.external[0]));
   const facts = {
     kind: 'weekly', date: today, window: `${dayCT(daysAgo(7))} to ${today}`,
@@ -306,6 +315,7 @@ async function markShown(facts) {
   const writes = [
     ...facts.followups_quiet.map(n => [n.path, { feed_nudge_shown_at: at }]),
     ...facts.met_but_stalled.map(s => [s.path, { feed_stalled_shown_at: at }]),
+    ...(facts._mark?.group_calls || []).map(p => [p, { feed_stalled_shown_at: at }]),
     ...facts.interested_not_booked.map(r => [r.path, { feed_notbooked_shown_at: at }]),
   ];
   for (const [p, data] of writes) await db.doc(p).set(data, { merge: true });
