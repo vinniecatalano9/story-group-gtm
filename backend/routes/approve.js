@@ -38,6 +38,22 @@ async function load(id) {
   return { db, ref, a: doc.exists ? doc.data() : null };
 }
 
+// Every card still waiting, in the order the panel steps through them:
+// real answers first (newest first), then close lines.
+router.get('/pending', auth, async (req, res) => {
+  try {
+    const { db } = require('../services/db');
+    const snap = await db.collection('reply_approvals').where('status', '==', 'pending').get();
+    const ms = v => (v && v.toDate ? v.toDate() : new Date(v || 0)).getTime();
+    const ids = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((x, y) => (x.kind === 'close_no') - (y.kind === 'close_no') || ms(y.created_at) - ms(x.created_at))
+      .map(a => a.id);
+    res.json({ ids });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 router.get('/:id', auth, async (req, res) => {
   try {
     const { db, a } = await load(req.params.id);

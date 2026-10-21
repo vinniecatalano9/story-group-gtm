@@ -328,8 +328,10 @@ async function findMeetingSlots({ people = ['vincent'], startInDays = 2, searchD
     const am = AM_TIMES.find(t => free(day, t));
     const pm = PM_TIMES.find(t => free(day, t));
     if (am && pm) {
-      // Always under a week out, so the day name alone is unambiguous (SOP Rule 8).
-      return { day: dayNames[day.dow], time1: fmtTime(...am), time2: fmtTime(...pm), people: checked, unreadable };
+      // Day name plus the date ("Thursday, October 22"): Vincent wants every
+      // offered day pinned to a date, never a bare weekday.
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      return { day: `${dayNames[day.dow]}, ${monthNames[day.m - 1]} ${day.d}`, time1: fmtTime(...am), time2: fmtTime(...pm), people: checked, unreadable };
     }
   }
   return { day: null, time1: null, time2: null, people: checked, unreadable };
