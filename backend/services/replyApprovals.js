@@ -52,6 +52,39 @@ function cleanDraft(draft) {
     .join('\n\n');
 }
 
+/** "Their last message: Oct 19, 6:46 PM CT (yesterday)" from the reply's message date. */
+function lastMessageLine(when) {
+  const d = when ? new Date(when && when._seconds ? when._seconds * 1000 : when) : null;
+  if (!d || isNaN(d)) return '';
+  const tz = 'America/Chicago';
+  const stamp = d.toLocaleString('en-US', { timeZone: tz, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  const day = x => new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(x);
+  const days = Math.round((new Date(day(new Date())) - new Date(day(d))) / 86400000);
+  const ago = days <= 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
+  return `🕒 Their last message: ${stamp} CT (${ago})`;
+}
+
+/** The card's text and its one button. */
+function buildCard({ id, reply, kind, draft }) {
+  const isNo = kind === 'close_no';
+  const name = reply.full_name || 'Someone';
+  const account = reply.heyreach_account_name || 'LinkedIn';
+  const their = String(reply.reply_text || '').trim();
+  const shown = their.length > 600 ? their.slice(0, 600) + '…' : their;
+  const when = lastMessageLine(reply.message_date);
+  const text = [
+    ...(when ? [when] : []),
+    `💬 <b>${escapeHtml(name)}</b>${reply.company_name ? `, ${escapeHtml(reply.company_name)}` : ''}`,
+    `<i>to ${escapeHtml(account)} on LinkedIn${isNo ? ' · a no' : ''}</i>`,
+    '',
+    `“${escapeHtml(shown)}”`,
+    '',
+    draft ? `<b>Draft:</b>\n${escapeHtml(draft)}` : '<b>No draft yet.</b> Tap below and use Edit to write one.',
+  ].join('\n');
+  const reply_markup = { inline_keyboard: [[{ text: isNo ? 'Send close line, or skip' : 'Review: Send, Edit, Skip', web_app: { url: `${PANEL_URL()}?id=${encodeURIComponent(id)}` } }]] };
+  return { text, reply_markup };
+}
+
 /**
  * Verify Telegram Mini App initData and that it came from Vincent.
  * https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
@@ -105,16 +138,8 @@ async function offerReply({ ref, reply, shadow = null }) {
     const name = reply.full_name || 'Someone';
     const account = reply.heyreach_account_name || 'LinkedIn';
     const their = String(reply.reply_text || '').trim();
-    const shown = their.length > 600 ? their.slice(0, 600) + '…' : their;
 
-    const text = [
-      `💬 <b>${escapeHtml(name)}</b>${reply.company_name ? `, ${escapeHtml(reply.company_name)}` : ''}`,
-      `<i>to ${escapeHtml(account)} on LinkedIn${isNo ? ' · a no' : ''}</i>`,
-      '',
-      `“${escapeHtml(shown)}”`,
-      '',
-      draft ? `<b>Draft:</b>\n${escapeHtml(draft)}` : '<b>No draft yet.</b> Tap below and use Edit to write one.',
-    ].join('\n');
+    const { text, reply_markup } = buildCard({ id: ref.id, reply, kind, draft });
 
     const msg = await tg('sendMessage', {
       chat_id: CHAT_ID(),
@@ -122,7 +147,7 @@ async function offerReply({ ref, reply, shadow = null }) {
       parse_mode: 'HTML',
       disable_web_page_preview: true,
       disable_notification: isNo,
-      reply_markup: { inline_keyboard: [[{ text: isNo ? 'Send close line, or skip' : 'Review: Send, Edit, Skip', web_app: { url: `${PANEL_URL()}?id=${encodeURIComponent(ref.id)}` } }]] },
+      reply_markup,
     });
 
     await db.collection('reply_approvals').doc(ref.id).set({
@@ -163,4 +188,4 @@ async function markCard(approval, label) {
   }).catch(e => console.warn('[replyPhone] card update failed:', e.message));
 }
 
-module.exports = { offerReply, verifyInitData, markCard, cleanDraft, isOn, tg };
+module.exports = { offerReply, verifyInitData, markCard, cleanDraft, isOn, tg, buildCard };
