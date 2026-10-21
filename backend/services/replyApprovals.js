@@ -90,9 +90,11 @@ async function offerReply({ ref, reply, shadow = null }) {
     // Nothing to answer: out of office, bounces, and "remove me".
     if (tag === 'Out of Office' || /^(ooo|out_of_office|bounce)$/i.test(cls) || type === 'ooo' || type === 'remove_me') return null;
 
-    // A no is auto-closed on the board, but Vincent still sends every no his
-    // close line. Those come through quietly, one tap each.
+    // A flat no gets no answer and no card (Vincent, 2026-10-20). A no that
+    // leaves the door open ("not now, let's keep in touch") comes through
+    // quietly with the close line, one tap.
     const isNo = reply.handled === true && reply.handled_reason === 'closed_hard_no_or_no_budget';
+    if (isNo && type !== 'soft_no') return null;
     const kind = isNo ? 'close_no' : 'draft';
     const draft = isNo ? TEMPLATES.close_no() : cleanDraft(reply.draft_response);
 
