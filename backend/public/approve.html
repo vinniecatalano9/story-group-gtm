@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Reply</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg: var(--tg-theme-bg-color, #fff);
+    --fg: var(--tg-theme-text-color, #111);
+    --muted: var(--tg-theme-hint-color, #888);
+    --card: var(--tg-theme-secondary-bg-color, #f2f2f5);
+    --btn: var(--tg-theme-button-color, #2a7de1);
+    --btn-fg: var(--tg-theme-button-text-color, #fff);
+    --danger: var(--tg-theme-destructive-text-color, #d33);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); font: 16px/1.4 -apple-system, system-ui, sans-serif; }
+  .who { font-weight: 600; font-size: 17px; }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .theirs { background: var(--card); border-radius: 12px; padding: 12px; margin: 12px 0 16px; white-space: pre-wrap; }
+  label { display: block; color: var(--muted); font-size: 13px; margin: 0 0 6px; }
+  textarea, input { width: 100%; font: inherit; color: var(--fg); background: var(--card); border: 0; border-radius: 12px; padding: 12px; }
+  textarea { min-height: 120px; resize: vertical; }
+  .row { display: flex; gap: 8px; margin-top: 8px; }
+  .row input { flex: 1; }
+  button { font: inherit; border: 0; border-radius: 12px; padding: 12px 16px; cursor: pointer; }
+  .send { width: 100%; margin-top: 16px; background: var(--btn); color: var(--btn-fg); font-weight: 600; font-size: 17px; padding: 14px; }
+  .ghost { background: var(--card); color: var(--fg); }
+  .skip { width: 100%; margin-top: 8px; background: transparent; color: var(--danger); }
+  button:disabled { opacity: .5; }
+  .msg { margin-top: 12px; font-size: 14px; color: var(--muted); min-height: 1em; }
+  .msg.err { color: var(--danger); }
+  .done { text-align: center; padding: 40px 0; font-size: 18px; }
+</style>
+</head>
+<body>
+<div id="app"><div class="msg">Loading…</div></div>
+<script>
+const tg = window.Telegram && window.Telegram.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+const id = new URLSearchParams(location.search).get('id');
+const base = location.pathname.replace(/\/panel$/, '');
+const app = document.getElementById('app');
+const esc = s => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+async function call(path, body) {
+  const r = await fetch(base + '/' + encodeURIComponent(id) + path, {
+    method: body ? 'POST' : 'GET',
+    headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': tg ? tg.initData : '' },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || ('Error ' + r.status));
+  return data;
+}
+
+function finish(text) {
+  app.innerHTML = '<div class="done">' + esc(text) + '</div>';
+  if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+  setTimeout(() => tg && tg.close(), 900);
+}
+
+function render(d) {
+  if (d.status !== 'pending') {
+    app.innerHTML = '<div class="done">Already ' + esc(d.status.replace('_', ' ')) + '.</div>';
+    return;
+  }
+  app.innerHTML = `
+    <div class="who">${esc(d.full_name)}</div>
+    <div class="sub">${esc([d.company_name, 'to ' + d.account_name].filter(Boolean).join(' · '))}</div>
+    <div class="theirs">${esc(d.their_text)}</div>
+    <label for="draft">Your reply (tap to change it)</label>
+    <textarea id="draft">${esc(d.draft)}</textarea>
+    <div class="row">
+      <input id="note" placeholder="Or say what to change, e.g. make it Thursday">
+      <button class="ghost" id="rewrite">Rewrite</button>
+    </div>
+    <button class="send" id="send">Send</button>
+    <button class="skip" id="skip">Skip</button>
+    <div class="msg" id="msg">${d.enabled ? '' : 'Phone replies are switched off, so Send is blocked.'}</div>`;
+  const $ = s => document.getElementById(s);
+  const msg = (t, err) => { $('msg').textContent = t || ''; $('msg').className = 'msg' + (err ? ' err' : ''); };
+  const busy = on => ['send', 'skip', 'rewrite'].forEach(b => $(b).disabled = on);
+
+  $('send').onclick = async () => {
+    const text = $('draft').value.trim();
+    if (!text) return msg('Nothing to send.', true);
+    busy(true); msg('Sending…');
+    try { await call('/send', { text }); finish('Sent ✓'); }
+    catch (e) { msg(e.message, true); busy(false); }
+  };
+  $('rewrite').onclick = async () => {
+    const note = $('note').value.trim();
+    if (!note) return msg('Type what to change first.', true);
+    busy(true); msg('Rewriting…');
+    try { const r = await call('/edit', { note }); $('draft').value = r.draft; $('note').value = ''; msg(r.note || 'Rewritten. Check it, then Send.'); }
+    catch (e) { msg(e.message, true); }
+    busy(false);
+  };
+  $('skip').onclick = async () => {
+    busy(true);
+    try { await call('/skip', {}); finish('Skipped'); }
+    catch (e) { msg(e.message, true); busy(false); }
+  };
+}
+
+if (!id) app.innerHTML = '<div class="msg err">No reply id.</div>';
+else call('').then(render).catch(e => { app.innerHTML = '<div class="msg err">' + esc(e.message) + '</div>'; });
+</script>
+</body>
+</html>

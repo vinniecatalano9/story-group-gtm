@@ -1,6 +1,7 @@
 const express = require('express');
 const { classifyReply } = require('../services/replyClassifier');
 const { evaluateReply, fetchConversation } = require('../services/autoReply');
+const { offerReply } = require('../services/replyApprovals');
 const { threadFacts, config: autoReplyConfig } = require('../lib/autoReplyPolicy');
 const { findMeetingSlots, peopleFromNote } = require('../services/calendar');
 const axios = require('axios');
@@ -745,9 +746,13 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
         await ref.update(update);
         console.log(`[heyreach webhook] Classified ${ref.id} as ${cls.classification}${update.handled ? ' (auto-closed)' : ''}`);
         // Shadow auto-reply: records what it would have done. Never sends.
+        let shadow = null;
         if (autoReplyConfig().mode !== 'off') {
-          await evaluateReply({ ref, reply: { ...replyDoc, ...update }, conversation: convo });
+          shadow = await evaluateReply({ ref, reply: { ...replyDoc, ...update }, conversation: convo });
         }
+        // The reply and its draft go to Vincent's phone (Work Bot) with
+        // Send / Edit / Skip. Only his tap sends. Off unless REPLY_PHONE=on.
+        await offerReply({ ref, reply: { ...replyDoc, ...update }, shadow });
       } catch (e) {
         console.error(`[heyreach webhook] Classify failed for ${ref.id}:`, e.message);
       }

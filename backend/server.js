@@ -30,6 +30,7 @@ app.use('/api/instantly', require('./routes/instantly'));
 app.use('/api/calendar', require('./routes/calendar'));
 app.use('/api/nutshell', require('./routes/nutshell'));
 app.use('/api/assist', require('./routes/assist'));
+app.use('/api/approve', require('./routes/approve'));
 
 // Health check
 app.get('/api/health', (req, res) => {
