@@ -19,6 +19,13 @@
   body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); font: 16px/1.4 -apple-system, system-ui, sans-serif; }
   .who { font-weight: 600; font-size: 17px; }
   .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .thread { margin: 12px 0 16px; display: flex; flex-direction: column; gap: 6px; }
+  .bubble { max-width: 85%; border-radius: 12px; padding: 8px 12px; white-space: pre-wrap; font-size: 15px; }
+  .bubble.them { align-self: flex-start; background: var(--card); }
+  .bubble.us { align-self: flex-end; background: var(--btn); color: var(--btn-fg); }
+  .when { font-size: 11px; opacity: .65; margin-top: 2px; }
+  .links { display: flex; gap: 8px; margin: 10px 0 0; }
+  .links a { flex: 1; text-align: center; text-decoration: none; background: var(--card); color: var(--fg); border-radius: 10px; padding: 8px; font-size: 14px; }
   .theirs { background: var(--card); border-radius: 12px; padding: 12px; margin: 12px 0 16px; white-space: pre-wrap; }
   label { display: block; color: var(--muted); font-size: 13px; margin: 0 0 6px; }
   textarea, input { width: 100%; font: inherit; color: var(--fg); background: var(--card); border: 0; border-radius: 12px; padding: 12px; }
@@ -70,7 +77,14 @@ function render(d) {
   app.innerHTML = `
     <div class="who">${esc(d.full_name)}</div>
     <div class="sub">${esc([d.company_name, 'to ' + d.account_name].filter(Boolean).join(' · '))}</div>
-    <div class="theirs">${esc(d.their_text)}</div>
+    ${d.headline ? `<div class="sub">${esc(d.headline)}</div>` : ''}
+    <div class="links">
+      ${d.profile_url ? `<a href="${esc(d.profile_url)}" target="_blank">LinkedIn profile</a>` : ''}
+      <a href="https://app.heyreach.io/inbox" target="_blank">HeyReach inbox</a>
+    </div>
+    ${d.thread && d.thread.length
+      ? `<div class="thread">${d.thread.map(m => `<div class="bubble ${m.from}">${esc(m.text)}<div class="when">${m.from === 'us' ? 'Us' : esc(d.full_name.split(' ')[0])}${m.at ? ' · ' + esc(new Date(m.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) : ''}</div></div>`).join('')}</div>`
+      : `<div class="theirs">${esc(d.their_text)}</div>`}
     <label for="draft">Your reply (tap to change it)</label>
     <textarea id="draft">${esc(d.draft)}</textarea>
     <div class="row">
@@ -106,6 +120,7 @@ function render(d) {
   };
 }
 
+document.addEventListener('click', e => { const a = e.target.closest('a[target=_blank]'); if (a && tg) { e.preventDefault(); tg.openLink(a.href); } });
 if (!id) app.innerHTML = '<div class="msg err">No reply id.</div>';
 else call('').then(render).catch(e => { app.innerHTML = '<div class="msg err">' + esc(e.message) + '</div>'; });
 </script>

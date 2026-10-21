@@ -40,11 +40,19 @@ async function load(id) {
 
 router.get('/:id', auth, async (req, res) => {
   try {
-    const { a } = await load(req.params.id);
+    const { db, a } = await load(req.params.id);
     if (!a) return res.status(404).json({ error: 'Reply not found.' });
+    // The whole thread, live from HeyReach, so Vincent can read it all here.
+    const rdoc = await db.collection('replies').doc(a.reply_id).get().catch(() => null);
+    const r = rdoc && rdoc.exists ? rdoc.data() : {};
+    const convo = await fetchConversation({ conversationId: a.conversation_id, name: a.full_name, accountId: a.heyreach_account_id });
+    const thread = (convo && convo.messages || [])
+      .filter(m => (m.body || '').trim())
+      .map(m => ({ from: m.sender === 'ME' ? 'us' : 'them', text: m.body, at: m.createdAt }));
     res.json({
       full_name: a.full_name, company_name: a.company_name, account_name: a.account_name,
       their_text: a.their_text, draft: a.draft, kind: a.kind, status: a.status, enabled: isOn(),
+      headline: r.headline || '', profile_url: r.profile_url || '', thread,
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
