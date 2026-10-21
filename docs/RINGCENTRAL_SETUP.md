@@ -55,7 +55,7 @@ curl -X POST http://localhost:3001/api/trigger/fireflies-poll   # after Fireflie
 `recorded_calls_last_7_days: 0` means recording isn't on yet.
 
 ## Not verified yet
-- The RingCentral calls haven't run against a live account. The code follows RingCentral's documented JWT and call-log API and passed a stubbed dry run.
+- Live test 10/21/2026: JWT works on production (ext 10103), 2 recorded calls went through Fireflies and came back summarized. Fireflies strips colons from titles, so phone calls are detected by the "RingCentral call" prefix.
 - Fireflies upload limits on our plan (size and count per month).
 - The phone match only finds leads whose `phone` was saved by enrichment. Prospects who booked from LinkedIn or Calendly with no stored phone come through as numbers only, so they get a summary but no draft.
 

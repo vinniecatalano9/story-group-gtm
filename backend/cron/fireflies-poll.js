@@ -9,7 +9,7 @@ const DRAFT_WINDOW_HOURS = 72;
 // CALL_RECAP_EMAIL=<address> emails a recap (summary, action items, draft)
 // for each new RingCentral phone call. CALL_RECAP_ALL=true does it for every call.
 const RECAP_TO = () => process.env.CALL_RECAP_EMAIL;
-const isPhoneCall = t => /^RingCentral call:/.test(t.title || '');
+const isPhoneCall = t => /^RingCentral call\b/.test(t.title || '');
 
 async function sendRecap(id) {
   const { sendMail, isConfigured } = require('../services/mailer');
