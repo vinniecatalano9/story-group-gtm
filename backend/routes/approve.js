@@ -151,6 +151,10 @@ router.post('/:id/skip', express.json(), auth, async (req, res) => {
     if (a.status !== 'pending') return res.status(409).json({ error: `Already ${a.status}.` });
     await ref.update({ status: 'skipped', skipped_at: new Date() });
     await releaseHolds(a.reply_id); // times offered in a skipped draft go back in the pool
+    // Skip means handled everywhere: it leaves the dashboard's waiting list too.
+    // A new message from them makes a fresh card. "Later" never calls this.
+    const { db } = require('../services/db');
+    await db.collection('replies').doc(a.reply_id).update({ handled: true, handled_reason: 'skipped_on_phone', handled_at: new Date() }).catch(() => {});
     await markCard(a, '⏭ Skipped. Nothing sent.');
     res.json({ ok: true });
   } catch (e) {
