@@ -14,11 +14,18 @@
 //
 // Items show once: the digest stamps its own feed_* markers (separate from
 // the reminders email's markers, so the two never hide items from each other).
+//
+// Vincent's own items only (10/21: "i only care bout my stuff"). Calls count
+// when he was on them, met-but-stalled only when Fireflies gave him a next
+// step, Nutshell only when he's the assignee. Story Group outbound all sends
+// as Aaron (his HeyReach sender, aaron@ in Instantly), so those numbers and
+// replies are the team's: TEAM_OUTBOUND decides whether they show at all.
 
 const axios = require('axios');
 const { db, transcripts } = require('../services/db');
 const { getTodaysEvents, getEventsWindow } = require('../services/calendar');
 const nutshell = require('../services/nutshell');
+const fireflies = require('../services/fireflies');
 const { getBoard, classMix7d, WINNABLE } = require('./brief');
 const { findNudgeCandidates, findMetButStalled, findInterestedNotBooked } = require('./reminders');
 
@@ -31,12 +38,23 @@ const INTERNAL_TITLES = /l10|leadership|standup|team meeting|one on one|1:1|inte
 const GROUP_TITLES = /board meeting|bible study|strategy meeting|webinar|town hall|mixer/i;
 const isGroupCall = (title, externalCount) => externalCount > 3 || GROUP_TITLES.test(title || '') || INTERNAL_TITLES.test(title || '');
 const VINCENT_NUTSHELL_ID = 3;
+const VINCENT_EMAILS = ['vincent@storygroup.io', 'vincent@winningrepublicans.com', 'vinnie.catalano3@gmail.com'];
+const isVincent = (email) => VINCENT_EMAILS.includes(String(email || '').toLowerCase().trim());
+const VINCENT_NAME = /^(vincent|vinnie)\b/i;
+// Teammates who show up as action item owners in Fireflies.
+const TEAMMATE_NAME = /^(mckenna|aaron|lydia|michelle|annette|sydney|gabriela)\b/i;
+const TEAM_OUTBOUND = false;
 const STATE = () => db.collection('feed_state').doc('digest');
 
 const dayCT = (d = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: CT }).format(d);
 const timeCT = (d) => new Date(d).toLocaleTimeString('en-US', { timeZone: CT, hour: 'numeric', minute: '2-digit' });
 const isExternal = (email) => email && email.includes('@') && !TEAM_DOMAINS.includes(email.split('@')[1]) && !/vincent|vinnie/.test(email);
 const clip = (s, n) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, n);
+// Placeholder text ("-", "Lead–1182", a bare payment code like "- LTKZ2QZQ") isn't a name.
+const realText = (s, n) => {
+  const v = clip(s, n).replace(/^[-–·\s]+/, '');
+  return /[a-z]{3}/.test(v) && !/^Lead[–-]\d+$/.test(v) ? v : null;
+};
 // Midnight Central for a YYYY-MM-DD day (CDT is UTC-5, CST is UTC-6).
 const ctOffsetHours = () => (/CST/.test(new Date().toLocaleString('en-US', { timeZone: CT, timeZoneName: 'short' })) ? 6 : 5);
 const ctMidnight = (day) => new Date(Date.parse(`${day}T00:00:00Z`) + ctOffsetHours() * 3600e3);
@@ -106,10 +124,19 @@ async function nutshellTasksDue() {
 
 async function nutshellNewLeads(lastId) {
   const res = await nutshell.call('findLeads', { query: { status: 0 }, orderBy: 'id', orderDirection: 'DESC', limit: 25, stubResponses: true });
-  const leads = (res || []).map(l => ({ id: l.id, what: clip(l.description || l.name, 100), contact: l.primaryContactName || null, company: l.primaryAccountName || null }));
-  const maxId = leads.reduce((m, l) => Math.max(m, l.id || 0), lastId || 0);
+  const maxId = (res || []).reduce((m, l) => Math.max(m, l.id || 0), lastId || 0);
   // First run has no baseline: record it, report nothing.
-  return { maxId, leads: lastId ? leads.filter(l => l.id > lastId) : [] };
+  const fresh = lastId ? (res || []).filter(l => l.id > lastId).slice(0, 10) : [];
+  // Stubs carry no assignee, so read each new lead in full and keep Vincent's.
+  const full = await Promise.all(fresh.map(l => safe(`Nutshell lead ${l.id}`, () => nutshell.call('getLead', { leadId: l.id }))));
+  const leads = full.filter(l => l && l.assignee?.id === VINCENT_NUTSHELL_ID).map(l => ({
+    id: l.id,
+    what: realText(l.description, 100),
+    contact: (l.contacts || [])[0]?.name || null,
+    company: l.primaryAccount?.name || null,
+    tags: (l.tags || []).slice(0, 4),
+  }));
+  return { maxId, leads, others: full.filter(l => l && l.assignee?.id !== VINCENT_NUTSHELL_ID).length };
 }
 
 // ── Calls ────────────────────────────────────────────────────────────────────
@@ -120,53 +147,156 @@ async function todaysCalls() {
     const s = await db.collection('precall_briefs').doc(day).get();
     return new Set(s.exists ? (s.data().event_ids || []) : []);
   }, new Set());
-  return events.map(e => {
+  // Blocks with nobody else on them ("-", the dentist) aren't calls.
+  return events.filter(e => e.attendees.some(a => a.email && !isVincent(a.email))).map(e => {
     const ext = e.attendees.filter(a => isExternal(a.email));
     const prospect = ext.length > 0 && !INTERNAL_TITLES.test(e.title);
+    const withList = ext.slice(0, 3).map(a => a.name ? `${a.name} <${a.email}>` : a.email);
     return {
-      time_ct: /T/.test(e.start) ? timeCT(e.start) : 'all day', title: clip(e.title, 90),
+      time_ct: /T/.test(e.start) ? timeCT(e.start) : 'all day',
+      title: realText(e.title, 90) || ext.map(a => a.name || a.email).slice(0, 2).join(', ') || 'Untitled',
       kind: prospect ? 'prospect' : (ext.length ? 'external' : 'internal'),
-      with: ext.slice(0, 3).map(a => a.name ? `${a.name} <${a.email}>` : a.email),
+      with: withList,
       brief_sent: prospect ? ledger.has(e.id) : undefined,
     };
   });
 }
 
+const externals = (t) => (t.participants || []).map(p => String(p).toLowerCase().trim()).filter(isExternal);
+// Each teammate's notetaker makes its own copy of a call (start times can differ
+// by a few minutes): same day, same outside people.
+const meetingKey = (t) => `${t.date ? dayCT(new Date(t.date)) : ''}|${externals(t).sort().join(',') || t.title}`;
+
+/**
+ * Fireflies leaves a copy's own owner out of `participants`, so whose
+ * notetaker recorded it (and who spoke) comes from Fireflies. Read once per
+ * transcript and cached on the doc as ff_owner / ff_speakers.
+ */
+async function withOwners(docs) {
+  const need = docs.filter(t => t.ff_owner === undefined);
+  const query = ids => `query { ${ids.map((id, j) => `t${j}: transcript(id: ${JSON.stringify(id)}) { user { email } speakers { name } }`).join(' ')} }`;
+  for (let i = 0; i < need.length; i += 20) {
+    const chunk = need.slice(i, i + 20);
+    let data;
+    try { data = await fireflies.graphql(query(chunk.map(t => t.id))); } catch (e) {
+      if (/^Fireflies API/.test(e.message)) throw e;   // API down: don't retry one by one
+      data = {};                                        // one bad id fails the batch, so ask singly
+      for (const [j, t] of chunk.entries()) data[`t${j}`] = await fireflies.graphql(query([t.id])).then(d => d.t0).catch(() => null);
+    }
+    for (const [j, t] of chunk.entries()) {
+      const r = data[`t${j}`];
+      if (!r) continue;
+      t.ff_owner = r.user?.email || null;
+      t.ff_speakers = (r.speakers || []).map(s => s.name).filter(Boolean);
+      await transcripts.doc(t.id).set({ ff_owner: t.ff_owner, ff_speakers: t.ff_speakers }, { merge: true });
+    }
+  }
+}
+
+/** Vincent was on a call: invited or his notetaker, and he spoke if Fireflies heard anyone. */
+function vincentOn(copies) {
+  const invited = copies.some(c => (c.participants || []).some(isVincent) || isVincent(c.ff_owner));
+  // His notetaker joins everything on his calendar, so speakers settle whether he was there.
+  const speakers = copies.flatMap(c => c.ff_speakers || []);
+  return invited && (!speakers.length || speakers.some(n => VINCENT_NAME.test(n)));
+}
+
+/** Fireflies action items come as "**Name**" headers over that person's items. */
+function actionOwners(text) {
+  const byOwner = {};
+  let cur = null;
+  for (const line of String(text || '').split('\n')) {
+    const h = line.match(/^\s*\*\*(.+?)\*\*/);
+    if (h) { cur = h[1].trim(); byOwner[cur] = byOwner[cur] || []; continue; }
+    const item = line.trim().replace(/\s*\(\d+:\d+\)$/, '');
+    if (cur && item && !byOwner[cur].includes(item)) byOwner[cur].push(item);
+  }
+  return byOwner;
+}
+
+/** Transcripts in a window, copies grouped per call. Fireflies failing falls back to participants. */
+async function meetingsBetween(start, end) {
+  const snap = await transcripts.where('date', '>=', start.toISOString()).where('date', '<', end.toISOString()).orderBy('date', 'desc').limit(300).get();
+  const docs = snap.docs.map(d => ({ id: d.id, path: d.ref.path, ...d.data() }));
+  const groups = new Map();
+  for (const t of docs) groups.set(meetingKey(t), [...(groups.get(meetingKey(t)) || []), t]);
+  return { docs, groups };
+}
+
 async function callsBetween(start, end) {
-  const snap = await transcripts.where('date', '>=', start.toISOString()).where('date', '<', end.toISOString()).orderBy('date', 'desc').limit(50).get();
-  return snap.docs.map(d => d.data()).map(t => ({
-    title: clip(t.title, 90), date: (t.date || '').slice(0, 10),
-    external_count: (t.participants || []).map(p => String(p).toLowerCase().trim()).filter(isExternal).length,
-    minutes: t.duration ? Math.round(t.duration > 300 ? t.duration / 60 : t.duration) : null,
-    external: (t.participants || []).map(p => String(p).toLowerCase().trim()).filter(isExternal).slice(0, 3),
-  }));
+  const { groups } = await meetingsBetween(start, end);
+  const meetings = [...groups.values()];
+  await safe('Fireflies call owners', () => withOwners(meetings.flat()));
+  return meetings.filter(vincentOn).map(copies => {
+    const t = copies[0];
+    const ext = externals(t);
+    const minutes = Math.max(0, ...copies.map(c => c.duration ? Math.round(c.duration > 300 ? c.duration / 60 : c.duration) : 0));
+    return {
+      title: realText(t.title, 90) || ext.slice(0, 2).join(', ') || 'Untitled', date: (t.date || '').slice(0, 10),
+      external_count: ext.length, minutes: minutes || null, external: ext.slice(0, 3),
+    };
+  });
 }
 
 // ── Digest ───────────────────────────────────────────────────────────────────
+/**
+ * Follow-up items that are Vincent's. Each notetaker's copy of a call has its
+ * own action items and its own shown marker, so all copies are read together:
+ * he was on the call, no copy was shown yet, and Fireflies gave him a next
+ * step (or named no teammate at all).
+ */
+async function vincentsFollowups(stalled, nudges) {
+  const { docs, groups } = await meetingsBetween(daysAgo(45), new Date());
+  const copiesOf = (ref, t) => {
+    const doc = docs.find(d => d.path === ref.path) || { id: ref.id, path: ref.path, ...t };
+    return groups.get(meetingKey(doc)) || [doc];
+  };
+  const st = stalled.map(s => ({ s, copies: copiesOf(s.ref, { date: s.date, title: s.title, participants: [s.email] }) }));
+  const nu = nudges.map(n => ({ n, copies: copiesOf(n.ref, n.t) }));
+  const ok = await safe('Fireflies call owners', async () => { await withOwners([...new Set([...st, ...nu].flatMap(x => x.copies))]); return true; }, false);
+
+  const myStalled = st.filter(({ copies }) => !copies.some(c => c.feed_stalled_shown_at) && vincentOn(copies)).map(({ s, copies }) => {
+    const owners = actionOwners(copies.map(c => c.action_items).join('\n'));
+    const mine = Object.entries(owners).filter(([who]) => VINCENT_NAME.test(who)).flatMap(([, items]) => items);
+    const teammate = Object.keys(owners).some(who => TEAMMATE_NAME.test(who));
+    return !mine.length && teammate ? null : { ...s, copies: copies.map(c => c.path), mine };
+  }).filter(Boolean);
+
+  const seen = new Set();
+  const myNudges = nu.filter(({ copies }) => {
+    const key = meetingKey(copies[0]);
+    if (seen.has(key) || copies.some(c => c.feed_nudge_shown_at) || !vincentOn(copies)) return false;
+    seen.add(key);
+    return true;
+  }).map(({ n, copies }) => ({ ...n, copies: copies.map(c => c.path) }));
+
+  return { stalled: myStalled, nudges: myNudges, ok };
+}
+
 async function digestFacts() {
   const today = dayCT();
   const yesterday = dayCT(daysAgo(1));
   const startToday = ctMidnight(today);
   const state = await safe('feed state', async () => (await STATE().get()).data() || {}, {});
 
-  const hr = await safe('HeyReach ids', hrIds, null);
+  const hr = TEAM_OUTBOUND ? await safe('HeyReach ids', hrIds, null) : null;
   const [li1, li7, em1, em7, board, nudges, stalled, notBooked, calls, yCalls, tasks, newLeads] = await Promise.all([
     hr ? safe('HeyReach 1d', () => hrStats(hr.accounts.map(a => a.id), hr.campaignIds, daysAgo(1), new Date())) : null,
     hr ? safe('HeyReach 7d', () => hrStats(hr.accounts.map(a => a.id), hr.campaignIds, daysAgo(7), new Date())) : null,
-    safe('Instantly 1d', () => instantly(yesterday, yesterday)),
-    safe('Instantly 7d', () => instantly(dayCT(daysAgo(7)), yesterday)),
-    safe('board', getBoard, []),
+    TEAM_OUTBOUND ? safe('Instantly 1d', () => instantly(yesterday, yesterday)) : null,
+    TEAM_OUTBOUND ? safe('Instantly 7d', () => instantly(dayCT(daysAgo(7)), yesterday)) : null,
+    TEAM_OUTBOUND ? safe('board', getBoard, []) : [],
     safe('nudges', () => findNudgeCandidates({ marker: 'feed_nudge_shown_at' }), []),
     safe('stalled', () => findMetButStalled({ marker: 'feed_stalled_shown_at' }), []),
-    safe('not booked', () => findInterestedNotBooked({ marker: 'feed_notbooked_shown_at' }), []),
+    TEAM_OUTBOUND ? safe('not booked', () => findInterestedNotBooked({ marker: 'feed_notbooked_shown_at' }), []) : [],
     safe('today calls', todaysCalls, []),
     safe('yesterday calls', () => callsBetween(new Date(startToday.getTime() - 86400e3), startToday), []),
     nutshell.isConfigured() ? safe('Nutshell tasks', nutshellTasksDue, null) : null,
     nutshell.isConfigured() ? safe('Nutshell leads', () => nutshellNewLeads(state.last_lead_id), null) : null,
   ]);
 
-  // LinkedIn replies live in Reply Bot (services/replyApprovals.js). The digest
-  // only lists email replies and gives LinkedIn as one count.
+  // LinkedIn replies live in Reply Bot (services/replyApprovals.js), where he
+  // approves each one. The digest only lists email replies and gives LinkedIn as one count.
   const isLinkedIn = b => b.channel === 'heyreach' || b.channel === 'ulinc';
   const emailBoard = board.filter(b => !isLinkedIn(b));
   const inReplyBot = await safe('Reply Bot count', async () => {
@@ -178,15 +308,19 @@ async function digestFacts() {
   const perCall = {};
   for (const s of stalled) perCall[s.ref.path] = (perCall[s.ref.path] || 0) + 1;
   const realStalled = stalled.filter(s => !isGroupCall(s.title, perCall[s.ref.path]));
+  // Older than 3 weeks is a dead thread, not a nudge.
+  const mine = await vincentsFollowups(realStalled, nudges.filter(n => n.ageDays <= 21));
 
   const facts = {
     kind: 'digest', date: today, weekday: new Date().toLocaleDateString('en-US', { timeZone: CT, weekday: 'long' }),
+    scope: TEAM_OUTBOUND
+      ? 'Vincent only: his calls, follow-ups he owes, his Nutshell tasks and leads. LinkedIn and email numbers are team outbound (sent as Aaron).'
+      : 'Vincent only: his calls, follow-ups he owes, his Nutshell tasks and leads. Team outbound (LinkedIn and email sent as Aaron) is left out on purpose.',
     replies_waiting: emailBoard.slice(0, 12).map(b => ({ name: b.name, company: clip(b.company, 50), email: b.email || null, channel: 'Email', type: b.classification, hot: b.hot, draft_ready: b.hasDraft, said: clip(b.reply, 160) })),
     replies_waiting_total: emailBoard.length,
     linkedin_replies_in_reply_bot: inReplyBot,
-    // Older than 3 weeks is a dead thread, not a nudge.
-    followups_quiet: nudges.filter(n => n.ageDays <= 21).map(n => ({ path: n.ref.path, to: n.d.to, call: clip(n.t.title, 80), call_date: (n.t.date || '').slice(0, 10), followup_subject: clip(n.d.subject, 100), days_since_followup: n.ageDays })),
-    met_but_stalled: realStalled.map(s => ({ path: s.ref.path, email: s.email, call: clip(s.title, 80), days_since_call: s.daysAgo, last_contact: s.lastContactWhat, whose_move: s.lastContactWhat === 'we emailed' ? 'theirs' : 'ours', action_items: clip(s.actionItems, 180) || null }))
+    followups_quiet: mine.nudges.map(n => ({ path: n.ref.path, copies: n.copies, to: n.d.to, call: realText(n.t.title, 80) || n.d.to, call_date: (n.t.date || '').slice(0, 10), followup_subject: clip(n.d.subject, 100), days_since_followup: n.ageDays })),
+    met_but_stalled: mine.stalled.map(s => ({ path: s.ref.path, copies: s.copies, email: s.email, call: realText(s.title, 80) || s.email, days_since_call: s.daysAgo, last_contact: s.lastContactWhat, whose_move: s.lastContactWhat === 'we emailed' ? 'theirs' : 'ours', his_action_items: clip(s.mine.join('; '), 180) || null }))
       .sort((a, b) => (a.whose_move === 'ours' ? 0 : 1) - (b.whose_move === 'ours' ? 0 : 1) || a.days_since_call - b.days_since_call),
     interested_not_booked: notBooked.map(r => ({ path: `replies/${r.id}`, email: r.email, name: r.full_name || null, company: clip(r.company_name, 50) || null, replied: r.created_at?.toDate ? dayCT(r.created_at.toDate()) : null })),
     calls_today: calls,
@@ -196,7 +330,8 @@ async function digestFacts() {
     linkedin_24h: li1, linkedin_7d: li7,
     email_yesterday: em1, email_7d: em7,
     sources_down: [
-      !hr && 'HeyReach', !em7 && 'Instantly', tasks === null && 'Nutshell tasks', newLeads === null && 'Nutshell leads',
+      TEAM_OUTBOUND && !hr && 'HeyReach', TEAM_OUTBOUND && !em7 && 'Instantly', tasks === null && 'Nutshell tasks', newLeads === null && 'Nutshell leads',
+      !mine.ok && 'Fireflies (who was on each call, so follow-ups use invite lists only)',
     ].filter(Boolean),
     _mark: { last_lead_id: newLeads ? newLeads.maxId : state.last_lead_id || null, group_calls: [...new Set(stalled.filter(s => !realStalled.includes(s)).map(s => s.ref.path))] },
   };
@@ -240,7 +375,7 @@ function digestText(f) {
     L.push('', 'Nutshell tasks due');
     for (const t of f.nutshell_tasks_due.slice(0, 5)) L.push(`• ${t.title} (${t.due})`);
   }
-  if (f.nutshell_new_leads && f.nutshell_new_leads.length) L.push('', `New Nutshell leads: ${f.nutshell_new_leads.map(l => l.what).join('; ')}`);
+  if (f.nutshell_new_leads && f.nutshell_new_leads.length) L.push('', `New Nutshell leads: ${f.nutshell_new_leads.map(l => [l.contact, l.company, l.what].filter(Boolean).join(', ')).join('; ')}`);
   const li = f.linkedin_24h;
   if (li && (li.invites || li.messages || li.replies)) L.push('', `LinkedIn, last 24h: ${li.invites} invites, ${li.accepted} accepted, ${li.replies} replies`);
   const em = f.email_yesterday;
@@ -253,24 +388,25 @@ function digestText(f) {
 // ── Weekly ───────────────────────────────────────────────────────────────────
 async function weeklyFacts() {
   const today = dayCT();
-  const hr = await safe('HeyReach ids', hrIds, null);
+  // Outbound rates, the reply mix and the insights run are all team outbound (see TEAM_OUTBOUND).
+  const hr = TEAM_OUTBOUND ? await safe('HeyReach ids', hrIds, null) : null;
   const ids = hr ? hr.accounts.map(a => a.id) : [];
   const [liThis, liPrior, emThis, emPrior, mix, held, upcoming, insights] = await Promise.all([
     hr ? safe('HeyReach this week', () => hrStats(ids, hr.campaignIds, daysAgo(7), new Date())) : null,
     hr ? safe('HeyReach prior week', () => hrStats(ids, hr.campaignIds, daysAgo(14), daysAgo(7))) : null,
-    safe('Instantly this week', () => instantly(dayCT(daysAgo(7)), dayCT(daysAgo(1)))),
-    safe('Instantly prior week', () => instantly(dayCT(daysAgo(14)), dayCT(daysAgo(8)))),
-    safe('reply mix', classMix7d, {}),
+    TEAM_OUTBOUND ? safe('Instantly this week', () => instantly(dayCT(daysAgo(7)), dayCT(daysAgo(1)))) : null,
+    TEAM_OUTBOUND ? safe('Instantly prior week', () => instantly(dayCT(daysAgo(14)), dayCT(daysAgo(8)))) : null,
+    TEAM_OUTBOUND ? safe('reply mix', classMix7d, {}) : {},
     safe('calls held', () => callsBetween(daysAgo(7), new Date()), []),
     safe('calls booked', async () => (await getEventsWindow({ daysBack: 0, daysAhead: 7 }))
       .filter(e => e.attendees.some(isExternal) && !INTERNAL_TITLES.test(e.title))
       .map(e => ({ when: `${dayCT(new Date(e.start))} ${/T/.test(e.start) ? timeCT(e.start) : ''}`.trim(), title: clip(e.title, 80) })), []),
-    safe('insights', async () => {
+    TEAM_OUTBOUND ? safe('insights', async () => {
       const s = await db.collection('insights').orderBy('created_at', 'desc').limit(1).get();
       if (s.empty) return null;
       const d = s.docs[0].data();
       return { date: d.date, noticing: d.noticing, icp_shift: d.icp?.shift, converting: d.icp?.converting, dead: d.icp?.dead, objections: d.objections, chase: d.chase };
-    }),
+    }) : null,
   ]);
 
   // Per-sender LinkedIn (acceptance by profile is where the weak senders show).
@@ -289,6 +425,9 @@ async function weeklyFacts() {
   const heldPeople = new Set(prospectCalls.filter(c => (c.minutes || 0) >= 10).map(c => c.external[0]));
   const facts = {
     kind: 'weekly', date: today, window: `${dayCT(daysAgo(7))} to ${today}`,
+    scope: TEAM_OUTBOUND
+      ? 'Calls are Vincent\'s only. LinkedIn, email, reply mix and insights are team outbound (sent as Aaron).'
+      : 'Vincent only: calls he was on and calls booked on his calendar. Team outbound (LinkedIn and email sent as Aaron) is left out on purpose.',
     linkedin: { this_week: liThis, prior_week: liPrior, by_sender: senders },
     email: { this_week: emThis, prior_week: emPrior },
     replies_7d: { by_type: mix, positives_and_questions: positives, interested: mix.interested || 0 },
@@ -301,7 +440,7 @@ async function weeklyFacts() {
       note: 'Different people sit in each count, so compare the trend week to week, not as an exact positive to meeting rate.',
     },
     insights_latest: insights && insights.date && (Date.now() - new Date(insights.date).getTime()) < 4 * 86400e3 ? insights : null,
-    sources_down: [!hr && 'HeyReach', !emThis && 'Instantly'].filter(Boolean),
+    sources_down: [TEAM_OUTBOUND && !hr && 'HeyReach', TEAM_OUTBOUND && !emThis && 'Instantly'].filter(Boolean),
   };
   facts.text = weeklyText(facts);
   return facts;
@@ -324,8 +463,9 @@ function weeklyText(f) {
 async function markShown(facts) {
   const at = new Date().toISOString();
   const writes = [
-    ...facts.followups_quiet.map(n => [n.path, { feed_nudge_shown_at: at }]),
-    ...facts.met_but_stalled.map(s => [s.path, { feed_stalled_shown_at: at }]),
+    // Every notetaker's copy of the call, so another copy can't bring it back tomorrow.
+    ...facts.followups_quiet.flatMap(n => (n.copies || [n.path]).map(p => [p, { feed_nudge_shown_at: at }])),
+    ...facts.met_but_stalled.flatMap(s => (s.copies || [s.path]).map(p => [p, { feed_stalled_shown_at: at }])),
     ...(facts._mark?.group_calls || []).map(p => [p, { feed_stalled_shown_at: at }]),
     ...facts.interested_not_booked.map(r => [r.path, { feed_notbooked_shown_at: at }]),
   ];
