@@ -65,7 +65,7 @@ function lastMessageLine(when) {
 }
 
 /** The card's text and its one button. */
-function buildCard({ id, reply, kind, draft }) {
+function buildCard({ id, reply, kind, draft, emailTo = '' }) {
   const isNo = kind === 'close_no';
   const name = reply.full_name || 'Someone';
   const account = reply.heyreach_account_name || 'LinkedIn';
@@ -80,8 +80,11 @@ function buildCard({ id, reply, kind, draft }) {
     `“${escapeHtml(shown)}”`,
     '',
     draft ? `<b>Draft:</b>\n${escapeHtml(draft)}` : '<b>No draft yet.</b> Tap below and use Edit to write one.',
+    ...(emailTo ? ['', `📧 <b>Email draft to ${escapeHtml(emailTo)} is in your work Gmail.</b> Send that first, then this.`] : []),
   ].join('\n');
-  const reply_markup = { inline_keyboard: [[{ text: isNo ? 'Send close line, or skip' : 'Review: Send, Edit, Skip', web_app: { url: `${PANEL_URL()}?id=${encodeURIComponent(id)}` } }]] };
+  const rows = [[{ text: isNo ? 'Send close line, or skip' : 'Review: Send, Edit, Skip', web_app: { url: `${PANEL_URL()}?id=${encodeURIComponent(id)}` } }]];
+  if (emailTo) rows.unshift([{ text: '📧 Open Gmail drafts', url: 'https://mail.google.com/mail/u/?authuser=vincent@storygroup.io#drafts' }]);
+  const reply_markup = { inline_keyboard: rows };
   return { text, reply_markup };
 }
 
@@ -151,14 +154,26 @@ async function offerReply({ ref, reply, shadow = null, force = false }) {
     const isNo = !force && reply.handled === true && reply.handled_reason === 'closed_hard_no_or_no_budget';
     if (isNo && type !== 'soft_no') return null;
     const kind = isNo ? 'close_no' : 'draft';
-    const draft = isNo ? TEMPLATES.close_no() : cleanDraft(reply.draft_response);
+    let draft = isNo ? TEMPLATES.close_no() : cleanDraft(reply.draft_response);
+
+    // They asked for info by email: the email goes into Vincent's work Gmail
+    // as a draft, and the LinkedIn reply just says it's on its way.
+    let emailTo = '';
+    const wantsEmail = !force && !isNo && emailRequest(reply, shadow);
+    if (wantsEmail) {
+      const made = await makeInfoEmail({ ref, reply, shadow, to: wantsEmail });
+      if (made) {
+        emailTo = wantsEmail;
+        draft = `Thanks ${String(reply.first_name || reply.full_name || '').split(' ')[0]}. Just sent it over to ${emailTo}. Look forward to your thoughts.`;
+      }
+    }
 
     const { db } = require('./db');
     const name = reply.full_name || 'Someone';
     const account = reply.heyreach_account_name || 'LinkedIn';
     const their = String(reply.reply_text || '').trim();
 
-    const { text, reply_markup } = buildCard({ id: ref.id, reply, kind, draft });
+    const { text, reply_markup } = buildCard({ id: ref.id, reply, kind, draft, emailTo });
 
     const msg = await tg('sendMessage', {
       chat_id: CHAT_ID(),
@@ -180,6 +195,7 @@ async function offerReply({ ref, reply, shadow = null, force = false }) {
       heyreach_account_id: reply.heyreach_account_id || null,
       conversation_id: reply.heyreach_conversation_id || null,
       status: 'pending',
+      email_to: emailTo || null,
       tg_message_id: msg.message_id,
       tg_text: text,
       created_at: new Date(),
@@ -205,6 +221,71 @@ async function markCard(approval, label) {
     parse_mode: 'HTML',
     disable_web_page_preview: true,
   }).catch(e => console.warn('[replyPhone] card update failed:', e.message));
+}
+
+// ── Info by email ────────────────────────────────────────────────────────────
+
+const EMAIL_RE = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
+
+/** Their email address when they ask us to send info by email, else ''. */
+function emailRequest(reply, shadow) {
+  const text = String(reply.reply_text || '');
+  const m = text.match(EMAIL_RE);
+  if (!m) return '';
+  const asks = (shadow && shadow.type === 'send_info') || reply.classification === 'send_info'
+    || /\b(e-?mail|send (me |over )?(some |more )?(info|information|details|materials?)|deck|one[- ]pager|overview)\b/i.test(text);
+  return asks ? m[0] : '';
+}
+
+/** Put a draft in Vincent's work Gmail through scripts/gmail_draft.py. Never sends. */
+function createGmailDraft({ to, subject, body }) {
+  return new Promise(resolve => {
+    const { execFile } = require('child_process');
+    const child = execFile('python3', [require('path').join(__dirname, '..', 'scripts', 'gmail_draft.py')], { timeout: 90000 }, (err, stdout) => {
+      let out = null;
+      try { out = JSON.parse(String(stdout).trim()); } catch { /* fall through */ }
+      if (err || !out || !out.ok) console.warn('[replyPhone] Gmail draft failed:', (out && out.error) || (err && err.message));
+      resolve(!!(out && out.ok));
+    });
+    child.stdin.end(JSON.stringify({ to, subject, body }));
+  });
+}
+
+/**
+ * The info email, from Vincent, with two open times (held, like any offer).
+ * Fixed wording from our outreach so nothing gets made up. Referral partners
+ * get the partner version; everyone else gets the client version.
+ */
+async function makeInfoEmail({ ref, reply, shadow, to }) {
+  const cal = require('./calendar');
+  const first = String(reply.first_name || reply.full_name || 'there').split(' ')[0];
+  const sender = String(reply.heyreach_account_name || 'our team').split(' ')[0];
+  const open = await cal.findMeetingSlots({ forReplyId: ref.id }).catch(() => null);
+  const ask = open && open.day
+    ? `Are you free ${open.day} at ${open.time1} or ${open.time2} EST?`
+    : 'What does your week look like?';
+  const partner = shadow && shadow.lane === 'referral';
+  const body = [
+    `Hi ${first},`,
+    '',
+    `Vincent here. I work with ${sender} at Story Group. You asked on LinkedIn for more info, so here it is.`,
+    '',
+    partner
+      ? 'We help founders and execs land earned media in places like NBC, FOX and the Associated Press. We pitch their stories to the reporters and producers who cover their space. Earned, not paid.'
+      : 'We help founders and execs land earned media in places like NBC, FOX and the Associated Press. We build your story, pitch it to the reporters and producers who cover your space, and earn the coverage. No paid placement.',
+    '',
+    partner
+      ? "For partners like you it's simple. You refer a client, we handle the PR, and we pay you a referral fee on every client you send us. Your client gets the spotlight and you look good for making the intro."
+      : 'The best next step is a quick call so we can show you which outlets fit and what a plan would look like.',
+    '',
+    `${partner ? 'Happy to walk you through how the partnership works on a quick call. ' : ''}${ask}`,
+    '',
+    'Vincent',
+  ].join('\n');
+  const ok = await createGmailDraft({ to, subject: 'Story Group info, from our LinkedIn chat', body });
+  if (ok && open && open.day) await cal.holdSlots(open, { replyId: ref.id, name: reply.full_name || '' });
+  if (ok) console.log(`[replyPhone] Info email drafted in Gmail for ${reply.full_name || to}`);
+  return ok;
 }
 
 // ── Snooze: park a reply until a date, then it comes back as a fresh card ──
