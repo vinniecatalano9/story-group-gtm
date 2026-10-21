@@ -165,6 +165,15 @@ async function digestFacts() {
     nutshell.isConfigured() ? safe('Nutshell leads', () => nutshellNewLeads(state.last_lead_id), null) : null,
   ]);
 
+  // LinkedIn replies live in Reply Bot (services/replyApprovals.js). The digest
+  // only lists email replies and gives LinkedIn as one count.
+  const isLinkedIn = b => b.channel === 'heyreach' || b.channel === 'ulinc';
+  const emailBoard = board.filter(b => !isLinkedIn(b));
+  const inReplyBot = await safe('Reply Bot count', async () => {
+    const { db } = require('../services/db');
+    return (await db.collection('reply_approvals').where('status', '==', 'pending').get()).size;
+  }, 0);
+
   // findMetButStalled returns one item per outside person; 4+ from one call = a group meeting.
   const perCall = {};
   for (const s of stalled) perCall[s.ref.path] = (perCall[s.ref.path] || 0) + 1;
@@ -172,8 +181,9 @@ async function digestFacts() {
 
   const facts = {
     kind: 'digest', date: today, weekday: new Date().toLocaleDateString('en-US', { timeZone: CT, weekday: 'long' }),
-    replies_waiting: board.slice(0, 12).map(b => ({ name: b.name, company: clip(b.company, 50), email: b.email || null, channel: b.channel === 'heyreach' ? 'LinkedIn' : 'Email', type: b.classification, hot: b.hot, draft_ready: b.hasDraft, said: clip(b.reply, 160) })),
-    replies_waiting_total: board.length,
+    replies_waiting: emailBoard.slice(0, 12).map(b => ({ name: b.name, company: clip(b.company, 50), email: b.email || null, channel: 'Email', type: b.classification, hot: b.hot, draft_ready: b.hasDraft, said: clip(b.reply, 160) })),
+    replies_waiting_total: emailBoard.length,
+    linkedin_replies_in_reply_bot: inReplyBot,
     // Older than 3 weeks is a dead thread, not a nudge.
     followups_quiet: nudges.filter(n => n.ageDays <= 21).map(n => ({ path: n.ref.path, to: n.d.to, call: clip(n.t.title, 80), call_date: (n.t.date || '').slice(0, 10), followup_subject: clip(n.d.subject, 100), days_since_followup: n.ageDays })),
     met_but_stalled: realStalled.map(s => ({ path: s.ref.path, email: s.email, call: clip(s.title, 80), days_since_call: s.daysAgo, last_contact: s.lastContactWhat, whose_move: s.lastContactWhat === 'we emailed' ? 'theirs' : 'ours', action_items: clip(s.actionItems, 180) || null }))
@@ -208,9 +218,10 @@ function digestText(f) {
   const L = [`☀️ GTM digest, ${f.weekday}`];
   const hot = f.replies_waiting.filter(r => r.hot);
   if (f.replies_waiting_total) {
-    L.push('', `Replies waiting: ${f.replies_waiting_total}${hot.length ? ` (${hot.length} interested)` : ''}`);
-    for (const r of f.replies_waiting.slice(0, 5)) L.push(`• ${r.name}${r.company ? `, ${r.company}` : ''} (${r.channel}, ${r.type})${r.draft_ready ? ', draft ready' : ''}`);
+    L.push('', `Email replies waiting: ${f.replies_waiting_total}${hot.length ? ` (${hot.length} interested)` : ''}`);
+    for (const r of f.replies_waiting.slice(0, 5)) L.push(`• ${r.name}${r.company ? `, ${r.company}` : ''} (${r.type})${r.draft_ready ? ', draft ready' : ''}`);
   }
+  if (f.linkedin_replies_in_reply_bot) L.push(`LinkedIn: ${f.linkedin_replies_in_reply_bot} waiting in Reply Bot`);
   const ours = f.met_but_stalled.filter(s => s.whose_move === 'ours');
   if (f.followups_quiet.length || f.met_but_stalled.length || f.interested_not_booked.length) {
     L.push('', 'Follow-ups');
