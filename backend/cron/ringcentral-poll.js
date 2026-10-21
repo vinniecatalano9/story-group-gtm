@@ -40,6 +40,7 @@ async function matchLeadByPhone(phone) {
  */
 async function pollRingCentral() {
   if (!ringcentral.isConfigured()) return { skipped: 'no RINGCENTRAL_CLIENT_ID / SECRET / JWT' };
+  if (process.env.RINGCENTRAL_POLL_PAUSED === 'true') return { skipped: 'RINGCENTRAL_POLL_PAUSED' };
   if (!process.env.FIREFLIES_API_KEY) return { skipped: 'no FIREFLIES_API_KEY (needed to transcribe)' };
 
   const dateFrom = new Date(Date.now() - LOOKBACK_HOURS() * 36e5).toISOString();
