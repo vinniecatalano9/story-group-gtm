@@ -15,11 +15,13 @@
 // Items show once: the digest stamps its own feed_* markers (separate from
 // the reminders email's markers, so the two never hide items from each other).
 //
-// Vincent's own items only (10/21: "i only care bout my stuff"). Calls count
-// when he was on them, met-but-stalled only when Fireflies gave him a next
-// step, Nutshell only when he's the assignee. Story Group outbound all sends
-// as Aaron (his HeyReach sender, aaron@ in Instantly), so those numbers and
-// replies are the team's: TEAM_OUTBOUND decides whether they show at all.
+// Vincent's own items only (10/21: "i only care bout my stuff"). A prospect
+// who is someone else's lead in Nutshell is out (Andy at Blue Collar is
+// Aaron's). Otherwise calls count when he was on them, met-but-stalled when
+// Fireflies gave him a next step, Nutshell leads and tasks when he's the
+// assignee. LinkedIn outbound sends as Aaron but Vincent works those replies,
+// so it stays; Instantly totals also carry Lydia's journalist pitches, so
+// email outbound stays out (OUTBOUND below).
 
 const axios = require('axios');
 const { db, transcripts } = require('../services/db');
@@ -43,7 +45,12 @@ const isVincent = (email) => VINCENT_EMAILS.includes(String(email || '').toLower
 const VINCENT_NAME = /^(vincent|vinnie)\b/i;
 // Teammates who show up as action item owners in Fireflies.
 const TEAMMATE_NAME = /^(mckenna|aaron|lydia|michelle|annette|sydney|gabriela)\b/i;
-const TEAM_OUTBOUND = false;
+const OUTBOUND = { linkedin: true, email: false };
+const scopeText = (what) => [
+  `Vincent only: ${what}. Prospects who are a teammate's lead in Nutshell are left out.`,
+  OUTBOUND.linkedin ? 'LinkedIn outbound sends as Aaron but is his to work.' : 'LinkedIn outbound (sent as Aaron) is left out on purpose.',
+  OUTBOUND.email ? 'Email numbers are all of Instantly, Lydia\'s journalist pitches included.' : 'Email outbound is left out on purpose (Instantly also carries Lydia\'s journalist pitches).',
+].join(' ');
 const STATE = () => db.collection('feed_state').doc('digest');
 
 const dayCT = (d = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: CT }).format(d);
@@ -139,6 +146,45 @@ async function nutshellNewLeads(lastId) {
   return { maxId, leads, others: full.filter(l => l && l.assignee?.id !== VINCENT_NUTSHELL_ID).length };
 }
 
+// Whose lead a prospect is: the assignee of their open Nutshell leads.
+// 'vincent', 'other', or null (not in Nutshell, or nobody assigned).
+// Nutshell takes ~8s a call, so lookups are cached and run 3 at a time.
+const leadOwners = new Map();
+let leadOwnerFailed = false;
+const pool = { busy: 0, queue: [] };
+function slot(fn) {
+  return new Promise((resolve, reject) => {
+    const run = () => { pool.busy++; fn().then(resolve, reject).finally(() => { pool.busy--; pool.queue.shift()?.(); }); };
+    pool.busy < 3 ? run() : pool.queue.push(run);
+  });
+}
+
+async function lookupOwner(email) {
+  if (!nutshell.isConfigured()) return null;
+  const hit = await slot(() => nutshell.call('searchByEmail', { emailAddressString: email }));
+  const contact = (hit?.contacts || [])[0];
+  if (!contact) return null;
+  const full = await slot(() => nutshell.call('getContact', { contactId: contact.id }));
+  const open = (full?.leads || []).filter(l => l.status === 0).slice(0, 5);
+  const leads = await Promise.all(open.map(l => slot(() => nutshell.call('getLead', { leadId: l.id }))));
+  const ids = leads.map(l => l?.assignee?.id).filter(Boolean);
+  return ids.includes(VINCENT_NUTSHELL_ID) ? 'vincent' : ids.length ? 'other' : null;
+}
+
+function leadOwner(email) {
+  const key = String(email || '').toLowerCase().trim();
+  if (!leadOwners.has(key)) {
+    leadOwners.set(key, lookupOwner(key).catch(e => { leadOwnerFailed = true; console.error(`[feed] Nutshell owner ${key} failed:`, e.message); return null; }));
+  }
+  return leadOwners.get(key);
+}
+
+/** One call or thread can have several outside people: any of his wins, else any teammate's. */
+async function leadOwnerOf(emails) {
+  const all = await Promise.all(emails.map(leadOwner));
+  return all.includes('vincent') ? 'vincent' : all.includes('other') ? 'other' : null;
+}
+
 // ── Calls ────────────────────────────────────────────────────────────────────
 async function todaysCalls() {
   const events = await getTodaysEvents();
@@ -227,7 +273,13 @@ async function callsBetween(start, end) {
   const { groups } = await meetingsBetween(start, end);
   const meetings = [...groups.values()];
   await safe('Fireflies call owners', () => withOwners(meetings.flat()));
-  return meetings.filter(vincentOn).map(copies => {
+  const on = meetings.filter(vincentOn);
+  // Group calls (4+ outside people) aren't one prospect's deal, so no owner lookup.
+  const owner = await Promise.all(on.map(copies => {
+    const ext = externals(copies[0]);
+    return ext.length && ext.length <= 3 ? leadOwnerOf(ext) : null;
+  }));
+  return on.filter((_, i) => owner[i] !== 'other').map(copies => {
     const t = copies[0];
     const ext = externals(t);
     const minutes = Math.max(0, ...copies.map(c => c.duration ? Math.round(c.duration > 300 ? c.duration / 60 : c.duration) : 0));
@@ -241,9 +293,10 @@ async function callsBetween(start, end) {
 // ── Digest ───────────────────────────────────────────────────────────────────
 /**
  * Follow-up items that are Vincent's. Each notetaker's copy of a call has its
- * own action items and its own shown marker, so all copies are read together:
- * he was on the call, no copy was shown yet, and Fireflies gave him a next
- * step (or named no teammate at all).
+ * own action items and its own shown marker, so all copies are read together.
+ * No copy shown yet, then the Nutshell lead owner decides; with no owner in
+ * Nutshell, he was on the call and Fireflies gave him a next step (or named
+ * no teammate at all).
  */
 async function vincentsFollowups(stalled, nudges) {
   const { docs, groups } = await meetingsBetween(daysAgo(45), new Date());
@@ -255,20 +308,25 @@ async function vincentsFollowups(stalled, nudges) {
   const nu = nudges.map(n => ({ n, copies: copiesOf(n.ref, n.t) }));
   const ok = await safe('Fireflies call owners', async () => { await withOwners([...new Set([...st, ...nu].flatMap(x => x.copies))]); return true; }, false);
 
-  const myStalled = st.filter(({ copies }) => !copies.some(c => c.feed_stalled_shown_at) && vincentOn(copies)).map(({ s, copies }) => {
+  const myStalled = (await Promise.all(st.filter(({ copies }) => !copies.some(c => c.feed_stalled_shown_at)).map(async ({ s, copies }) => {
+    const lead = await leadOwner(s.email);
     const owners = actionOwners(copies.map(c => c.action_items).join('\n'));
     const mine = Object.entries(owners).filter(([who]) => VINCENT_NAME.test(who)).flatMap(([, items]) => items);
     const teammate = Object.keys(owners).some(who => TEAMMATE_NAME.test(who));
-    return !mine.length && teammate ? null : { ...s, copies: copies.map(c => c.path), mine };
-  }).filter(Boolean);
+    if (lead === 'other' || (lead !== 'vincent' && (!vincentOn(copies) || (!mine.length && teammate)))) return null;
+    return { ...s, copies: copies.map(c => c.path), mine };
+  }))).filter(Boolean);
 
   const seen = new Set();
-  const myNudges = nu.filter(({ copies }) => {
+  const fresh = nu.filter(({ copies }) => {
     const key = meetingKey(copies[0]);
-    if (seen.has(key) || copies.some(c => c.feed_nudge_shown_at) || !vincentOn(copies)) return false;
+    if (seen.has(key) || copies.some(c => c.feed_nudge_shown_at)) return false;
     seen.add(key);
     return true;
-  }).map(({ n, copies }) => ({ ...n, copies: copies.map(c => c.path) }));
+  });
+  const lead = await Promise.all(fresh.map(({ copies }) => leadOwnerOf(externals(copies[0]))));
+  const myNudges = fresh.filter(({ copies }, i) => lead[i] === 'vincent' || (lead[i] !== 'other' && vincentOn(copies)))
+    .map(({ n, copies }) => ({ ...n, copies: copies.map(c => c.path) }));
 
   return { stalled: myStalled, nudges: myNudges, ok };
 }
@@ -279,16 +337,16 @@ async function digestFacts() {
   const startToday = ctMidnight(today);
   const state = await safe('feed state', async () => (await STATE().get()).data() || {}, {});
 
-  const hr = TEAM_OUTBOUND ? await safe('HeyReach ids', hrIds, null) : null;
+  const hr = OUTBOUND.linkedin ? await safe('HeyReach ids', hrIds, null) : null;
   const [li1, li7, em1, em7, board, nudges, stalled, notBooked, calls, yCalls, tasks, newLeads] = await Promise.all([
     hr ? safe('HeyReach 1d', () => hrStats(hr.accounts.map(a => a.id), hr.campaignIds, daysAgo(1), new Date())) : null,
     hr ? safe('HeyReach 7d', () => hrStats(hr.accounts.map(a => a.id), hr.campaignIds, daysAgo(7), new Date())) : null,
-    TEAM_OUTBOUND ? safe('Instantly 1d', () => instantly(yesterday, yesterday)) : null,
-    TEAM_OUTBOUND ? safe('Instantly 7d', () => instantly(dayCT(daysAgo(7)), yesterday)) : null,
-    TEAM_OUTBOUND ? safe('board', getBoard, []) : [],
+    OUTBOUND.email ? safe('Instantly 1d', () => instantly(yesterday, yesterday)) : null,
+    OUTBOUND.email ? safe('Instantly 7d', () => instantly(dayCT(daysAgo(7)), yesterday)) : null,
+    OUTBOUND.email ? safe('board', getBoard, []) : [],
     safe('nudges', () => findNudgeCandidates({ marker: 'feed_nudge_shown_at' }), []),
     safe('stalled', () => findMetButStalled({ marker: 'feed_stalled_shown_at' }), []),
-    TEAM_OUTBOUND ? safe('not booked', () => findInterestedNotBooked({ marker: 'feed_notbooked_shown_at' }), []) : [],
+    OUTBOUND.linkedin ? safe('not booked', () => findInterestedNotBooked({ marker: 'feed_notbooked_shown_at' }), []) : [],
     safe('today calls', todaysCalls, []),
     safe('yesterday calls', () => callsBetween(new Date(startToday.getTime() - 86400e3), startToday), []),
     nutshell.isConfigured() ? safe('Nutshell tasks', nutshellTasksDue, null) : null,
@@ -310,19 +368,19 @@ async function digestFacts() {
   const realStalled = stalled.filter(s => !isGroupCall(s.title, perCall[s.ref.path]));
   // Older than 3 weeks is a dead thread, not a nudge.
   const mine = await vincentsFollowups(realStalled, nudges.filter(n => n.ageDays <= 21));
+  const replyOwner = await Promise.all(notBooked.map(r => leadOwner(r.email)));
+  const myNotBooked = notBooked.filter((_, i) => replyOwner[i] !== 'other');
 
   const facts = {
     kind: 'digest', date: today, weekday: new Date().toLocaleDateString('en-US', { timeZone: CT, weekday: 'long' }),
-    scope: TEAM_OUTBOUND
-      ? 'Vincent only: his calls, follow-ups he owes, his Nutshell tasks and leads. LinkedIn and email numbers are team outbound (sent as Aaron).'
-      : 'Vincent only: his calls, follow-ups he owes, his Nutshell tasks and leads. Team outbound (LinkedIn and email sent as Aaron) is left out on purpose.',
+    scope: scopeText('his calls, follow-ups he owes, his Nutshell tasks and leads'),
     replies_waiting: emailBoard.slice(0, 12).map(b => ({ name: b.name, company: clip(b.company, 50), email: b.email || null, channel: 'Email', type: b.classification, hot: b.hot, draft_ready: b.hasDraft, said: clip(b.reply, 160) })),
     replies_waiting_total: emailBoard.length,
     linkedin_replies_in_reply_bot: inReplyBot,
     followups_quiet: mine.nudges.map(n => ({ path: n.ref.path, copies: n.copies, to: n.d.to, call: realText(n.t.title, 80) || n.d.to, call_date: (n.t.date || '').slice(0, 10), followup_subject: clip(n.d.subject, 100), days_since_followup: n.ageDays })),
     met_but_stalled: mine.stalled.map(s => ({ path: s.ref.path, copies: s.copies, email: s.email, call: realText(s.title, 80) || s.email, days_since_call: s.daysAgo, last_contact: s.lastContactWhat, whose_move: s.lastContactWhat === 'we emailed' ? 'theirs' : 'ours', his_action_items: clip(s.mine.join('; '), 180) || null }))
       .sort((a, b) => (a.whose_move === 'ours' ? 0 : 1) - (b.whose_move === 'ours' ? 0 : 1) || a.days_since_call - b.days_since_call),
-    interested_not_booked: notBooked.map(r => ({ path: `replies/${r.id}`, email: r.email, name: r.full_name || null, company: clip(r.company_name, 50) || null, replied: r.created_at?.toDate ? dayCT(r.created_at.toDate()) : null })),
+    interested_not_booked: myNotBooked.map(r => ({ path: `replies/${r.id}`, email: r.email, name: r.full_name || null, company: clip(r.company_name, 50) || null, replied: r.created_at?.toDate ? dayCT(r.created_at.toDate()) : null })),
     calls_today: calls,
     calls_yesterday: yCalls,
     nutshell_tasks_due: tasks,
@@ -330,7 +388,8 @@ async function digestFacts() {
     linkedin_24h: li1, linkedin_7d: li7,
     email_yesterday: em1, email_7d: em7,
     sources_down: [
-      TEAM_OUTBOUND && !hr && 'HeyReach', TEAM_OUTBOUND && !em7 && 'Instantly', tasks === null && 'Nutshell tasks', newLeads === null && 'Nutshell leads',
+      OUTBOUND.linkedin && !hr && 'HeyReach', OUTBOUND.email && !em7 && 'Instantly', tasks === null && 'Nutshell tasks', newLeads === null && 'Nutshell leads',
+      leadOwnerFailed && "Nutshell lead owners (a teammate's lead may slip in)",
       !mine.ok && 'Fireflies (who was on each call, so follow-ups use invite lists only)',
     ].filter(Boolean),
     _mark: { last_lead_id: newLeads ? newLeads.maxId : state.last_lead_id || null, group_calls: [...new Set(stalled.filter(s => !realStalled.includes(s)).map(s => s.ref.path))] },
@@ -388,20 +447,20 @@ function digestText(f) {
 // ── Weekly ───────────────────────────────────────────────────────────────────
 async function weeklyFacts() {
   const today = dayCT();
-  // Outbound rates, the reply mix and the insights run are all team outbound (see TEAM_OUTBOUND).
-  const hr = TEAM_OUTBOUND ? await safe('HeyReach ids', hrIds, null) : null;
+  // The reply mix and the insights run come from LinkedIn replies, so they follow OUTBOUND.linkedin.
+  const hr = OUTBOUND.linkedin ? await safe('HeyReach ids', hrIds, null) : null;
   const ids = hr ? hr.accounts.map(a => a.id) : [];
   const [liThis, liPrior, emThis, emPrior, mix, held, upcoming, insights] = await Promise.all([
     hr ? safe('HeyReach this week', () => hrStats(ids, hr.campaignIds, daysAgo(7), new Date())) : null,
     hr ? safe('HeyReach prior week', () => hrStats(ids, hr.campaignIds, daysAgo(14), daysAgo(7))) : null,
-    TEAM_OUTBOUND ? safe('Instantly this week', () => instantly(dayCT(daysAgo(7)), dayCT(daysAgo(1)))) : null,
-    TEAM_OUTBOUND ? safe('Instantly prior week', () => instantly(dayCT(daysAgo(14)), dayCT(daysAgo(8)))) : null,
-    TEAM_OUTBOUND ? safe('reply mix', classMix7d, {}) : {},
+    OUTBOUND.email ? safe('Instantly this week', () => instantly(dayCT(daysAgo(7)), dayCT(daysAgo(1)))) : null,
+    OUTBOUND.email ? safe('Instantly prior week', () => instantly(dayCT(daysAgo(14)), dayCT(daysAgo(8)))) : null,
+    OUTBOUND.linkedin ? safe('reply mix', classMix7d, {}) : {},
     safe('calls held', () => callsBetween(daysAgo(7), new Date()), []),
     safe('calls booked', async () => (await getEventsWindow({ daysBack: 0, daysAhead: 7 }))
       .filter(e => e.attendees.some(isExternal) && !INTERNAL_TITLES.test(e.title))
       .map(e => ({ when: `${dayCT(new Date(e.start))} ${/T/.test(e.start) ? timeCT(e.start) : ''}`.trim(), title: clip(e.title, 80) })), []),
-    TEAM_OUTBOUND ? safe('insights', async () => {
+    OUTBOUND.linkedin ? safe('insights', async () => {
       const s = await db.collection('insights').orderBy('created_at', 'desc').limit(1).get();
       if (s.empty) return null;
       const d = s.docs[0].data();
@@ -425,9 +484,7 @@ async function weeklyFacts() {
   const heldPeople = new Set(prospectCalls.filter(c => (c.minutes || 0) >= 10).map(c => c.external[0]));
   const facts = {
     kind: 'weekly', date: today, window: `${dayCT(daysAgo(7))} to ${today}`,
-    scope: TEAM_OUTBOUND
-      ? 'Calls are Vincent\'s only. LinkedIn, email, reply mix and insights are team outbound (sent as Aaron).'
-      : 'Vincent only: calls he was on and calls booked on his calendar. Team outbound (LinkedIn and email sent as Aaron) is left out on purpose.',
+    scope: scopeText('calls he was on and calls booked on his calendar'),
     linkedin: { this_week: liThis, prior_week: liPrior, by_sender: senders },
     email: { this_week: emThis, prior_week: emPrior },
     replies_7d: { by_type: mix, positives_and_questions: positives, interested: mix.interested || 0 },
@@ -440,7 +497,7 @@ async function weeklyFacts() {
       note: 'Different people sit in each count, so compare the trend week to week, not as an exact positive to meeting rate.',
     },
     insights_latest: insights && insights.date && (Date.now() - new Date(insights.date).getTime()) < 4 * 86400e3 ? insights : null,
-    sources_down: [TEAM_OUTBOUND && !hr && 'HeyReach', TEAM_OUTBOUND && !emThis && 'Instantly'].filter(Boolean),
+    sources_down: [OUTBOUND.linkedin && !hr && 'HeyReach', OUTBOUND.email && !emThis && 'Instantly', leadOwnerFailed && "Nutshell lead owners (a teammate's lead may slip in)"].filter(Boolean),
   };
   facts.text = weeklyText(facts);
   return facts;
