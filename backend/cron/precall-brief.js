@@ -13,6 +13,8 @@ const FREE_MAIL = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'iclo
 const INTERNAL_TITLES = /l10|leadership|standup|team meeting|one on one|1:1|internal|sameer|web team|invoicing/i;
 const DISCOVERY_TITLES = /discovery|intro|solutions call|strategy call|story ?group &/i;
 
+// McKenna's inbox first; she also books from mckenna@ (same person).
+const MCKENNA = (process.env.MCKENNA_EMAILS || 'mmoonan@storygroup.io,mckenna@storygroup.io').split(',').map(s => s.trim().toLowerCase());
 const RECIPIENTS = () => (process.env.BRIEF_RECIPIENTS || 'vincent@storygroup.io,mmoonan@storygroup.io').split(',').map(s => s.trim());
 // Where the call scorecard lives. Each brief links there with the booking + research pre-filled.
 const SCORECARD_URL = () => process.env.SCORECARD_URL || 'https://story-group-gtm.web.app/call-scorecard/';
@@ -395,11 +397,11 @@ async function runPrecallBrief({ send = true, force = false } = {}) {
   }
 
   const dateStr = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'long', month: 'long', day: 'numeric' });
-  const html = `
+  const renderHtml = (list) => `
 <div style="font-family:Helvetica,Arial,sans-serif;max-width:640px;margin:0 auto;color:#1a1a2e">
   <h2 style="color:#FF2257">Pre-Call Briefs — ${dateStr}</h2>
-  <p style="color:#666">${briefs.length} prospect call${briefs.length > 1 ? 's' : ''} on the Story Group calendar today.</p>
-  ${briefs.map(b => `
+  <p style="color:#666">${list.length} prospect call${list.length > 1 ? 's' : ''} on the Story Group calendar today.</p>
+  ${list.map(b => `
   <div style="border:1px solid #e0e0e8;border-radius:8px;padding:20px;margin:16px 0">
     <div style="font-size:16px;font-weight:bold">${new Date(b.event.start).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' })} ET — ${b.event.title}</div>
     <div style="color:#666;font-size:13px;margin:4px 0 12px">${b.prospect.name ? b.prospect.name + ' · ' : ''}${b.prospect.email} · <span style="color:${b.callType.startsWith('solutions') ? '#FF743F' : '#FF2257'};font-weight:bold">${b.callType.toUpperCase()}</span></div>
@@ -407,6 +409,7 @@ async function runPrecallBrief({ send = true, force = false } = {}) {
     <pre style="white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.5;margin:0">${b.brief.replace(/</g, '&lt;')}</pre>
   </div>`).join('')}
 </div>`;
+  const html = renderHtml(briefs);
 
   const result = { calls: briefs.length, sent: false, telegram: 0, briefs: briefs.map(b => ({ title: b.event.title, to: b.prospect.email })) };
   const note = apifyCapped ? 'Web research partly skipped: Apify monthly cap hit (resets on the 19th).' : null;
@@ -429,20 +432,25 @@ async function runPrecallBrief({ send = true, force = false } = {}) {
       }
       if (result.telegram) telegram.noteForWorkBot(`backend sent ${result.telegram} pre-call brief(s) to Vincent on Telegram as you: ${briefs.filter(b => delivered.has(b.event.id)).map(b => b.event.title).join('; ')}. Copies in ~/gtm-feed/precall/. Nothing pending.`);
     }
-    if (process.env.PRECALL_EMAIL !== 'off') {
+    // Email (Vincent 10/20): Telegram is his copy. McKenna gets the email only for calls
+    // she's on the invite for. PRECALL_EMAIL=all restores the old everyone-every-call email.
+    const emailAll = process.env.PRECALL_EMAIL === 'all';
+    const forMcKenna = briefs.filter(b => b.event.attendees.some(a => MCKENNA.includes(a.email)));
+    const toEmail = emailAll ? briefs : forMcKenna;
+    if (process.env.PRECALL_EMAIL !== 'off' && toEmail.length) {
       if (!isConfigured()) {
         console.warn('[precall-brief] SMTP not configured — brief not emailed');
         result.error = 'SMTP_USER/SMTP_PASS not set';
       } else {
         await sendMail({
-          to: RECIPIENTS(),
+          to: emailAll ? RECIPIENTS() : [MCKENNA[0]],
           subject: skipped
-            ? `Pre-Call Brief — newly booked: ${briefs.length} call${briefs.length > 1 ? 's' : ''} (${dateStr})`
-            : `Pre-Call Briefs: ${briefs.length} call${briefs.length > 1 ? 's' : ''} today (${dateStr})`,
-          html,
+            ? `Pre-Call Brief — newly booked: ${toEmail.length} call${toEmail.length > 1 ? 's' : ''} (${dateStr})`
+            : `Pre-Call Briefs: ${toEmail.length} call${toEmail.length > 1 ? 's' : ''} today (${dateStr})`,
+          html: renderHtml(toEmail),
         });
         result.sent = true;
-        briefs.forEach(b => delivered.add(b.event.id));
+        toEmail.forEach(b => delivered.add(b.event.id));
       }
     }
     if (delivered.size) await recordBriefed([...delivered]);
