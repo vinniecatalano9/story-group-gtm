@@ -92,6 +92,7 @@ async function getBoard() {
         id: doc.id,
         name: d.full_name || d.lead_name || d.email || 'Unknown',
         company: d.company_name || '',
+        email: d.email || null,
         channel: d.source || '',
         classification: d.classification,
         hot: d.classification === 'interested' || d.auto_tag_interested === true,
@@ -186,11 +187,15 @@ async function runBrief({ send = true } = {}) {
   lines.push(`\n*✅ Do today:*\n${todo.map((t, i) => `${i + 1}. ${t}`).join('\n')}`);
 
   const text = lines.join('\n');
-  if (send) {
+  // Vincent reads the Telegram digest (cron/feed.js) instead of Slack.
+  // BRIEF_SLACK=off keeps this run (and its log line) but skips the post.
+  if (send && process.env.BRIEF_SLACK === 'off') {
+    console.log(`[brief] Built morning brief (${board.length} board items); Slack post off, Telegram digest covers it`);
+  } else if (send) {
     await slack.notify(text);
     console.log(`[brief] Sent morning brief (${board.length} board items)`);
   }
   return { text, boardCount: board.length, li, email, mix };
 }
 
-module.exports = { runBrief, gatherData };
+module.exports = { runBrief, gatherData, getBoard, classMix7d, WINNABLE };

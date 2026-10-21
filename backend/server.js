@@ -831,7 +831,9 @@ cron.schedule('0 8 * * *', async () => {
   console.log('[cron] Running GTM reminders...');
   try {
     const { runReminders } = require('./cron/reminders');
-    await runReminders({ send: true });
+    // REMINDERS_EMAIL=off: the Telegram digest (cron/feed.js) carries these instead.
+    if (process.env.REMINDERS_EMAIL === 'off') console.log('[reminders] Email off; Telegram digest covers it');
+    else await runReminders({ send: true });
   } catch (e) {
     console.error('[cron] Reminders error:', e.message);
   }

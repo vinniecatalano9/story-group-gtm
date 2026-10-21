@@ -6,6 +6,7 @@ const { claudePrompt } = require('../services/claude');
 const { sendMail, isConfigured } = require('../services/mailer');
 const { transcripts, db } = require('../services/db');
 const fireflies = require('../services/fireflies');
+const telegram = require('../services/telegram');
 
 const TEAM_DOMAINS = ['storygroup.io', 'winningrepublicans.com', 'fireflies.ai', 'group.calendar.google.com', 'resource.calendar.google.com'];
 const FREE_MAIL = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com', 'me.com', 'aol.com', 'proton.me', 'protonmail.com', 'live.com', 'msn.com', 'mac.com'];
@@ -68,6 +69,42 @@ function loadCaseStudies() {
   }
 }
 
+// Apify is one shared $39/month account (Vincent's research skills use it too).
+// Past the cap every run returns 403 "Monthly usage hard limit exceeded" until
+// the cycle resets on the 19th, and briefs came back with no research at all.
+// Now: the company site comes from a plain fetch first (free), Apify only fills
+// gaps, the first cap 403 turns Apify off for the rest of the run, and the
+// brief says research was skipped instead of looking empty.
+let apifyCapped = false;
+async function viaApify(fn, ...args) {
+  if (apifyCapped) throw new Error('skipped, Apify monthly cap hit earlier in this run');
+  try {
+    return await fn(...args);
+  } catch (e) {
+    if (/\(403\)|hard limit/i.test(e.message)) apifyCapped = true;
+    throw e;
+  }
+}
+
+/** Free first pass at a company site: homepage + about page, tags stripped. */
+async function fetchSiteText(domain) {
+  const texts = [];
+  for (const url of [`https://${domain}`, `https://${domain}/about`, `https://${domain}/about-us`]) {
+    try {
+      const r = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(15000), headers: { 'User-Agent': 'Mozilla/5.0 (compatible; StoryGroupBrief/1.0)' } });
+      if (!r.ok || !/html/i.test(r.headers.get('content-type') || '')) continue;
+      const text = (await r.text())
+        .replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<noscript[\s\S]*?<\/noscript>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&#39;|&rsquo;/g, "'").replace(/&quot;/g, '"')
+        .replace(/\s+/g, ' ').trim();
+      if (text.length > 200 && !texts.includes(text.slice(0, 4000))) texts.push(text.slice(0, 4000));
+      if (texts.join(' ').length > 6000) break;
+    } catch { /* try the next page */ }
+  }
+  return texts.join('\n\n').substring(0, 8000) || null;
+}
+
 function prospectsOf(event) {
   return event.attendees.filter(a => {
     const domain = a.email.split('@')[1];
@@ -86,12 +123,15 @@ async function research(prospect, event) {
   const out = { domain: hasCompanySite ? domain : null, company, website: null, news: null, person: null, newsTitles: [], personTitles: [], linkedin: null };
 
   if (hasCompanySite) {
-    try { out.website = await scrapeWebsite(domain); }
-    catch (e) { console.warn(`[precall-brief] Site scrape failed for ${domain}:`, e.message); }
+    out.website = await fetchSiteText(domain);
+    if (!out.website || out.website.length < 500) {
+      try { out.website = (await viaApify(scrapeWebsite, domain)) || out.website; }
+      catch (e) { console.warn(`[precall-brief] Site scrape failed for ${domain}:`, e.message); }
+    }
   }
   if (company) {
     try {
-      const pages = await searchNews(company);
+      const pages = await viaApify(searchNews, company);
       const items = pages.flatMap(p => p.organicResults || []);
       out.news = items.map(n => `${n.title || ''}: ${n.description || n.snippet || ''}`).join('\n').substring(0, 3000) || null;
       out.newsTitles = items.map(n => n.title).filter(Boolean).slice(0, 3);
@@ -99,7 +139,7 @@ async function research(prospect, event) {
   }
   try {
     const q = prospect.name ? `"${prospect.name}" ${company || domain}` : `"${prospect.email}"`;
-    const pages = await searchGoogle(q);
+    const pages = await viaApify(searchGoogle, q);
     const items = pages.flatMap(p => p.organicResults || []);
     out.person = items.map(n => `${n.title || ''}: ${n.description || n.snippet || ''}`).join('\n').substring(0, 2000) || null;
     out.personTitles = items.map(n => n.title).filter(Boolean).slice(0, 2);
@@ -214,7 +254,7 @@ The one library case that matches, with exact numbers, framed for the close ("th
 WATCH-OUTS
 1-2 open questions from Call 1 that could derail the close if unaddressed.
 
-Keep it under 400 words. Use their exact words wherever possible.`;
+Keep it under 400 words. Use their exact words wherever possible. No em dashes or en dashes.`;
 }
 
 function briefPrompt(event, prospect, r, caseLibrary) {
@@ -259,10 +299,37 @@ The 2-3 objections THIS prospect will most likely raise given their industry/sta
 CASE STUDY TO OPEN WITH
 The one case from the library that matches, with its exact numbers, and one sentence on how to frame it for this prospect.
 
-Keep the whole brief under 350 words. Be specific — use their words from the website/news, never generic filler.`;
+Keep the whole brief under 350 words. Be specific — use their words from the website/news, never generic filler. No em dashes or en dashes.`;
+}
+
+/** One Telegram message per call (HTML mode: only the header and link are markup). */
+function telegramText(b, note, withLink = true) {
+  const t = (tz) => new Date(b.event.start).toLocaleTimeString('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit' });
+  const esc = withLink ? telegram.escapeHtml : (x) => x;
+  const who = `${b.prospect.name ? b.prospect.name + ' · ' : ''}${b.prospect.email} · ${b.callType.toUpperCase()}`;
+  const head = `📋 Pre-call brief: ${t('America/Chicago')} CT (${t('America/New_York')} ET) · ${b.event.title}`;
+  const lines = [withLink ? `<b>${esc(head)}</b>` : head, esc(who)];
+  if (note) lines.push(`⚠️ ${esc(note)}`);
+  lines.push('', esc(b.brief));
+  // A link too long for one message would split the HTML; skip it then.
+  if (withLink && b.link && b.link.length < 3000) lines.push('', `<a href="${esc(b.link)}">Open the pre-filled scorecard</a>`);
+  return lines.join('\n');
+}
+
+async function sendBriefTelegram(b, note) {
+  // Before 7am CT, arrive silently.
+  const silent = Number(new Date().toLocaleString('en-US', { timeZone: 'America/Chicago', hour: 'numeric', hour12: false })) < 7;
+  try {
+    await telegram.sendTelegram(telegramText(b, note, true), { html: true, silent });
+  } catch (e) {
+    // Most likely the scorecard link was too long for one message. Send it plain, no link.
+    console.warn(`[precall-brief] Telegram HTML send failed for "${b.event.title}" (${e.message}); retrying plain`);
+    await telegram.sendTelegram(telegramText(b, note, false), { silent });
+  }
 }
 
 async function runPrecallBrief({ send = true, force = false } = {}) {
+  apifyCapped = false;
   const events = await getTodaysEvents();
   const caseLibrary = loadCaseStudies();
 
@@ -304,7 +371,7 @@ async function runPrecallBrief({ send = true, force = false } = {}) {
         try {
           const company = (event.title.match(/story ?group\s*[&x]\s*(.+?)(?:\s+(?:discovery|intro|solutions|strategy).*)?$/i) || [])[1];
           if (company) {
-            const pages = await searchNews(company);
+            const pages = await viaApify(searchNews, company);
             const items = pages.flatMap(p => p.organicResults || []);
             r.news = items.map(n => `${n.title || ''}: ${n.description || n.snippet || ''}`).join('\n').substring(0, 3000) || null;
             r.newsTitles = items.map(n => n.title).filter(Boolean).slice(0, 3);
@@ -341,24 +408,45 @@ async function runPrecallBrief({ send = true, force = false } = {}) {
   </div>`).join('')}
 </div>`;
 
-  const result = { calls: briefs.length, sent: false, briefs: briefs.map(b => ({ title: b.event.title, to: b.prospect.email })) };
+  const result = { calls: briefs.length, sent: false, telegram: 0, briefs: briefs.map(b => ({ title: b.event.title, to: b.prospect.email })) };
+  const note = apifyCapped ? 'Web research partly skipped: Apify monthly cap hit (resets on the 19th).' : null;
 
   if (send) {
-    if (!isConfigured()) {
-      console.warn('[precall-brief] SMTP not configured — brief generated but not emailed');
-      result.error = 'SMTP_USER/SMTP_PASS not set';
-      result.html = html;
-    } else {
-      await sendMail({
-        to: RECIPIENTS(),
-        subject: skipped
-          ? `Pre-Call Brief — newly booked: ${briefs.length} call${briefs.length > 1 ? 's' : ''} (${dateStr})`
-          : `Pre-Call Briefs: ${briefs.length} call${briefs.length > 1 ? 's' : ''} today (${dateStr})`,
-        html,
-      });
-      result.sent = true;
-      await recordBriefed(briefs.map(b => b.event.id));
+    // Telegram (Work Bot) is Vincent's feed. PRECALL_TELEGRAM=off / PRECALL_EMAIL=off turn either side off.
+    const delivered = new Set();
+    if (process.env.PRECALL_TELEGRAM !== 'off' && telegram.isConfigured()) {
+      const day = dayKey();
+      for (const b of briefs) {
+        try {
+          await sendBriefTelegram(b, note);
+          delivered.add(b.event.id);
+          result.telegram++;
+          const slug = String(b.event.title).toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60);
+          telegram.dropForWorkBot(`precall/${day}-${slug}.md`, `# ${b.event.title}\n${b.event.start}\n${b.prospect.name || ''} <${b.prospect.email}> · ${b.callType}\n\n${b.brief}\n`);
+        } catch (e) {
+          console.error(`[precall-brief] Telegram send failed for "${b.event.title}":`, e.message);
+        }
+      }
+      if (result.telegram) telegram.noteForWorkBot(`backend sent ${result.telegram} pre-call brief(s) to Vincent on Telegram as you: ${briefs.filter(b => delivered.has(b.event.id)).map(b => b.event.title).join('; ')}. Copies in ~/gtm-feed/precall/. Nothing pending.`);
     }
+    if (process.env.PRECALL_EMAIL !== 'off') {
+      if (!isConfigured()) {
+        console.warn('[precall-brief] SMTP not configured — brief not emailed');
+        result.error = 'SMTP_USER/SMTP_PASS not set';
+      } else {
+        await sendMail({
+          to: RECIPIENTS(),
+          subject: skipped
+            ? `Pre-Call Brief — newly booked: ${briefs.length} call${briefs.length > 1 ? 's' : ''} (${dateStr})`
+            : `Pre-Call Briefs: ${briefs.length} call${briefs.length > 1 ? 's' : ''} today (${dateStr})`,
+          html,
+        });
+        result.sent = true;
+        briefs.forEach(b => delivered.add(b.event.id));
+      }
+    }
+    if (delivered.size) await recordBriefed([...delivered]);
+    else result.html = html;
   } else {
     result.html = html;
   }

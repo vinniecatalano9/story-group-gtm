@@ -11,14 +11,14 @@ const RECIPIENTS = () => (process.env.BRIEF_RECIPIENTS || 'vincent@storygroup.io
  * We can't see the prospect's inbox, so this is a REMINDER with a
  * suggested nudge — Vincent decides whether they actually replied.
  */
-async function findNudgeCandidates() {
+async function findNudgeCandidates({ marker = 'nudge_reminded_at' } = {}) {
   const snap = await transcripts.where('followup_draft.status', '==', 'sent').limit(100).get();
   const now = Date.now();
   const due = [];
   for (const doc of snap.docs) {
     const t = doc.data();
     const d = t.followup_draft;
-    if (t.nudge_reminded_at) continue;
+    if (t[marker]) continue;
     const ageDays = (now - new Date(d.sent_at).getTime()) / 86400e3;
     if (ageDays >= NUDGE_AFTER_DAYS) due.push({ ref: doc.ref, t, d, ageDays: Math.floor(ageDays) });
   }
@@ -54,7 +54,7 @@ Subject should thread naturally (e.g. "Re: ${d.subject}").`;
  * 14 days whose email never appears on the calendar (7 days back to 14 ahead)
  * and has no meeting recorded.
  */
-async function findInterestedNotBooked() {
+async function findInterestedNotBooked({ marker = null } = {}) {
   const since = new Date(Date.now() - 14 * 86400e3);
   // Grace period: give them a few days to book before flagging
   const graceCutoff = new Date(Date.now() - 3 * 86400e3);
@@ -69,6 +69,7 @@ async function findInterestedNotBooked() {
     const created = r.created_at?.toDate ? r.created_at.toDate() : new Date(r.created_at);
     if (created < since || created > graceCutoff) continue;
     if (r.had_meeting || r.booked_check_dismissed || !r.email) continue;
+    if (marker && r[marker]) continue;
     const key = r.email.toLowerCase();
     if (!byEmail.has(key)) byEmail.set(key, r);
   }
@@ -93,7 +94,7 @@ const TEAM_DOMAINS = ['storygroup.io', 'winningrepublicans.com', 'fireflies.ai']
  * later call happened and nothing is on the calendar with them. Fires
  * once per transcript (stalled_reminded_at).
  */
-async function findMetButStalled() {
+async function findMetButStalled({ marker = 'stalled_reminded_at' } = {}) {
   const now = Date.now();
   const oldest = new Date(now - 30 * 86400e3).toISOString();
   const newest = new Date(now - 5 * 86400e3).toISOString();
@@ -125,7 +126,7 @@ async function findMetButStalled() {
   const stalled = [];
   const seen = new Set();
   for (const t of all) {
-    if (t.date > newest || t.stalled_reminded_at) continue;
+    if (t.date > newest || t[marker]) continue;
     const prospects = (t.participants || []).map(x => x.toLowerCase().trim())
       .filter(p => p.includes('@') && !TEAM_DOMAINS.includes(p.split('@')[1]) && !p.includes('vincent') && !p.includes('vinnie'));
     for (const p of prospects) {
@@ -245,4 +246,6 @@ async function runReminders({ send = true } = {}) {
   return result;
 }
 
-module.exports = { runReminders };
+// The find* helpers also feed the Telegram digest (cron/feed.js), which passes
+// its own marker fields so it and this email never hide items from each other.
+module.exports = { runReminders, findNudgeCandidates, findInterestedNotBooked, findMetButStalled, NUDGE_AFTER_DAYS };
