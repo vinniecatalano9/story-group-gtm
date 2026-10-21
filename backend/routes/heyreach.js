@@ -3,7 +3,7 @@ const { classifyReply } = require('../services/replyClassifier');
 const { evaluateReply, fetchConversation } = require('../services/autoReply');
 const { offerReply } = require('../services/replyApprovals');
 const { threadFacts, config: autoReplyConfig } = require('../lib/autoReplyPolicy');
-const { findMeetingSlots, peopleFromNote } = require('../services/calendar');
+const { findMeetingSlots, peopleFromNote, holdSlots, releaseHolds, draftOffersSlots } = require('../services/calendar');
 const axios = require('axios');
 const router = express.Router();
 
@@ -354,7 +354,7 @@ router.post('/redraft', express.json(), async (req, res) => {
     // (or Aaron) adds their calendar and only shared free times are offered.
     // A calendar we can't read is said out loud, never guessed.
     const people = peopleFromNote(feedback);
-    const open = await findMeetingSlots({ people }).catch(e => ({ day: null, unreadable: [], error: e.message }));
+    const open = await findMeetingSlots({ people, forReplyId: reply_id }).catch(e => ({ day: null, unreadable: [], error: e.message }));
     const cap = p => p.charAt(0).toUpperCase() + p.slice(1);
     const missing = (open.unreadable || []).map(u => cap(u.person));
     let calendarNote = '';
@@ -394,6 +394,9 @@ router.post('/redraft', express.json(), async (req, res) => {
       previous_draft: d.draft_response || '',
     };
     await ref.update(update);
+    // Offered times are held so no other prospect gets them; a rewrite without times frees them.
+    if (draftOffersSlots(update.draft_response, open)) await holdSlots(open, { replyId: reply_id, name: d.full_name || '' });
+    else await releaseHolds(reply_id);
     console.log(`[heyreach redraft] ${d.full_name || reply_id}: "${String(feedback).slice(0, 80)}"`);
     res.json({ ok: true, ...update, reclassified_at: undefined });
   } catch (e) {
@@ -689,7 +692,7 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
         // partner or not) and offers real times from Vincent's calendar.
         const convo = await fetchConversation({ conversationId: replyDoc.heyreach_conversation_id, name: fullName, accountId });
         const lane = convo ? threadFacts({ messages: convo.messages || [], accountId }).lane : '';
-        const open = await findMeetingSlots().catch(e => { console.warn('[heyreach webhook] slots:', e.message); return null; });
+        const open = await findMeetingSlots({ forReplyId: ref.id }).catch(e => { console.warn('[heyreach webhook] slots:', e.message); return null; });
         const draftSlots = toDraftSlots(open);
         const cls = await classifyReply({
           channel: 'linkedin',
@@ -744,6 +747,7 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
           update.subsequence = '';
         }
         await ref.update(update);
+        if (!update.handled && draftOffersSlots(update.draft_response, open)) await holdSlots(open, { replyId: ref.id, name: fullName || '' });
         console.log(`[heyreach webhook] Classified ${ref.id} as ${cls.classification}${update.handled ? ' (auto-closed)' : ''}`);
         // Shadow auto-reply: records what it would have done. Never sends.
         let shadow = null;

@@ -279,11 +279,65 @@ function etBusinessDays(now, startInDays, count) {
   return out;
 }
 
+// ── Slot holds ───────────────────────────────────────────────────────────────
+// A time offered to one prospect is never offered to another (Vincent,
+// 2026-10-20). Each offer writes two holds to Firestore slot_holds; the finder
+// treats them as busy. A hold lapses on its own once the slot has passed.
+
+async function activeHolds(exceptReplyId) {
+  try {
+    const { db } = require('./db');
+    const snap = await db.collection('slot_holds').where('end', '>', new Date()).get();
+    return snap.docs.map(d => d.data())
+      .filter(h => !exceptReplyId || h.reply_id !== exceptReplyId)
+      .map(h => ({ start: h.start.toDate ? h.start.toDate() : new Date(h.start), end: h.end.toDate ? h.end.toDate() : new Date(h.end) }));
+  } catch (e) {
+    console.warn('[calendar] slot holds unreadable:', e.message);
+    return [];
+  }
+}
+
+/** Drop every hold for one reply (skipped, or re-offered with new times). */
+async function releaseHolds(replyId) {
+  if (!replyId) return 0;
+  try {
+    const { db } = require('./db');
+    const snap = await db.collection('slot_holds').where('reply_id', '==', replyId).get();
+    await Promise.all(snap.docs.map(d => d.ref.delete()));
+    return snap.size;
+  } catch (e) {
+    console.warn('[calendar] release holds failed:', e.message);
+    return 0;
+  }
+}
+
+/**
+ * Hold the two offered times for this reply, replacing any older hold for it.
+ * Only call when the draft actually offers them (draftOffersSlots).
+ */
+async function holdSlots(open, { replyId, name = '' } = {}) {
+  if (!open || !open.starts || !replyId) return;
+  await releaseHolds(replyId);
+  const { db } = require('./db');
+  await Promise.all(open.starts.map(iso => db.collection('slot_holds').add({
+    reply_id: replyId,
+    name,
+    label: open.day,
+    start: new Date(iso),
+    end: new Date(new Date(iso).getTime() + MEETING_MINUTES * 60000),
+    created_at: new Date(),
+  }))).catch(e => console.warn('[calendar] hold failed:', e.message));
+}
+
+const draftOffersSlots = (draft, open) =>
+  !!(open && open.day && draft && (draft.includes(open.time1) || draft.includes(open.time2)));
+
 /**
  * @param {string[]} people  'vincent' (default), plus 'mckenna' or 'aaron' when he asks.
- * @returns {{day, time1, time2, people, unreadable}} day is null when nothing fits.
+ * @param {string} forReplyId  the reply being drafted; its own holds don't block it.
+ * @returns {{day, time1, time2, starts, people, unreadable}} day is null when nothing fits.
  */
-async function findMeetingSlots({ people = ['vincent'], startInDays = 2, searchDays = 5, now = new Date() } = {}) {
+async function findMeetingSlots({ people = ['vincent'], startInDays = 2, searchDays = 5, now = new Date(), forReplyId = null } = {}) {
   const ids = PEOPLE();
   const unreadable = [];
   const readable = [];
@@ -317,6 +371,7 @@ async function findMeetingSlots({ people = ['vincent'], startInDays = 2, searchD
     for (const b of cal.busy || []) busy.push({ start: new Date(b.start), end: new Date(b.end) });
   }
   if (!checked.length) return { day: null, time1: null, time2: null, people: [], unreadable };
+  busy.push(...await activeHolds(forReplyId));
 
   const free = (day, [h, min]) => {
     const start = etInstant(day.y, day.m, day.d, h, min);
@@ -331,7 +386,12 @@ async function findMeetingSlots({ people = ['vincent'], startInDays = 2, searchD
       // Day name plus the date ("Thursday, October 22"): Vincent wants every
       // offered day pinned to a date, never a bare weekday.
       const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-      return { day: `${dayNames[day.dow]}, ${monthNames[day.m - 1]} ${day.d}`, time1: fmtTime(...am), time2: fmtTime(...pm), people: checked, unreadable };
+      return {
+        day: `${dayNames[day.dow]}, ${monthNames[day.m - 1]} ${day.d}`,
+        time1: fmtTime(...am), time2: fmtTime(...pm),
+        starts: [etInstant(day.y, day.m, day.d, ...am).toISOString(), etInstant(day.y, day.m, day.d, ...pm).toISOString()],
+        people: checked, unreadable,
+      };
     }
   }
   return { day: null, time1: null, time2: null, people: checked, unreadable };
@@ -345,4 +405,4 @@ function peopleFromNote(note) {
   return people;
 }
 
-module.exports = { getAvailableSlots, getTodaysEvents, getEventsWindow, findMeetingSlots, peopleFromNote };
+module.exports = { getAvailableSlots, getTodaysEvents, getEventsWindow, findMeetingSlots, peopleFromNote, holdSlots, releaseHolds, draftOffersSlots };

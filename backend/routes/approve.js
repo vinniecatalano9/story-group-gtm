@@ -12,6 +12,7 @@ const axios = require('axios');
 const router = express.Router();
 const { verifyInitData, markCard, cleanDraft, isOn } = require('../services/replyApprovals');
 const { fetchConversation } = require('../services/autoReply');
+const { releaseHolds } = require('../services/calendar');
 
 const LOCAL = () => `http://127.0.0.1:${process.env.PORT || 3001}`;
 
@@ -149,6 +150,7 @@ router.post('/:id/skip', express.json(), auth, async (req, res) => {
     if (!a) return res.status(404).json({ error: 'Reply not found.' });
     if (a.status !== 'pending') return res.status(409).json({ error: `Already ${a.status}.` });
     await ref.update({ status: 'skipped', skipped_at: new Date() });
+    await releaseHolds(a.reply_id); // times offered in a skipped draft go back in the pool
     await markCard(a, '⏭ Skipped. Nothing sent.');
     res.json({ ok: true });
   } catch (e) {
