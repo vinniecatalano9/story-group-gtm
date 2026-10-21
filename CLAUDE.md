@@ -1,125 +1,17 @@
-# Story Group GTM Engine — Node.js App
+# story-group-gtm
 
-This is the **primary GTM engine** for Story Group. The n8n workflow version (`story-group-gtm-engine/`) is deprecated — all future development happens here.
+The live Story Group GTM system: Express backend (`backend/`) and React dashboard (`frontend/`). The parent folder's `../CLAUDE.md` is the main guide (where it runs, deploy, backend map, CRM, env vars, conventions) and loads with this file. Read it first. This file only adds repo details.
 
-## Workflow
+- The CRM is Nutshell. HubSpot and Coterie are retired: `services/hubspot.js` and `services/coteriehq.js` still get called but do nothing without keys, so swap in Nutshell when you touch that code.
+- GitHub `vinniecatalano9/story-group-gtm`, branch `main`. No tests, no linter.
+- npm scripts break on the colon in the folder path. Call binaries directly (`node --watch server.js`, `./node_modules/.bin/vite`).
 
-- **Repo**: `github.com/vinniecatalano9/story-group-gtm` (branch: `main`)
-- **Frontend deploy**: `story-group-gtm.web.app` (Firebase Hosting, manual `cd frontend && firebase deploy`)
-- **Backend deploy**: `gtm-api.srv1364275.hstgr.cloud` — Hostinger VPS (`root@187.77.19.152`), PM2 process `gtm-engine`, code at `/root/story-group-gtm`
-- **Dev flow**: Make changes locally → commit → `git push origin main` → SSH and `cd /root/story-group-gtm && git pull && pm2 restart all`
+## Data model extras
+- Signal strengths: `hot` (1.5x), `warm` (1.0x), `cold` (0.5x).
+- Reply classifications: `interested`, `not_interested`, `why_reach_out`, `more_info`, `cost_question`, `question_other`, `referral`, `re_engage`, `ooo`, `bounce`, `other`.
+- Response macros: `CALL_TIME`, `WHY_REACH_OUT`, `MORE_INFO`, `COST_QUESTION`, `RE_ENGAGE`, `CASE_STUDY`, `POST_BOOKING`, `NONE`.
 
-## What It Does
-
-Automated lead generation pipeline for Story Group's PR/media services:
-**Ingest → Enrich → Score → Email via Instantly → Handle Replies → Sync to HubSpot**
-
-## Commands
-
-```bash
-# Backend
-cd backend && npm install && npm run dev   # node --watch server.js, port 3001
-
-# Frontend
-cd frontend && npm install && npm run dev  # Vite dev server
-npm run build                               # Production build
-```
-
-No tests. No linter.
-
-## Architecture
-
-### Backend (`backend/`)
-
-**Entry point**: `server.js` — Express on port 3001. Mounts all routes, cron jobs, and dashboard/leads/replies REST endpoints.
-
-**Routes**:
-| Route | File | Purpose |
-|-------|------|---------|
-| `POST /api/ingest` | `routes/ingest.js` | Accept leads (JSON, CSV upload via multer, Apify webhook). Normalize, dedup by email, store in Firestore. |
-| `POST /api/enrich` | `routes/enrich.js` | Pull `ingested` leads (batch of 10), scrape website (Apify), search news, Claude signal detection, waterfall email, score, push to Instantly, sync to HubSpot. Main pipeline route. |
-| `POST /api/reply` | `routes/replies.js` | Instantly reply webhook. Claude classifies reply, routes by type (interested→notify, not_interested/bounce→remove from Instantly, etc.), syncs HubSpot, notifies Slack. |
-| `POST /api/scraper` | `routes/scraper.js` | Apify scraper management. |
-| `GET /api/dashboard` | `server.js` | Pipeline stats for frontend. |
-| `GET /api/leads` | `server.js` | Paginated lead list (filter by status/tier). |
-| `GET /api/replies` | `server.js` | Paginated reply list (filter by classification). |
-| `POST /api/trigger/cleanup` | `server.js` | Manual cleanup trigger. |
-| `POST /api/trigger/dashboard` | `server.js` | Manual dashboard report trigger. |
-| `GET /api/health` | `server.js` | Health check. |
-
-**Services** (`backend/services/`):
-- `db.js` — Firebase Admin + Firestore. Collections: `leads`, `replies`, `logs`. Functions: addLead, updateLead, getLeadByEmail, getLeadsByStatus, addReply, addLog, getLeadStats, getLeadsPage, getRepliesPage.
-- `claude.js` — Shells out to Claude Code CLI (`claude -p`). `claudeJSON()` parses JSON from responses.
-- `instantly.js` — Instantly API v2. Batched campaign uploads (100 at a time), ESG cleanup, 429 retry.
-- `hubspot.js` — HubSpot CRM v3. Creates/updates contacts with `gtm_*` custom properties. Gracefully skips if no API key.
-- `slack.js` — Slack webhook notifications for new replies.
-
-**Libs** (`backend/lib/`):
-- `normalize.js` — `normalizeLead()` maps varied field names to canonical schema. Strips company suffixes, normalizes titles (CEO, CFO, etc.), cleans domains, validates emails.
-- `scoring.js` — `scoreLead()` returns `{ score, tier }`. Signal base scores (0-30) * strength multiplier (0.5-1.5x) + base attributes (email +10, LinkedIn +5, C-suite +15, domain +5). Tiers: priority (60+), standard (30-59), nurture (<30), manual_review (no email).
-- `email-patterns.js` — Waterfall email pattern generation from name + domain.
-
-**Cron** (`backend/cron/`):
-- `cleanup.js` — Weekly stale lead cleanup from Instantly (Sun 11pm EST).
-- `dashboard.js` — Weekly metrics aggregation (Mon 8am EST).
-
-### Frontend (`frontend/`)
-
-React 18 + Vite + Tailwind CSS + React Router. Firebase Hosting.
-
-Three pages:
-- `Dashboard.jsx` — Pipeline funnel + KPI cards + quick action buttons.
-- `Leads.jsx` — Lead table with status/tier filters.
-- `Replies.jsx` — Reply list with classification filters.
-
-Standalone tools in `frontend/public/` (plain HTML, no React, copied into the build as-is):
-- `call-scorecard/` — internal live-call panel for discovery and pitch calls. Readiness scorecard (placeholder categories until Michelle's Story Group questions land), v6 beat tracker, rules-based package suggestion from the 9/18/26 packages, case studies that pop up on what the rep clicks, and instant search over objections / Aaron's answers / packages / cases. No AI on the call, localStorage only. Prefill: each pre-call brief email (`backend/cron/precall-brief.js`) carries an "Open pre-filled scorecard" link — booking-form answers, ad campaign (read from the booking link's name: PR / crisis / video), and the brief's research ride in the URL fragment (`#prefill=<base64url JSON>`, never sent to a server; base URL from `SCORECARD_URL`). Reps can also paste any invite or form text via "Paste booking info". Its search index and case library are embedded: after PR Mastery, `tier_reference.md`, or `Aaron-Selling-System.md` changes, run `node frontend/scripts/build-call-scorecard-kb.mjs` (call node directly, npm scripts break on the colon in the path).
-
-## Lead Data Model
-
-**Statuses**: `ingested` → `enriching` → `enriched` → `scored` → `emailed` → `replied` → `booked` → `dead` (also `enrichment_failed`, `manual_review`)
-
-**Tiers**: `priority` (60+), `standard` (30-59), `nurture` (<30), `manual_review` (no email)
-
-**Signal types**: `funding_growth`, `competitor_pr`, `leadership_change`, `product_launch`, `negative_press`, `hiring_comms`, `active_ad_spend`, `industry_event`, `content_gap`, `no_signal`
-
-**Signal strengths**: `hot` (1.5x), `warm` (1.0x), `cold` (0.5x)
-
-**Reply classifications**: `interested`, `not_interested`, `why_reach_out`, `more_info`, `cost_question`, `question_other`, `referral`, `re_engage`, `ooo`, `bounce`, `other`
-
-**Response macros**: `CALL_TIME`, `WHY_REACH_OUT`, `MORE_INFO`, `COST_QUESTION`, `RE_ENGAGE`, `CASE_STUDY`, `POST_BOOKING`, `NONE`
-
-## Canonical Lead Schema
-
-```js
-{
-  lead_id, first_name, last_name, email, company_name, company_domain,
-  role_title, linkedin_url, source, campaign_tag, status, score, tier,
-  signal_type, signal_strength, signal_summary, company_description,
-  detected_industry, instantly_campaign_id, hubspot_contact_id,
-  created_at, updated_at
-}
-```
-
-## Environment Variables
-
-```
-PORT=3001
-INSTANTLY_API_KEY, INSTANTLY_CAMPAIGN_PRIORITY, INSTANTLY_CAMPAIGN_STANDARD, INSTANTLY_CAMPAIGN_NURTURE
-APIFY_API_TOKEN
-HUBSPOT_API_KEY
-SLACK_WEBHOOK_URL
-NOTIFICATION_EMAIL
-CALENDLY_LINK
-GOOGLE_APPLICATION_CREDENTIALS (path to Firebase service account JSON)
-FIREBASE_PROJECT_ID
-MAX_LEADS_PER_HOUR=50, MAX_INSTANTLY_BATCH_SIZE=100, MAX_CLEANUP_PER_RUN=500
-```
-
-## Conventions
-
-- Backend: CommonJS (`require`/`module.exports`). Frontend: ESM (`import`/`export`).
-- Env vars read lazily via functions to allow runtime config.
-- External API failures are caught and warned, never thrown — pipeline continues with degraded data.
-- Lead fields use `snake_case` internally; Instantly custom variables use `camelCase`.
-- Intent signals are for scoring only — not used in email body. Vincent handles all email copy in Instantly.
+## Call scorecard (`frontend/public/call-scorecard/`)
+Internal live-call panel for discovery and pitch calls: readiness scorecard, v6 beat tracker, rules-based package suggestion from the 9/18/26 packages, case studies that pop up on what the rep clicks, and instant search over objections, Aaron's answers, packages and cases. No AI on the call, localStorage only.
+- Prefill: each pre-call brief email (`backend/cron/precall-brief.js`) carries an "Open pre-filled scorecard" link. Booking-form answers, the ad campaign (read from the booking link's name: PR, crisis or video) and the brief's research ride in the URL fragment (`#prefill=<base64url JSON>`, never sent to a server; base URL from `SCORECARD_URL`). Reps can also paste invite or form text via "Paste booking info".
+- Its search index and case library are embedded. After PR Mastery, `tier_reference.md` or `Aaron-Selling-System.md` changes, run `node frontend/scripts/build-call-scorecard-kb.mjs`.
