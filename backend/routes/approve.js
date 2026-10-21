@@ -11,7 +11,7 @@ const express = require('express');
 const axios = require('axios');
 const router = express.Router();
 const { verifyInitData, markCard, cleanDraft, isOn } = require('../services/replyApprovals');
-const { fetchConversation } = require('../services/autoReply');
+const { fetchConversation, markSeen } = require('../services/autoReply');
 const { releaseHolds } = require('../services/calendar');
 
 const LOCAL = () => `http://127.0.0.1:${process.env.PORT || 3001}`;
@@ -155,6 +155,7 @@ router.post('/:id/skip', express.json(), auth, async (req, res) => {
     // A new message from them makes a fresh card. "Later" never calls this.
     const { db } = require('../services/db');
     await db.collection('replies').doc(a.reply_id).update({ handled: true, handled_reason: 'skipped_on_phone', handled_at: new Date() }).catch(() => {});
+    await markSeen({ conversationId: a.conversation_id, accountId: a.heyreach_account_id });
     await markCard(a, '⏭ Skipped. Nothing sent.');
     res.json({ ok: true });
   } catch (e) {

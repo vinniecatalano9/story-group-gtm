@@ -175,4 +175,18 @@ async function evaluateReply({ ref, reply, conversation = undefined }) {
   }
 }
 
-module.exports = { evaluateReply, fetchConversation, blockKey, normUrl };
+/** Mark a HeyReach conversation read, so a thread we answered or passed on stops showing as unread. Best effort. */
+async function markSeen({ conversationId, accountId }) {
+  if (!API_KEY() || !conversationId || !accountId) return false;
+  try {
+    await axios.post(`${HEYREACH_BASE}/inbox/SetSeenStatus`,
+      { conversationId, linkedInAccountId: Number(accountId), seen: true },
+      { headers: { 'X-API-KEY': API_KEY(), 'Content-Type': 'application/json' }, timeout: 30000 });
+    return true;
+  } catch (e) {
+    console.warn('[autoReply] markSeen failed:', e.response && e.response.status, e.message);
+    return false;
+  }
+}
+
+module.exports = { evaluateReply, fetchConversation, markSeen, blockKey, normUrl };

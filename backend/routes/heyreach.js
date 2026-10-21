@@ -1,6 +1,6 @@
 const express = require('express');
 const { classifyReply } = require('../services/replyClassifier');
-const { evaluateReply, fetchConversation } = require('../services/autoReply');
+const { evaluateReply, fetchConversation, markSeen } = require('../services/autoReply');
 const { offerReply } = require('../services/replyApprovals');
 const { threadFacts, config: autoReplyConfig } = require('../lib/autoReplyPolicy');
 const { findMeetingSlots, peopleFromNote, holdSlots, releaseHolds, draftOffersSlots } = require('../services/calendar');
@@ -318,6 +318,8 @@ router.post('/reply', express.json({ limit: '1mb' }), async (req, res) => {
       sent_via: 'heyreach',
     });
 
+    // Answered means read in HeyReach too.
+    await markSeen({ conversationId, accountId: linkedInAccountId });
     console.log(`[heyreach reply] Sent ${sentBlocks.length} message(s) to ${d.full_name || conversationId}`);
     res.json({ ok: true, sent: sentBlocks.length });
   } catch (e) {
