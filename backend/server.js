@@ -840,6 +840,16 @@ cron.schedule('0 8 * * *', async () => {
   }
 }, { timezone: 'America/New_York' });
 
+// Snoozed LinkedIn replies: 8am ET daily, any that are due come back to Reply
+// Bot as fresh cards with a new draft (services/replyApprovals.js).
+cron.schedule('0 8 * * *', async () => {
+  try {
+    await require('./services/replyApprovals').reviveDue();
+  } catch (e) {
+    console.error('[cron] Reply snooze error:', e.message);
+  }
+}, { timezone: 'America/New_York' });
+
 // Fireflies poll: every 15 min — webhook safety net. Stores new call
 // transcripts, matches contacts, auto-drafts follow-up emails.
 cron.schedule('*/15 * * * *', async () => {

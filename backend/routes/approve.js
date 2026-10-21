@@ -10,7 +10,7 @@ const path = require('path');
 const express = require('express');
 const axios = require('axios');
 const router = express.Router();
-const { verifyInitData, markCard, cleanDraft, isOn } = require('../services/replyApprovals');
+const { verifyInitData, markCard, cleanDraft, isOn, snoozeReply } = require('../services/replyApprovals');
 const { fetchConversation, markSeen } = require('../services/autoReply');
 const { releaseHolds } = require('../services/calendar');
 
@@ -158,6 +158,21 @@ router.post('/:id/skip', express.json(), auth, async (req, res) => {
     await markSeen({ conversationId: a.conversation_id, accountId: a.heyreach_account_id });
     await markCard(a, '⏭ Skipped. Nothing sent.');
     res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Later: park it and bring it back as a fresh card in N days (8am ET run).
+router.post('/:id/snooze', express.json(), auth, async (req, res) => {
+  try {
+    const days = Math.max(1, Math.min(120, Number((req.body || {}).days) || 7));
+    const { a } = await load(req.params.id);
+    if (!a) return res.status(404).json({ error: 'Reply not found.' });
+    if (a.status !== 'pending') return res.status(409).json({ error: `Already ${a.status}.` });
+    const until = new Date(Date.now() + days * 86400000);
+    await snoozeReply({ replyId: a.reply_id, until, note: 'We said we would get back to them around now. Write a short, warm follow-up that picks up where the thread left off and offers two times.' });
+    res.json({ ok: true, until: until.toISOString() });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

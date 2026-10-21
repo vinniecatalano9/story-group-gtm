@@ -117,19 +117,27 @@ function verifyInitData(initData, maxAgeSec = 24 * 3600) {
  * @param reply   the replies doc data after classification
  * @param shadow  evaluateReply()'s log entry, or null
  */
-async function offerReply({ ref, reply, shadow = null }) {
+async function offerReply({ ref, reply, shadow = null, force = false }) {
   if (!isOn()) return null;
   try {
     const type = shadow && shadow.type;
     const tag = reply.tag || '';
     const cls = reply.classification || '';
-    // Nothing to answer: out of office, bounces, and "remove me".
-    if (tag === 'Out of Office' || /^(ooo|out_of_office|bounce)$/i.test(cls) || type === 'ooo' || type === 'remove_me') return null;
+    const isOoo = tag === 'Out of Office' || /^(ooo|out_of_office)$/i.test(cls) || type === 'ooo';
+    // Out of office: park it and bring it back the day after they return,
+    // with a fresh draft (Vincent, 2026-10-20). No card today.
+    if (!force && isOoo) {
+      const back = parseReturnDate(reply.reply_text) || addDays(new Date(), 7);
+      await snoozeReply({ replyId: ref.id, until: addDays(back, 1), note: 'They were out of office and asked us to reach out once they are back. Follow up now: a short check-in that restates our ask in one line and offers two times.' });
+      return null;
+    }
+    // Nothing to answer: bounces and "remove me".
+    if (!force && (/^bounce$/i.test(cls) || type === 'remove_me')) return null;
 
     // A flat no gets no answer and no card (Vincent, 2026-10-20). A no that
     // leaves the door open ("not now, let's keep in touch") comes through
     // quietly with the close line, one tap.
-    const isNo = reply.handled === true && reply.handled_reason === 'closed_hard_no_or_no_budget';
+    const isNo = !force && reply.handled === true && reply.handled_reason === 'closed_hard_no_or_no_budget';
     if (isNo && type !== 'soft_no') return null;
     const kind = isNo ? 'close_no' : 'draft';
     const draft = isNo ? TEMPLATES.close_no() : cleanDraft(reply.draft_response);
@@ -188,4 +196,74 @@ async function markCard(approval, label) {
   }).catch(e => console.warn('[replyPhone] card update failed:', e.message));
 }
 
-module.exports = { offerReply, verifyInitData, markCard, cleanDraft, isOn, tg, buildCard };
+// ── Snooze: park a reply until a date, then it comes back as a fresh card ──
+
+const addDays = (d, n) => new Date(new Date(d).getTime() + n * 86400000);
+
+/** "out until 11/9", "back on November 9th", "returning Oct 30" -> a Date, or null. */
+function parseReturnDate(text, now = new Date()) {
+  const t = String(text || '');
+  const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+  const year = now.getFullYear();
+  const cands = [];
+  for (const m of t.matchAll(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/g)) {
+    const y = m[3] ? (m[3].length === 2 ? 2000 + +m[3] : +m[3]) : year;
+    cands.push(new Date(y, +m[1] - 1, +m[2], 12));
+  }
+  for (const m of t.matchAll(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?\b/gi)) {
+    cands.push(new Date(year, months.indexOf(m[1].toLowerCase()), +m[2], 12));
+  }
+  // Next year if the date already passed ("back 1/5" in December).
+  const fixed = cands.filter(d => !isNaN(d)).map(d => (d < addDays(now, -1) ? new Date(d.getFullYear() + 1, d.getMonth(), d.getDate(), 12) : d));
+  return fixed.find(d => d > now && d < addDays(now, 150)) || null;
+}
+
+/**
+ * Park a reply until a date. Its card (if any) leaves the chat, offered times
+ * go back in the pool, and it drops off the dashboard's waiting list until then.
+ */
+async function snoozeReply({ replyId, until, note = '' }) {
+  const { db } = require('./db');
+  const ref = db.collection('reply_approvals').doc(replyId);
+  const doc = await ref.get();
+  const a = doc.exists ? doc.data() : null;
+  if (a && a.status === 'pending' && a.tg_message_id) {
+    await tg('deleteMessage', { chat_id: CHAT_ID(), message_id: a.tg_message_id }).catch(() => {});
+  }
+  await ref.set({ reply_id: replyId, status: 'snoozed', snooze_until: new Date(until), revive_note: note, snoozed_at: new Date() }, { merge: true });
+  await require('./calendar').releaseHolds(replyId);
+  await db.collection('replies').doc(replyId).update({ handled: true, handled_reason: 'snoozed', snoozed_until: new Date(until) }).catch(() => {});
+  console.log(`[replyPhone] Snoozed ${replyId} until ${new Date(until).toISOString().slice(0, 10)}`);
+}
+
+/** Bring back every snoozed reply that is due, each with a fresh draft. Run by cron. */
+async function reviveDue() {
+  if (!isOn()) return 0;
+  const { db } = require('./db');
+  const snap = await db.collection('reply_approvals').where('status', '==', 'snoozed').get();
+  const now = Date.now();
+  let n = 0;
+  for (const d of snap.docs) {
+    const a = d.data();
+    const until = a.snooze_until && a.snooze_until.toDate ? a.snooze_until.toDate() : new Date(a.snooze_until);
+    if (!(until.getTime() <= now)) continue;
+    try {
+      const rref = db.collection('replies').doc(a.reply_id);
+      await rref.update({ handled: false, handled_reason: '' });
+      const port = process.env.PORT || 3001;
+      const rd = await axios.post(`http://127.0.0.1:${port}/api/heyreach/redraft`,
+        { reply_id: a.reply_id, feedback: a.revive_note || 'We said we would follow up around now. Write a short, warm check-in that offers two times.' },
+        { timeout: 180000, validateStatus: () => true });
+      const reply = (await rref.get()).data();
+      if (rd.status !== 200) console.warn(`[replyPhone] revive redraft failed for ${a.reply_id}: ${rd.status}`);
+      await offerReply({ ref: rref, reply, force: true });
+      n++;
+    } catch (e) {
+      console.warn(`[replyPhone] revive failed for ${a.reply_id}:`, e.message);
+    }
+  }
+  if (n) console.log(`[replyPhone] Brought back ${n} snoozed repl${n === 1 ? 'y' : 'ies'}`);
+  return n;
+}
+
+module.exports = { snoozeReply, reviveDue, parseReturnDate, offerReply, verifyInitData, markCard, cleanDraft, isOn, tg, buildCard };
