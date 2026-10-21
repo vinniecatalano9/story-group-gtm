@@ -432,10 +432,12 @@ router.get('/docx/:firefliesId', async (req, res) => {
 router.get('/transcripts', async (req, res) => {
   try {
     const { transcripts: tCol } = require('../services/db');
-    const snap = await tCol.where('is_my_call', '==', true).limit(200).get();
+    // No limit before sorting: a bare limit returns an arbitrary 200, which hid new calls
+    const snap = await tCol.where('is_my_call', '==', true).get();
     const myTranscripts = snap.docs
       .map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+      .slice(0, 200);
 
     res.json({ success: true, transcripts: myTranscripts });
   } catch (e) {
