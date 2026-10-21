@@ -1,14 +1,15 @@
 // services/replyApprovals.js — LinkedIn replies to Vincent's phone, sent on a tap.
 //
-// Each new HeyReach reply lands in Work Bot with the draft and one button. The
+// Each new HeyReach reply lands in Reply Bot (@StoryGroupRepliesbot, its own
+// chat so Work Bot stays clear) with the draft and one button. The
 // button opens a small panel inside Telegram (a Mini App, served by
 // routes/approve.js) with Send, Edit and Skip. Nothing goes out unless Vincent
 // taps Send there. No timer, no auto-send.
 //
-// Why a panel and not plain chat buttons: Work Bot's Telegram plugin owns the
-// bot's update stream and drops button taps it doesn't recognize, so a plain
-// callback button would never reach this server. A Mini App button opens a page
-// instead, and the page talks to this backend directly, signed by Telegram.
+// A Mini App button opens a page, and the page talks to this backend directly,
+// signed by Telegram, so no process has to poll the bot for button taps.
+// Once Vincent sends or skips, the card is deleted: the chat only ever shows
+// what is still waiting on him.
 //
 // Any Story Group HeyReach sender account works (Aaron, McKenna, and the rest);
 // the send goes out on whichever account the conversation is on.
@@ -27,8 +28,10 @@ const CHAT_ID = () => process.env.FEED_TELEGRAM_CHAT || '1027800577';
 const PANEL_URL = () => process.env.REPLY_PANEL_URL || 'https://gtm-api.srv1364275.hstgr.cloud/api/approve/panel';
 const isOn = () => String(process.env.REPLY_PHONE || 'off').toLowerCase() === 'on';
 
-// Same read as services/telegram.js: the token stays in the bot's own .env.
+// Reply Bot's token (REPLY_BOT_TOKEN in .env). Without it, fall back to Work
+// Bot's, read the same way services/telegram.js does.
 function token() {
+  if (process.env.REPLY_BOT_TOKEN) return process.env.REPLY_BOT_TOKEN.trim();
   const m = fs.readFileSync(TOKEN_FILE(), 'utf8').match(/^TELEGRAM_BOT_TOKEN=["']?([0-9]+:[A-Za-z0-9_-]+)/m);
   if (!m) throw new Error('Work Bot token not found');
   return m[1];
@@ -137,7 +140,7 @@ async function offerReply({ ref, reply, shadow = null }) {
       tg_text: text,
       created_at: new Date(),
     });
-    noteForWorkBot(`LinkedIn reply from ${name} (${account}) sent to Vincent with a ${kind === 'close_no' ? 'close line' : 'draft'} and Send/Edit/Skip buttons.`);
+    noteForWorkBot(`LinkedIn reply from ${name} (${account}) went to Reply Bot with a ${kind === 'close_no' ? 'close line' : 'draft'} and Send/Edit/Skip.`);
     console.log(`[replyPhone] Card sent for ${name} (${kind})`);
     return msg.message_id;
   } catch (e) {
@@ -146,9 +149,11 @@ async function offerReply({ ref, reply, shadow = null }) {
   }
 }
 
-/** Swap the card's button for the outcome so it can't be tapped twice. */
+/** Delete the card once it's handled; if Telegram won't, show the outcome instead. */
 async function markCard(approval, label) {
   if (!approval.tg_message_id) return;
+  const gone = await tg('deleteMessage', { chat_id: CHAT_ID(), message_id: approval.tg_message_id }).then(() => true).catch(() => false);
+  if (gone) return;
   await tg('editMessageText', {
     chat_id: CHAT_ID(),
     message_id: approval.tg_message_id,
@@ -158,4 +163,4 @@ async function markCard(approval, label) {
   }).catch(e => console.warn('[replyPhone] card update failed:', e.message));
 }
 
-module.exports = { offerReply, verifyInitData, markCard, cleanDraft, isOn };
+module.exports = { offerReply, verifyInitData, markCard, cleanDraft, isOn, tg };
