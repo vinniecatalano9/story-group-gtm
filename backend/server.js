@@ -629,6 +629,35 @@ app.post('/api/trigger/fireflies-poll', async (req, res) => {
   }
 });
 
+// RingCentral poll on demand — send new recorded calls to Fireflies
+app.post('/api/trigger/ringcentral-poll', async (req, res) => {
+  try {
+    const { pollRingCentral } = require('./cron/ringcentral-poll');
+    const r = await pollRingCentral();
+    res.json({ success: true, ...r });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// RingCentral setup check — proves the JWT works and shows recent recorded calls
+app.get('/api/ringcentral/status', async (req, res) => {
+  try {
+    const rc = require('./services/ringcentral');
+    if (!rc.isConfigured()) return res.json({ configured: false, missing: ['RINGCENTRAL_CLIENT_ID', 'RINGCENTRAL_CLIENT_SECRET', 'RINGCENTRAL_JWT'].filter(k => !process.env[k]) });
+    const me = await rc.whoAmI();
+    const calls = await rc.getRecordedCalls(new Date(Date.now() - 7 * 864e5).toISOString());
+    res.json({
+      configured: true,
+      extension: me,
+      recorded_calls_last_7_days: calls.length,
+      latest: calls.slice(0, 5).map(c => ({ start: c.startTime, direction: c.direction, duration: c.duration, from: c.from?.phoneNumber, to: c.to?.phoneNumber })),
+    });
+  } catch (e) {
+    res.status(500).json({ configured: true, error: e.message });
+  }
+});
+
 // Morning GTM Brief — fire to Slack on demand
 app.post('/api/trigger/brief', async (req, res) => {
   try {
@@ -858,6 +887,17 @@ cron.schedule('*/15 * * * *', async () => {
     await pollFireflies();
   } catch (e) {
     console.error('[cron] Fireflies poll error:', e.message);
+  }
+}, { timezone: 'America/Chicago' });
+
+// RingCentral poll: every 10 min — new recorded phone calls go to Fireflies
+// for transcription, then flow through the Fireflies poll above.
+cron.schedule('*/10 * * * *', async () => {
+  try {
+    const { pollRingCentral } = require('./cron/ringcentral-poll');
+    await pollRingCentral();
+  } catch (e) {
+    console.error('[cron] RingCentral poll error:', e.message);
   }
 }, { timezone: 'America/Chicago' });
 

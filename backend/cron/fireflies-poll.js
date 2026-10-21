@@ -6,6 +6,34 @@ const { storeAndMatch, generateDraftForTranscript } = require('../routes/firefli
 // transcripts from getting stale "great talking today" drafts.
 const DRAFT_WINDOW_HOURS = 72;
 
+// CALL_RECAP_EMAIL=<address> emails a recap (summary, action items, draft)
+// for each new RingCentral phone call. CALL_RECAP_ALL=true does it for every call.
+const RECAP_TO = () => process.env.CALL_RECAP_EMAIL;
+const isPhoneCall = t => /^RingCentral call:/.test(t.title || '');
+
+async function sendRecap(id) {
+  const { sendMail, isConfigured } = require('../services/mailer');
+  if (!isConfigured()) return;
+  const t = (await transcripts.doc(id).get()).data() || {};
+  const d = t.followup_draft;
+  const text = [
+    t.title,
+    '',
+    'WHAT HAPPENED',
+    t.overview || '(no summary from Fireflies)',
+    '',
+    'WHAT YOU NEED TO DO',
+    t.action_items || '(no action items)',
+    '',
+    d ? `FOLLOW-UP DRAFT (to ${d.to}, not sent)\nSubject: ${d.subject}\n\n${d.body}` : 'No follow-up draft: the number did not match a lead with an email.',
+    '',
+    `Dashboard: https://story-group-gtm.web.app/transcripts`,
+    t.transcript_url ? `Full transcript: ${t.transcript_url}` : '',
+  ].join('\n');
+  await sendMail({ to: RECAP_TO(), subject: `Call recap: ${(t.title || '').replace(/^RingCentral call:\s*/, '')}`, text, fromName: 'Story Group GTM' });
+  await transcripts.doc(id).set({ recap_sent_at: new Date().toISOString() }, { merge: true });
+}
+
 /**
  * Poll Fireflies for new transcripts (webhook safety net).
  * Stores + matches anything new, then drafts follow-ups for
@@ -44,6 +72,11 @@ async function pollFireflies() {
         if (r.skipped && r.skipped.startsWith('no external')) {
           await transcripts.doc(t.id).set({ followup_skipped: r.skipped }, { merge: true });
         }
+      }
+
+      const recapDone = doc.exists && !!doc.data().recap_sent_at;
+      if (RECAP_TO() && !recapDone && callAgeHours <= DRAFT_WINDOW_HOURS && (isPhoneCall(t) || process.env.CALL_RECAP_ALL === 'true')) {
+        await sendRecap(t.id);
       }
     } catch (e) {
       console.error(`[fireflies-poll] Failed on transcript ${t.id} ("${t.title}"):`, e.message);

@@ -87,4 +87,27 @@ async function getAllTranscripts() {
   return all;
 }
 
-module.exports = { getTranscript, getRecentTranscripts, getAllTranscripts, graphql };
+/**
+ * Hand Fireflies an audio URL to transcribe (used for RingCentral phone calls).
+ * bearerToken is sent as the download auth so the URL itself carries no secret.
+ * The transcript lands in the normal Fireflies list, so the webhook/poll picks it up.
+ */
+async function uploadAudio({ url, title, attendees = [], meetingDate = null, clientReferenceId = null, bearerToken = null }) {
+  const data = await graphql(`
+    mutation UploadAudio($input: AudioUploadInput) {
+      uploadAudio(input: $input) { success title message }
+    }
+  `, {
+    input: {
+      url,
+      title,
+      attendees,
+      ...(meetingDate ? { meeting_date: meetingDate } : {}),
+      ...(clientReferenceId ? { client_reference_id: clientReferenceId } : {}),
+      ...(bearerToken ? { download_auth: { type: 'bearer_token', bearer: { token: bearerToken } } } : {}),
+    },
+  });
+  return data.uploadAudio;
+}
+
+module.exports = { getTranscript, getRecentTranscripts, getAllTranscripts, uploadAudio, graphql };
