@@ -218,6 +218,12 @@ body.light {
 .light .text-white\/20  { color: rgba(var(--ink), 0.45); }
 .light .text-body       { color: rgba(var(--ink), 0.92); }
 .light .text-muted      { color: rgba(var(--ink), 0.58); }
+/* Opacity-modified variants generate their own classes (.text-body\/80 etc.),
+   which the plain overrides above never touch — same trap as the accent
+   colors below. Without these, the ICP-card bullets and board reply text
+   render as near-invisible pale gray on the light theme. */
+.light .text-body\/80   { color: rgba(var(--ink), 0.85); }
+.light .text-muted\/70  { color: rgba(var(--ink), 0.55); }
 
 /* --- Fills and borders ---------------------------------------------------- */
 .light .bg-white\/3,

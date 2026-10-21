@@ -30,7 +30,7 @@ async function sendRecap(id) {
     `Dashboard: https://story-group-gtm.web.app/transcripts`,
     t.transcript_url ? `Full transcript: ${t.transcript_url}` : '',
   ].join('\n');
-  await sendMail({ to: RECAP_TO(), subject: `Call recap: ${(t.title || '').replace(/^RingCentral call:\s*/, '')}`, text, fromName: 'Story Group GTM' });
+  await sendMail({ to: RECAP_TO(), subject: `Call recap: ${(t.title || '').replace(/^RingCentral call:?\s*/, '')}`, text, fromName: 'Story Group GTM' });
   await transcripts.doc(id).set({ recap_sent_at: new Date().toISOString() }, { merge: true });
 }
 
