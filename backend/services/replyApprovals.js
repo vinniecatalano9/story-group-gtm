@@ -127,8 +127,19 @@ async function offerReply({ ref, reply, shadow = null, force = false }) {
     // Out of office: park it and bring it back the day after they return,
     // with a fresh draft (Vincent, 2026-10-20). No card today.
     if (!force && isOoo) {
-      const back = parseReturnDate(reply.reply_text) || addDays(new Date(), 7);
+      const labeled = shadow && shadow.label && shadow.label.ooo_return_date ? new Date(`${shadow.label.ooo_return_date}T12:00:00`) : null;
+      const back = (labeled && labeled > new Date() ? labeled : null) || parseReturnDate(reply.reply_text) || addDays(new Date(), 7);
       await snoozeReply({ replyId: ref.id, until: addDays(back, 1), note: 'They were out of office and asked us to reach out once they are back. Follow up now: a short check-in that restates our ask in one line and offers two times.' });
+      return null;
+    }
+    // Someone cold-pitching us (they started the thread, selling their own
+    // thing): marked read in HeyReach and closed, no card (Vincent, 2026-10-20).
+    // Only threads they started, so a partner who also sells never gets lost.
+    if (!force && type === 'pitching_us' && shadow.lane === 'inbound' && (shadow.label?.confidence ?? 1) >= 0.7) {
+      await require('./autoReply').markSeen({ conversationId: reply.heyreach_conversation_id, accountId: reply.heyreach_account_id });
+      const { db } = require('./db');
+      await db.collection('replies').doc(ref.id).update({ handled: true, handled_reason: 'pitch_auto_read', handled_at: new Date() }).catch(() => {});
+      console.log(`[replyPhone] Pitch from ${reply.full_name || ref.id}: marked read, no card`);
       return null;
     }
     // Nothing to answer: bounces and "remove me".
