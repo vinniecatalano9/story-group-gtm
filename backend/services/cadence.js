@@ -43,7 +43,10 @@ function db() { return require('./db').db; }
 // anything that addresses mail must go through realEmail().
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const realEmail = l => (l && EMAIL_RE.test(String(l.email || '')) ? l.email : null);
-const canEmail = l => !!realEmail(l) && !l.email_bounced;
+const emailDead = l => !realEmail(l) || !!l.email_bounced || !!l.email_bad;
+// Clearout said catch-all / unknown: emails wait for Vincent's OK; texts go on.
+const emailHeld = l => !emailDead(l) && !!l.email_hold && l.email_override !== 'send';
+const canEmail = l => !emailDead(l) && !emailHeld(l);
 const canText = l => !!l.phone && !l.email_only && !l.sms_failed && l.state !== 'opted_out';
 const leadsCol = () => db().collection('ad_leads');
 const approvalsCol = () => db().collection('cadence_approvals');
@@ -153,6 +156,15 @@ async function importLeads(rows) {
       });
       out.added++;
     }
+    // Clearout on import (Vincent, 10/22): never a guess, never twice in 30 days.
+    const now = await getLead(email);
+    const c = now.email_check;
+    if (realEmail(now) && !emailDead(now) && (!c || Date.now() - toDate(c.at) > RECHECK_DAYS * 864e5)) {
+      try { await verifyLeadEmail(email); out.verified = (out.verified || 0) + 1; } catch (e) {
+        await saveLead(email, { email_check_error: e.message });
+        out.verify_failed = (out.verify_failed || 0) + 1;
+      }
+    }
   }
   return out;
 }
@@ -191,7 +203,11 @@ async function startLead(email) {
   if (/@storygroup\.io$/i.test(lead.email)) throw new Error('Story Group test lead: skipped');
   if (['opted_out'].includes(lead.state)) throw new Error('This lead texted STOP');
   if (lead.running) throw new Error('Already in a cadence');
-  if (!canEmail(lead) && !canText(lead)) throw new Error('No working channel: no deliverable email and no textable phone');
+  if (realEmail(lead) && !emailDead(lead) && !lead.email_check) {
+    try { await verifyLeadEmail(lead.email); } catch (e) { await saveLead(lead.email, { email_check_error: e.message }); }
+    Object.assign(lead, await getLead(lead.email));
+  }
+  if (!canEmail(lead) && !canText(lead) && !emailHeld(lead)) throw new Error('No working channel: no deliverable email and no textable phone');
   const last = toDate(lead.email1_sent_at);
   if (last && Date.now() - last.getTime() < RESTART_DAYS * 864e5) throw new Error(`Email 1 already went out ${shortDate(last, lead.tz)}; one first email per lead per ${RESTART_DAYS} days`);
   await saveLead(lead.email, {
@@ -256,10 +272,11 @@ function nextStep(lead) {
   for (const step of steps) {
     if (done[step.id]) continue;
     if (step.channel === 'sms' && !canText(lead)) return { step, skip: lead.sms_failed ? 'texts failed' : 'email only' };
-    if (step.channel === 'email' && !canEmail(lead)) return { step, skip: lead.email_bounced ? 'email bounced' : 'no email' };
+    if (step.channel === 'email' && emailHeld(lead)) continue; // held, not skipped: goes once Vincent says send
+    if (step.channel === 'email' && !canEmail(lead)) return { step, skip: lead.email_bounced ? 'email bounced' : lead.email_bad ? 'email invalid' : 'no email' };
     // Text intro replaces Text 1 when there's no email to refer back to.
     if (step.onlyWithoutEmail && canEmail(lead)) return { step, skip: 'has email' };
-    if (step.skipWithoutEmail && !canEmail(lead)) return { step, skip: lead.email_bounced ? 'email bounced' : 'no email' };
+    if (step.skipWithoutEmail && !canEmail(lead)) return { step, skip: lead.email_bounced ? 'email bounced' : lead.email_bad ? 'email invalid' : emailHeld(lead) ? 'email held' : 'no email' };
     let due;
     if (step.beforeMeetingMinutes) {
       due = new Date(toDate(lead.meeting_at).getTime() - step.beforeMeetingMinutes * 6e4);
@@ -487,6 +504,7 @@ async function queueStep(lead, step, msg) {
     const card = [
       `<b>Ad lead cadence: ${esc(step.label)}</b> to ${esc(fullName(lead))}`,
       `${step.channel === 'email' ? 'Email' : 'Text'} to ${esc(a.to)}${lead.company ? ` (${esc(lead.company)})` : ''}`,
+      step.channel === 'email' && lead.email_check ? `Clearout: ${esc(lead.email_check.status)}${lead.email_check.desc ? ` (${esc(lead.email_check.desc)})` : ''}, ${shortDate(toDate(lead.email_check.at), lead.tz)}${lead.email_override === 'send' ? ', sending anyway per you' : ''}` : '',
       msg.note ? `⚠️ ${esc(msg.note)}` : '',
       a.subject ? `\nSubject: ${esc(a.subject)}` : '',
       `\n${esc(a.text)}`,
@@ -624,19 +642,100 @@ async function approveMany(ids) {
   return { approved: cards.length, sent: Object.values((r && r.results) || {}).filter(x => x.status === 'sent').length };
 }
 
+// ── Email verification (Clearout) ────────────────────────────────────────────
+// Vincent (10/22, after a bounce): no cadence email goes to an address that
+// hasn't passed Clearout. Checked on import and tag; re-checked before a later
+// email only when the last check is over 30 days old. Valid: send. Invalid:
+// like a bounce (texts only). Catch-all / unknown: emails wait for his OK on
+// Telegram, texts go on. Clearout down or out of credits: the email blocks.
+
+const RECHECK_DAYS = 30;
+
+/** Run Clearout for this lead and apply the result. Returns the check, or throws. */
+async function verifyLeadEmail(email) {
+  const lead = await getLead(email);
+  if (!lead || !realEmail(lead)) return null;
+  const check = await require('./clearout').verifyEmail(realEmail(lead));
+  await saveLead(lead.email, { email_check: check, email_check_error: null, sheet_dirty: true });
+  await addTimeline(lead.email, timelineEntry('note', { text: `Clearout: ${check.status}${check.desc ? ` (${check.desc})` : ''}` }));
+  if (check.status === 'invalid') {
+    await markChannelDead(lead.email, 'email', `Clearout: invalid${check.desc ? ` (${check.desc})` : ''}`, { invalid: true });
+  } else if (check.status !== 'valid' && lead.email_override !== 'send') {
+    if (!lead.email_hold) await askEmailDecision(await getLead(lead.email), check);
+  } else if (check.status === 'valid' && lead.email_hold) {
+    await saveLead(lead.email, { email_hold: false });
+  }
+  return check;
+}
+
+/** Catch-all / unknown: hold emails and ask Vincent once. */
+async function askEmailDecision(lead, check) {
+  const token = lead.decision_token || crypto.randomBytes(18).toString('base64url');
+  const patch = { email_hold: true, decision_token: token, sheet_dirty: true };
+  // No email for now: the text intro (no "just sent you an email") can go first.
+  const done = lead.steps_done || {};
+  if (!(done.text1 && done.text1.status === 'sent') && done.text_intro && done.text_intro.status === 'skipped') {
+    patch['steps_done.text_intro'] = require('firebase-admin').firestore.FieldValue.delete();
+  }
+  await saveLead(lead.email, patch);
+  await cancelPending(lead.email, 'email held: Clearout not sure', { channel: 'email' });
+  const url = d => `${PUBLIC_URL()}/api/cadence/email-decision/${encodeURIComponent(lead.email)}?t=${token}&d=${d}`;
+  await ping(`❓ <b>${esc(fullName(lead))}</b> (${esc(lead.email)}): Clearout says <b>${esc(check.status)}</b>${check.desc ? ` (${esc(check.desc)})` : ''}. Emails are on hold; texts keep going. Send emails anyway?`,
+    { reply_markup: { inline_keyboard: [[{ text: 'Send anyway', url: url('send') }, { text: 'No emails', url: url('no') }]] } });
+}
+
+/** Vincent's answer on a held email: 'send' or 'no'. */
+async function setEmailDecision(email, decision) {
+  const lead = await getLead(email);
+  if (!lead) throw new Error('Lead not found');
+  if (decision === 'send') {
+    await saveLead(lead.email, { email_override: 'send', email_hold: false, sheet_dirty: true });
+    await addTimeline(lead.email, timelineEntry('note', { text: 'Vincent: send emails anyway' }));
+    return lead.running ? refreshNext(lead.email) : getLead(lead.email);
+  }
+  await markChannelDead(lead.email, 'email', 'Vincent: no emails to this address', { invalid: true });
+  return getLead(lead.email);
+}
+
+/**
+ * Before any email is queued or sent. Returns { ok } or { stop } (channel dead
+ * or held: don't send) or { block: reason } (couldn't verify: try again later).
+ */
+async function emailGate(email) {
+  let lead = await getLead(email);
+  if (emailDead(lead)) return { stop: 'email dead' };
+  const c = lead.email_check;
+  const age = c && c.at ? Date.now() - toDate(c.at) : Infinity;
+  if (!c || age > RECHECK_DAYS * 864e5) {
+    try {
+      await verifyLeadEmail(lead.email);
+    } catch (e) {
+      await saveLead(lead.email, { email_check_error: e.message });
+      return { block: `Email not verified (${e.credits ? 'Clearout is out of credits' : e.message}), so it won't send` };
+    }
+    lead = await getLead(email);
+  }
+  if (emailDead(lead)) return { stop: 'email invalid' };
+  if (emailHeld(lead)) return { stop: 'email held' };
+  if (!lead.email_check || (lead.email_check.status !== 'valid' && lead.email_override !== 'send')) return { stop: 'email not valid' };
+  return { ok: true };
+}
+
 /**
  * A channel stopped working for this lead (Vincent, 10/22): an email bounced,
  * or a text was undeliverable. That channel is done for good; the other keeps
  * its schedule. With no channel left, the cadence ends.
  */
-async function markChannelDead(email, channel, reason) {
+async function markChannelDead(email, channel, reason, { invalid = false } = {}) {
   const lead = await getLead(email);
   if (!lead) return;
   const isEmail = channel === 'email';
-  if (isEmail ? lead.email_bounced : lead.sms_failed) return;
+  if (isEmail ? (lead.email_bounced || lead.email_bad) : lead.sms_failed) return;
   const { FieldValue } = require('firebase-admin').firestore;
   const patch = isEmail
-    ? { email_bounced: true, email_bounce_reason: String(reason).slice(0, 500), email_bounced_at: new Date(), sheet_dirty: true }
+    ? invalid
+      ? { email_bad: true, email_bad_reason: String(reason).slice(0, 500), email_bad_at: new Date(), email_hold: false, sheet_dirty: true }
+      : { email_bounced: true, email_bounce_reason: String(reason).slice(0, 500), email_bounced_at: new Date(), sheet_dirty: true }
     : { sms_failed: true, sms_fail_reason: String(reason).slice(0, 500), sms_failed_at: new Date(), sheet_dirty: true };
   // Email gone before Text 1: the text intro (no "just sent you an email") takes its place.
   const done = lead.steps_done || {};
@@ -644,18 +743,19 @@ async function markChannelDead(email, channel, reason) {
     patch['steps_done.text_intro'] = FieldValue.delete();
   }
   await saveLead(lead.email, patch);
-  await cancelPending(lead.email, isEmail ? 'email bounced' : 'texts failed', { channel });
-  await addTimeline(lead.email, timelineEntry('note', { text: `${isEmail ? 'Email bounced' : 'Text undeliverable'}: ${String(reason).slice(0, 300)}` }));
+  const what = isEmail ? (invalid ? 'Email invalid' : 'Email bounced') : 'Text undeliverable';
+  await cancelPending(lead.email, isEmail ? (invalid ? 'email invalid' : 'email bounced') : 'texts failed', { channel });
+  await addTimeline(lead.email, timelineEntry('note', { text: `${what}: ${String(reason).slice(0, 300)}` }));
   const fresh = await getLead(lead.email);
-  const left = canEmail(fresh) || canText(fresh);
-  const line = isEmail ? 'Email bounced, texts only' : 'Texts failed, email only';
-  await logToNutshell(fresh, `${today(fresh.tz)} ${isEmail ? 'Email bounced' : 'Text undeliverable'}. ${left ? line : 'No working channel left; cadence ended'}.\n\n${String(reason).slice(0, 500)}`);
+  const left = canEmail(fresh) || canText(fresh) || emailHeld(fresh);
+  const line = isEmail ? `${what}, texts only` : 'Texts failed, email only';
+  await logToNutshell(fresh, `${today(fresh.tz)} ${what}. ${left ? line : 'No working channel left; cadence ended'}.\n\n${String(reason).slice(0, 500)}`);
   if (!left) {
     await saveLead(lead.email, { running: false, state: 'dead', next_step: null, next_due_at: null, next_touch_label: '', sheet_dirty: true });
     await slots.releaseHolds(holdKey(lead.email));
-    await ping(`❌ <b>${esc(fullName(fresh))}</b>: ${isEmail ? 'email bounced' : 'texts undeliverable'} and there's no other way to reach them. Cadence ended.\n${esc(String(reason).slice(0, 300))}`);
+    await ping(`❌ <b>${esc(fullName(fresh))}</b>: ${what.toLowerCase()} and there's no other way to reach them. Cadence ended.\n${esc(String(reason).slice(0, 300))}`);
   } else {
-    await ping(`⚠️ <b>${esc(fullName(fresh))}</b>: ${isEmail ? 'email bounced' : 'text undeliverable'}. ${line}.\n${esc(String(reason).slice(0, 300))}`);
+    await ping(`⚠️ <b>${esc(fullName(fresh))}</b>: ${what.toLowerCase()}. ${line}.\n${esc(String(reason).slice(0, 300))}`);
     if (fresh.running) await refreshNext(lead.email);
   }
 }
@@ -727,6 +827,20 @@ async function dispatch(id) {
   if (a.step === 'text1' && (lead.state === 'replied')) {
     await ref.update({ status: 'cancelled', cancel_reason: 'already replied' });
     return { status: 'cancelled' };
+  }
+
+  if (a.channel === 'email') {
+    const g = await emailGate(lead.email);
+    if (g.block) { await block(lead, g.block); return { status: `waiting: ${g.block}` }; }
+    if (g.stop) {
+      const cur = (await ref.get()).data();
+      if (cur.status === 'approved') {
+        await ref.update({ status: 'cancelled', cancel_reason: g.stop });
+        await markCard(a, `Not sent: ${g.stop}`);
+        await saveLead(lead.email, { pending_approval: null, pending_approved: false });
+      }
+      return { status: 'cancelled', error: g.stop };
+    }
   }
 
   try {
@@ -1050,7 +1164,7 @@ async function syncSheet({ all = false } = {}) {
   if (!leads.length) return 0;
   const n = await require('./adLeadsSheet').writeBack(leads.map(l => ({
     email: realEmail(l), phone: l.phone, touches: touchesSoFar(l),
-    status: l.state === 'dead' ? 'dead' : l.running && l.email_bounced && realEmail(l) ? 'email_bounced' : l.running && l.sms_failed && l.phone ? 'sms_failed' : l.state,
+    status: l.state === 'dead' ? 'dead' : l.running && l.email_bad && realEmail(l) ? 'email_invalid' : l.running && l.email_bounced && realEmail(l) ? 'email_bounced' : l.running && l.sms_failed && l.phone ? 'sms_failed' : l.state,
     last_touch: l.last_touch_label || '',
     next_touch: l.running ? (l.pending_approval ? `${l.next_touch_label || ''} (${l.pending_approved ? 'approved, sending soon' : 'waiting on Vincent'})` : l.next_touch_label || '')
       : l.state === 'done' ? 'Done: no reply' : l.state === 'opted_out' ? 'Texted STOP' : l.manual ? 'Manual (Vincent)' : '',
@@ -1128,7 +1242,12 @@ async function tick() {
           ? "Couldn't check RingCentral for the call. Send only if it really was a no-show."
           : 'No RingCentral call with this number since the start. Send only if it really was a no-show (a Meet or cell call would not show).';
       }
-      const msg = await buildMessage(fresh, n.step);
+      if (n.step.channel === 'email') {
+        const g = await emailGate(fresh.email);
+        if (g.block) { await block(fresh, g.block); out.blocked.push(fresh.email); continue; }
+        if (g.stop) { await refreshNext(fresh.email); continue; }
+      }
+      const msg = await buildMessage(await getLead(fresh.email), n.step);
       if (note) msg.note = note;
       if (msg.blocked) { await block(fresh, msg.blocked); out.blocked.push(fresh.email); continue; }
       const a = await queueStep(fresh, n.step, msg);
@@ -1207,5 +1326,5 @@ async function status() {
 module.exports = {
   MODE, importLeads, updateLead, startLead, setOutcome, markNoShow, listLeads, getLead, refreshNext, nextStep,
   listCopy, saveCopy, approve, skip, dispatch, tick, checkReplies, syncSheet, dryRun, status, inWindow, intoWindow,
-  approvalsCol, queueStep, drainNutshell, touchesSoFar, dispatchApproved, rebuildPending, markChannelDead, realEmail, pendingCards, approveMany, checkBatchToken, refreshBatchCard, cardTimes, ping, fullName, esc, DASHBOARD_URL,
+  approvalsCol, queueStep, drainNutshell, touchesSoFar, dispatchApproved, rebuildPending, markChannelDead, realEmail, verifyLeadEmail, setEmailDecision, emailGate, emailHeld, pendingCards, approveMany, checkBatchToken, refreshBatchCard, cardTimes, ping, fullName, esc, DASHBOARD_URL,
 };

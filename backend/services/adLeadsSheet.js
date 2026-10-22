@@ -32,6 +32,7 @@ const STATUS = () => ({
   stopped: 'Not interested',
   // Channel failures (Vincent, 10/22); added to the J dropdown by ensureStatusOptions().
   email_bounced: 'Email bounced, texts only',
+  email_invalid: 'Email invalid, texts only',
   sms_failed: 'Texts failed, email only',
   dead: 'No working channel',
   ...JSON.parse(process.env.AD_LEADS_STATUS_MAP || '{}'),

@@ -111,7 +111,7 @@ function LeadRow({ lead, api, onChange, setErr }) {
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" onClick={() => setOpen(!open)} className="text-left flex-1 min-w-[220px]">
           <p className="font-semibold text-body">{name} <span className="text-muted text-xs font-normal">{lead.company}</span></p>
-          <p className="text-[11px] text-muted">{lead.text_only ? 'no email · texts only' : lead.email}{lead.email_bounced ? ' (bounced)' : ''}{lead.phone ? ` · ${lead.phone}${lead.sms_failed ? ' (texts failed)' : ''}` : ' · email only'} · {lead.tz?.split('/')[1]?.replace('_', ' ')} · {lead.role}</p>
+          <p className="text-[11px] text-muted">{lead.text_only ? 'no email · texts only' : lead.email}{lead.email_bounced ? ' (bounced)' : lead.email_bad ? ' (invalid)' : ''}{lead.phone ? ` · ${lead.phone}${lead.sms_failed ? ' (texts failed)' : ''}` : ' · email only'} · {lead.tz?.split('/')[1]?.replace('_', ' ')} · {lead.role}</p>
         </button>
         <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${STATE_STYLE[lead.state] || STATE_STYLE.imported}`}>{STATE_LABEL[lead.state] || lead.state}</span>
         <div className="text-[11px] text-muted min-w-[160px]">
@@ -122,6 +122,15 @@ function LeadRow({ lead, api, onChange, setErr }) {
           <Btn kind="primary" disabled={busy} onClick={async () => { if (await call('start', {})) onChange(); }}>Tag: start cadence</Btn>
         )}
       </div>
+      {lead.email_check && <p className={`text-[11px] mt-1 ${lead.email_check.status === 'valid' ? 'text-green-400' : lead.email_check.status === 'invalid' ? 'text-red-400' : 'text-yellow-400'}`}>
+        Clearout: {lead.email_check.status}{lead.email_check.desc ? ` (${lead.email_check.desc})` : ''} · {fmt(lead.email_check.at)}{lead.email_override === 'send' ? ' · sending anyway' : ''}</p>}
+      {!lead.email_check && !lead.text_only && <p className="text-[11px] mt-1 text-yellow-400">Email not verified yet{lead.email_check_error ? `: ${lead.email_check_error}` : ''}</p>}
+      {lead.email_hold && lead.email_override !== 'send' && !lead.email_bad && (
+        <div className="flex items-center gap-2 mt-2 text-xs text-yellow-400">Emails on hold (Clearout not sure). Texts keep going.
+          <Btn disabled={busy} onClick={async () => { if (await call('email-decision', { decision: 'send' })) onChange(); }}>Send emails anyway</Btn>
+          <Btn kind="danger" disabled={busy} onClick={async () => { if (await call('email-decision', { decision: 'no' })) onChange(); }}>No emails</Btn>
+        </div>
+      )}
       {lead.blocked_reason && lead.running && <p className="text-xs text-yellow-400 mt-2">Blocked: {lead.blocked_reason}</p>}
       {lead.hold_reason && <p className="text-xs text-yellow-400 mt-2">On hold: {lead.hold_reason}</p>}
 

@@ -25,6 +25,8 @@ router.post('/import', wrap(async req => {
 
 router.post('/leads/:email/start', wrap(req => cadence.startLead(req.params.email)));
 router.post('/leads/:email/outcome', wrap(req => cadence.setOutcome(req.params.email, req.body.outcome, { meeting_at: req.body.meeting_at })));
+router.post('/leads/:email/verify', wrap(async req => { await cadence.verifyLeadEmail(req.params.email.toLowerCase()); return cadence.getLead(req.params.email); }));
+router.post('/leads/:email/email-decision', wrap(req => cadence.setEmailDecision(req.params.email.toLowerCase(), req.body.decision === 'send' ? 'send' : 'no')));
 router.post('/leads/:email/noshow', wrap(req => cadence.markNoShow(req.params.email.toLowerCase())));
 router.post('/leads/:email/update', wrap(req => cadence.updateLead(req.params.email.toLowerCase(), req.body || {})));
 router.get('/leads/:email/preview', wrap(req => cadence.dryRun(req.params.email, { at: req.query.at, track: req.query.track })));
@@ -133,6 +135,42 @@ router.post('/approve-all', express.urlencoded({ extended: false }), async (req,
   try {
     const r = await cadence.approveMany(String(req.body.ids || '').split(',').filter(Boolean));
     res.send(page(`<h1>Approved ${r.approved}.</h1><p class="muted">${r.sent} sent so far; the rest go out on their gaps and windows. Each card in Telegram updates as it sends.</p>`));
+  } catch (e) {
+    res.status(400).send(page(`<h1>${esc(e.message)}</h1>`));
+  }
+});
+
+// ── Held email: Vincent's answer from Telegram (Send anyway / No emails) ─────
+
+async function decisionLead(req) {
+  const lead = await cadence.getLead(req.params.email).catch(() => null);
+  const t = String(req.query.t || (req.body && req.body.t) || '');
+  if (!lead || !lead.decision_token || t.length !== lead.decision_token.length
+    || !crypto.timingSafeEqual(Buffer.from(t), Buffer.from(lead.decision_token))) return null;
+  return lead;
+}
+
+router.get('/email-decision/:email', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const lead = await decisionLead(req);
+  if (!lead) return res.status(404).send(page('<h1>Link not valid</h1>'));
+  const d = req.query.d === 'send' ? 'send' : 'no';
+  const c = lead.email_check || {};
+  res.send(page(`
+<h1>${d === 'send' ? 'Send emails anyway' : 'No emails'} to ${esc([lead.first_name, lead.last_name].filter(Boolean).join(' '))}?</h1>
+<div class="muted">${esc(lead.email)} · Clearout: ${esc(c.status || 'not checked')}${c.desc ? ` (${esc(c.desc)})` : ''}</div>
+<p class="muted">${d === 'send' ? 'Their email steps go out on schedule, each still waiting for your OK on its own card.' : 'No email ever goes to this address. Texts keep going.'}</p>
+<form method="post"><input type="hidden" name="t" value="${esc(req.query.t)}"><input type="hidden" name="d" value="${d}">
+<button class="send">${d === 'send' ? 'Yes, send emails' : 'Yes, no emails'}</button></form>`));
+});
+
+router.post('/email-decision/:email', express.urlencoded({ extended: false }), async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const lead = await decisionLead(req);
+  if (!lead) return res.status(404).send(page('<h1>Link not valid</h1>'));
+  try {
+    await cadence.setEmailDecision(lead.email, req.body.d === 'send' ? 'send' : 'no');
+    res.send(page(`<h1>${req.body.d === 'send' ? 'Emails back on.' : 'No emails to this address.'}</h1>`));
   } catch (e) {
     res.status(400).send(page(`<h1>${esc(e.message)}</h1>`));
   }
