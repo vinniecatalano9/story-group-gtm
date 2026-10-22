@@ -40,7 +40,24 @@ function token() {
 async function tg(method, body) {
   const r = await axios.post(`https://api.telegram.org/bot${token()}/${method}`, body, { timeout: 30000, validateStatus: () => true });
   if (!r.data?.ok) throw new Error(`Telegram ${method} failed (${r.status}): ${r.data?.description || 'no detail'}`);
+  mirror(method, body, r.data.result);
   return r.data.result;
+}
+
+// Telegram never lets one bot read another bot's chat, so every message Reply
+// Bot posts, edits or deletes is copied to a file Work Bot can read
+// (`replybot` on the VPS). Folder is root:worker 750, so Personal Bot can't.
+const MIRROR = () => process.env.REPLYBOT_LOG || '/srv/replybot/chat.jsonl';
+function mirror(method, body, result) {
+  if (!['sendMessage', 'editMessageText', 'deleteMessage'].includes(method)) return;
+  try {
+    const plain = s => String(s || '').replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+    const buttons = (body.reply_markup?.inline_keyboard || []).flat().map(b => b.text).filter(Boolean);
+    const line = { at: new Date().toISOString(), method, message_id: result?.message_id || body.message_id || null, text: plain(body.text), buttons };
+    fs.appendFileSync(MIRROR(), JSON.stringify(line) + '\n');
+  } catch (e) {
+    console.warn('[replyPhone] mirror failed:', e.message);
+  }
 }
 
 /** "Message 1: Great.\n\nMessage 2: ..." -> plain blocks split by blank lines. */
