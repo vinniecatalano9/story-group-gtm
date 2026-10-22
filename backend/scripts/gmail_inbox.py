@@ -11,6 +11,10 @@ Reads JSON on stdin, one of:
       Hard bounces (mailer-daemon / postmaster / delivery status notices) since
       that day that name one of those addresses or reply to one of our
       Message-IDs. Delay notices ("will retry") don't count.
+  {"op": "new_leads", "since": "2026-10-22"}
+      -> {"ok": true, "messages": [{from, subject, date, message_id, body}]}
+      "New Lead" emails since that day, not from this mailbox, in All Mail.
+      body is the plain text (HTML turned into lines) for services/leadIntake.js.
   {"op": "signature"}
       -> {"ok": true, "html": "..."}  the gmail_signature block from the newest
       sent email that has one ("" when none found).
@@ -149,6 +153,50 @@ def bounces(req):
     return {"ok": True, "bounces": out}
 
 
+def lead_body(msg):
+    """The whole form text: plain part, else HTML with rows and breaks as new lines."""
+    plain, html = "", ""
+    for p in msg.walk():
+        if p.get_content_maintype() == "multipart":
+            continue
+        try:
+            body = p.get_payload(decode=True).decode(p.get_content_charset() or "utf-8", "replace")
+        except Exception:
+            continue
+        if p.get_content_type() == "text/plain" and not plain:
+            plain = body
+        elif p.get_content_type() == "text/html" and not html:
+            html = body
+    if not plain and html:
+        h = re.sub(r"(?i)<br\s*/?>|</(p|div|tr|li|h\d)>", "\n", html)
+        h = re.sub(r"(?i)</td>\s*<td[^>]*>", " ", h)
+        plain = re.sub(r"<[^>]+>", "", h).replace("&nbsp;", " ").replace("&amp;", "&")
+    return plain[:6000]
+
+
+def new_leads(req):
+    me = json.load(open(LOGIN))["email"].lower()
+    m = connect()
+    m.select('"[Gmail]/All Mail"', readonly=True)
+    since = datetime.strptime(req["since"][:10], "%Y-%m-%d").strftime("%d-%b-%Y")
+    typ, data = m.search(None, "SUBJECT", '"New Lead"', "SINCE", since)
+    out = []
+    for i in (data[0].split() if typ == "OK" else [])[-100:]:
+        typ, d = m.fetch(i, "(BODY.PEEK[])")
+        msg = email.message_from_bytes(d[0][1])
+        subj = hdr(msg.get("Subject"))
+        sender = hdr(msg.get("From"))
+        if parseaddr(sender)[1].lower() == me or not re.search(r"new lead", subj, re.I):
+            continue
+        try:
+            date = parsedate_to_datetime(msg.get("Date")).isoformat()
+        except Exception:
+            date = None
+        out.append({"from": sender, "subject": subj, "date": date, "message_id": msg.get("Message-ID", "").strip(), "body": lead_body(msg)})
+    m.logout()
+    return {"ok": True, "messages": out}
+
+
 def signature(req):
     m = connect()
     m.select('"[Gmail]/Sent Mail"', readonly=True)
@@ -182,7 +230,7 @@ def signature(req):
 if __name__ == "__main__":
     try:
         req = json.load(sys.stdin)
-        print(json.dumps({"replies": replies, "bounces": bounces, "signature": signature}[req["op"]](req)))
+        print(json.dumps({"replies": replies, "bounces": bounces, "new_leads": new_leads, "signature": signature}[req["op"]](req)))
     except Exception as e:
         print(json.dumps({"ok": False, "error": str(e)[:300]}))
         sys.exit(1)

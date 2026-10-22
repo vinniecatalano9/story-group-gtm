@@ -145,6 +145,35 @@ async function writeBack(updates) {
   }
 }
 
+/**
+ * Add one lead row (A:H only: Notes in I and the cadence's J:M are left alone)
+ * below the last row, with the same dropdowns as Vincent's rows. Returns the row number.
+ * @param cells [Full Name, Phone, Email, role, frustration, Channel, Lead Status, Assigned Rep]
+ */
+async function appendLead(cells) {
+  const tab = await tabName();
+  const r = await sheets().spreadsheets.values.append({
+    spreadsheetId: SHEET_ID(), range: `${q(tab)}!A1:H1`, valueInputOption: 'USER_ENTERED', insertDataOption: 'OVERWRITE',
+    requestBody: { values: [cells.slice(0, 8)] },
+  });
+  const row = Number(((r.data.updates && r.data.updates.updatedRange) || '').match(/!A(\d+)/)?.[1]);
+  if (!row) throw new Error(`append gave no row (${r.data.updates && r.data.updates.updatedRange})`);
+  try {
+    const { rows, header } = await readRows();
+    const repCol = header.findIndex(h => /assigned|rep\b/i.test(String(h)));
+    const model = rows.find(x => x.row !== row && String(x.raw[repCol] || '').toLowerCase().includes(REP().toLowerCase()));
+    if (model) {
+      const meta = await sheets().spreadsheets.get({ spreadsheetId: SHEET_ID(), fields: 'sheets.properties' });
+      const sheetId = meta.data.sheets.find(s => s.properties.title === tab).properties.sheetId;
+      const span = (n) => ({ sheetId, startRowIndex: n - 1, endRowIndex: n, startColumnIndex: 0, endColumnIndex: 13 });
+      await sheets().spreadsheets.batchUpdate({ spreadsheetId: SHEET_ID(), requestBody: { requests: [{ copyPaste: { source: span(model.row), destination: span(row), pasteType: 'PASTE_DATA_VALIDATION' } }] } });
+    }
+  } catch (e) {
+    console.warn('[adLeadsSheet] dropdown copy for new row failed:', e.message);
+  }
+  return row;
+}
+
 /** Can the backend read the sheet? For the status endpoint. */
 async function status() {
   try {
@@ -181,4 +210,4 @@ async function ensureStatusOptions() {
   return { changed: true, added: want, rows: mine };
 }
 
-module.exports = { readLeads, writeBack, status, STATUS, ensureStatusOptions };
+module.exports = { readLeads, readRows, appendLead, writeBack, status, STATUS, ensureStatusOptions };

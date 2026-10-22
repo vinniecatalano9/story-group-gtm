@@ -35,6 +35,7 @@ router.get('/copy', wrap(() => cadence.listCopy()));
 router.post('/copy/:step', wrap(async req => { await cadence.saveCopy(req.params.step, req.body || {}); return cadence.listCopy(); }));
 
 router.post('/run', wrap(() => cadence.tick()));
+router.get('/intake/dry-run', wrap(req => require('../services/leadIntake').dryRun({ last: Number(req.query.last) || 8 })));
 
 // Dashboard "Approve all pending": the full list, then the exact ids shown.
 router.get('/pending', wrap(() => cadence.pendingCards().then(cs => cs.map(({ token, tg_text, ...a }) => ({ ...a, times: cadence.cardTimes(a) })))));

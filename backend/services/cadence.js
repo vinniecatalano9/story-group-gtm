@@ -1218,6 +1218,8 @@ async function tick() {
   _running = true;
   const out = { queued: [], sent: [], waiting: [], blocked: [] };
   try {
+    // New Lead emails first, so a new lead's first card goes out on this same run.
+    out.intake = await require('./leadIntake').run().catch(e => ({ error: e.message }));
     out.replies = await checkReplies();
     out.calls = await require('./cadenceCalls').checkCalls().catch(e => ({ error: e.message }));
 
@@ -1332,5 +1334,5 @@ async function status() {
 module.exports = {
   MODE, importLeads, updateLead, startLead, setOutcome, markNoShow, listLeads, getLead, refreshNext, nextStep,
   listCopy, saveCopy, approve, skip, dispatch, tick, checkReplies, syncSheet, dryRun, status, inWindow, intoWindow,
-  approvalsCol, queueStep, drainNutshell, touchesSoFar, dispatchApproved, rebuildPending, markChannelDead, realEmail, verifyLeadEmail, setEmailDecision, emailGate, emailHeld, pendingCards, approveMany, checkBatchToken, refreshBatchCard, cardTimes, ping, fullName, esc, DASHBOARD_URL,
+  approvalsCol, queueStep, drainNutshell, touchesSoFar, dispatchApproved, rebuildPending, markChannelDead, realEmail, verifyLeadEmail, setEmailDecision, emailGate, emailHeld, pendingCards, approveMany, checkBatchToken, refreshBatchCard, cardTimes, ping, fullName, esc, DASHBOARD_URL, gmailInbox,
 };
