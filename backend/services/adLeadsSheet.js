@@ -13,21 +13,23 @@ const SHEET_ID = () => process.env.AD_LEADS_SHEET_ID || '1qMYNGAEELfc8GLkg5hoLrB
 const TAB = () => process.env.AD_LEADS_SHEET_TAB || ''; // blank = first tab
 const EMAIL_COL = 'C';
 const WRITE_COLS = ['J', 'K', 'L']; // Outreach Status, Last Touch, Next Touch
+const REP = () => process.env.AD_LEADS_REP || 'Vincent'; // only rows assigned to him
 
-// Cadence state -> the Outreach Status dropdown. Override with
+// Cadence state -> the Outreach Status dropdown (Not contacted, In sequence,
+// Replied (paused), Hit once, Talked yes, Meeting yes, Not interested). Override with
 // AD_LEADS_STATUS_MAP='{"active":"In cadence",...}' if the dropdown changes.
 const STATUS = () => ({
-  imported: 'Not started',
-  active: 'In cadence',
-  blocked: 'In cadence',
-  replied: 'Replied',
-  hit_once: 'Talked',
-  talked_yes: 'Talked',
-  meeting: 'Meeting booked',
+  imported: 'Not contacted',
+  active: 'In sequence',
+  blocked: 'In sequence',
+  done: 'In sequence', // finished with no reply; Next Touch says so
+  replied: 'Replied (paused)',
+  hit_once: 'Hit once',
+  talked_yes: 'Talked yes',
+  meeting: 'Meeting yes',
   not_interested: 'Not interested',
-  opted_out: 'Opted out',
-  done: 'Cadence done',
-  stopped: 'Stopped',
+  opted_out: 'Not interested',
+  stopped: 'Not interested',
   ...JSON.parse(process.env.AD_LEADS_STATUS_MAP || '{}'),
 });
 
@@ -90,9 +92,10 @@ async function readLeads() {
       frustration: pick(values, 'frustrat', 'challenge', 'struggle'),
       company: pick(values, 'company', 'business', 'organization'),
       source: pick(values, 'source'),
+      rep: pick(values, 'assigned', 'rep', 'owner'),
       sheet_values: values,
     };
-  }).filter(l => /@/.test(l.email));
+  }).filter(l => /@/.test(l.email) && (!l.rep || l.rep.toLowerCase().includes(REP().toLowerCase())));
   return { tab, header, leads };
 }
 

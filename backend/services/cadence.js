@@ -614,7 +614,9 @@ async function syncSheet({ all = false } = {}) {
   const leads = (await listLeads()).filter(l => all || l.sheet_dirty);
   if (!leads.length) return 0;
   const n = await require('./adLeadsSheet').writeBack(leads.map(l => ({
-    email: l.email, status: l.state, last_touch: l.last_touch_label || '', next_touch: l.running ? l.next_touch_label || '' : '',
+    email: l.email, status: l.state, last_touch: l.last_touch_label || '',
+    next_touch: l.running ? (l.pending_approval ? `${l.next_touch_label || ''} (waiting on Vincent)` : l.next_touch_label || '')
+      : l.state === 'done' ? 'Done: no reply' : l.state === 'opted_out' ? 'Texted STOP' : '',
   })));
   if (n !== null) await Promise.all(leads.map(l => leadsCol().doc(l.email).update({ sheet_dirty: false })));
   return n;
