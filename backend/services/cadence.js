@@ -1147,7 +1147,12 @@ function touchesSoFar(lead) {
   return [...(lead.timeline || [])]
     .sort((a, b) => toDate(a.at) - toDate(b.at))
     .map(t => {
-      if (t.kind === 'sent') { const st = copy.stepById(t.step); return (st ? st.label : t.step).replace(/ \(.*\)$/, ''); }
+      if (t.kind === 'sent') {
+        const st = copy.stepById(t.step);
+        const d = (lead.steps_done || {})[t.step] || {};
+        const failed = rc.FAILED_STATUSES.includes(d.delivery);
+        return (st ? st.label : t.step).replace(/ \(.*\)$/, '') + (failed ? ' (failed)' : '');
+      }
       if (t.kind === 'reply') return t.channel === 'sms' && rc.isStop(t.text) ? 'Texted STOP' : `Replied (${t.channel === 'sms' ? 'text' : 'email'})`;
       if (t.kind === 'outcome' && t.outcome) return OUTCOME_SHORT[t.outcome] || null;
       return null;
