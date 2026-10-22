@@ -253,6 +253,10 @@ router.post('/verify', parseMultipart, async (req, res) => {
       return res.status(400).json({ error: msg, details: data });
     }
 
+    // Daily Clearout usage alert (services/clearout.js): count the rows sent.
+    const rows = String(req.file.buffer).split(/\r?\n/).filter(l => l.trim()).length - 1;
+    require('../services/clearout').recordUsage(rows, 'cleaner');
+
     res.json({ success: true, list_id: data.data.list_id });
   } catch (e) {
     console.error('[cleaner] verify error:', e.response?.data || e.message);

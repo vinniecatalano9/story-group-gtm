@@ -1263,6 +1263,7 @@ async function tick() {
       }
     }
     out.sheet_rows = await syncSheet();
+    await require('./clearout').checkUsageAlert().catch(e => console.warn('[cadence] Clearout usage alert:', e.message));
   } finally {
     _running = false;
   }
