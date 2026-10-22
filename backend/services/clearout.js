@@ -20,7 +20,8 @@ async function recordUsage(n, source) {
   try {
     const { db } = require('./db');
     const { FieldValue } = require('firebase-admin').firestore;
-    await db.collection('clearout_usage').doc(dayCT()).set({ count: FieldValue.increment(n), [`by.${source}`]: FieldValue.increment(n), updated_at: new Date() }, { merge: true });
+    // Nested object, not "by.x": set() takes dotted keys literally.
+    await db.collection('clearout_usage').doc(dayCT()).set({ count: FieldValue.increment(n), by: { [source]: FieldValue.increment(n) }, updated_at: new Date() }, { merge: true });
   } catch (e) {
     console.warn('[clearout] usage count failed:', e.message);
   }
