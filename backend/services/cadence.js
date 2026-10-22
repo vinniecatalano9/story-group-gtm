@@ -436,7 +436,7 @@ async function queueStep(lead, step, msg) {
     status: MODE() === 'live' && !step.alwaysApprove ? 'approved' : 'pending', token, created_at: new Date(),
   };
   await ref.set(a);
-  await saveLead(lead.email, { pending_approval: ref.id, ...(msg.offer ? { offer: a.offer } : {}) });
+  await saveLead(lead.email, { pending_approval: ref.id, sheet_dirty: true, ...(msg.offer ? { offer: a.offer } : {}) });
   await addTimeline(lead.email, timelineEntry('queued', { step: step.id, channel: step.channel, text: msg.text, subject: msg.subject || null, approval: ref.id }));
   if (a.status === 'pending') {
     const url = `${PUBLIC_URL()}/api/cadence/approval/${ref.id}?t=${token}`;
@@ -949,7 +949,10 @@ async function dispatchApproved() {
   if (_running) return { skipped: 'a run is going' };
   _running = true;
   try {
-    return { results: await sendApproved() };
+    const results = await sendApproved();
+    // Vincent watches the sheet: write changed rows within a minute of a send.
+    await syncSheet().catch(e => console.warn('[cadence] sheet sync:', e.message));
+    return { results };
   } finally {
     _running = false;
     refreshBatchCard().catch(e => console.warn('[cadence] batch card:', e.message));
