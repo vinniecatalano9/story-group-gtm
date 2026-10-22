@@ -13,7 +13,9 @@
 // {time} {meeting_day} {meeting_time} {times_question}. Steps whose copy uses
 // a time get fresh times planned and held when they're queued.
 
-const SUBJECT = 'Story Group: quick call?';
+// Vincent, 10/22 (was "Story Group: quick call?", which Albert's and
+// Ethelyn's threads keep: follow-ups reply on the thread's own subject).
+const SUBJECT = 'Your Story Group request';
 const AD = '"Become Impossible to Ignore"';
 
 // `day` counts from the lead's day 1 (the day Email 1 went out, or the day the

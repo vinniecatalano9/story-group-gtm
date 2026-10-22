@@ -370,6 +370,9 @@ function liveTimes(offer, now = new Date()) {
   return slots.labels({ today: keep(offer.today, 60), day: offer.day, am: keep(offer.am, 0), pm: keep(offer.pm, 0) }, now);
 }
 
+/** "Re: <the subject Email 1 went out with>", so follow-ups stay in that thread. */
+const threadReply = lead => `Re: ${(lead.thread && lead.thread.subject) || copy.SUBJECT}`;
+
 /** Which planned times a template actually offers (only those get held). */
 function offeredTimes(template, offer) {
   const out = [];
@@ -402,7 +405,7 @@ async function buildMessage(lead, step, { sendAt = new Date(), dryRun = false } 
   if (text == null) return { blocked: `${step.label}: no open time to offer in the next 5 business days` };
   if (offer && !dryRun) await slots.holdOffer(offer, { key: holdKey(lead.email), name: fullName(lead), only: offeredTimes(c.template, offer) });
   const subject = step.channel === 'email'
-    ? (c.subject ? copy.render(step, c.subject, lead, times, meeting) || c.subject : (step.id === 'email1' ? copy.SUBJECT : `Re: ${copy.SUBJECT}`))
+    ? (c.subject ? copy.render(step, c.subject, lead, times, meeting) || c.subject : (step.id === 'email1' ? copy.SUBJECT : threadReply(lead)))
     : null;
   return { subject, text, offer, times };
 }
@@ -655,7 +658,7 @@ async function dispatch(id) {
       const thread = lead.thread || null;
       const r = await mailer.sendAsVincent({
         to: a.to,
-        subject: a.subject || `Re: ${copy.SUBJECT}`,
+        subject: a.subject || threadReply(lead),
         text: a.text,
         html: await emailHtml(a.text),
         inReplyTo: thread ? thread.first_message_id : undefined,
