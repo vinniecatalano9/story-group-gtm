@@ -157,7 +157,7 @@ async function markNoShow(email) {
   const lead = await getLead(email);
   if (!lead || lead.track !== 'meeting') throw new Error('Only for a booked meeting');
   await saveLead(lead.email, { no_show_marked: true });
-  await addTimeline(lead.email, timelineEntry('outcome', { text: 'Marked no-show' }));
+  await addTimeline(lead.email, timelineEntry('outcome', { outcome: 'no_show', text: 'Marked no-show' }));
   return refreshNext(lead.email);
 }
 
@@ -216,7 +216,7 @@ async function setOutcome(email, outcome, { meeting_at, source = '' } = {}) {
   await saveLead(lead.email, patch);
   // Booked, a no, or stopped: their held times go back in the pool.
   if (['meeting', 'not_interested', 'stop'].includes(outcome)) await slots.releaseHolds(holdKey(lead.email));
-  await addTimeline(lead.email, timelineEntry('outcome', { text: o.label + (meetingAt ? `, meeting ${patch.meeting_label}` : '') + (source ? ` (${source})` : '') }));
+  await addTimeline(lead.email, timelineEntry('outcome', { outcome, text: o.label + (meetingAt ? `, meeting ${patch.meeting_label}` : '') + (source ? ` (${source})` : '') }));
   await logToNutshell(lead, `${today(lead.tz)} Outcome: ${o.label}${meetingAt ? `, meeting ${patch.meeting_label}` : ''}.${source ? ` (${source})` : ''}`, { outcome });
   return refreshNext(lead.email);
 }
@@ -780,14 +780,33 @@ async function applyStage(lead, leadId, outcome) {
   return `Nutshell stage set to ${(ms.find(m => m.id === target) || {}).name}`;
 }
 
+/**
+ * Column M "Touches So Far": what really happened, in order. Sent steps,
+ * replies and outcomes; skipped, queued or unapproved steps don't count.
+ */
+const OUTCOME_SHORT = { hit_once: 'Hit once', talked_yes: 'Talked yes', meeting: 'Meeting yes', not_interested: 'Not interested', stop: 'Stopped', no_show: 'No-show' };
+function touchesSoFar(lead) {
+  const rc = require('./ringcentral');
+  return [...(lead.timeline || [])]
+    .sort((a, b) => toDate(a.at) - toDate(b.at))
+    .map(t => {
+      if (t.kind === 'sent') { const st = copy.stepById(t.step); return (st ? st.label : t.step).replace(/ \(.*\)$/, ''); }
+      if (t.kind === 'reply') return t.channel === 'sms' && rc.isStop(t.text) ? 'Texted STOP' : `Replied (${t.channel === 'sms' ? 'text' : 'email'})`;
+      if (t.kind === 'outcome' && t.outcome) return OUTCOME_SHORT[t.outcome] || null;
+      return null;
+    })
+    .filter(Boolean)
+    .join(', ');
+}
+
 // ── Sheet ────────────────────────────────────────────────────────────────────
 
 async function syncSheet({ all = false } = {}) {
-  // Untagged leads keep whatever the team typed in J:L.
+  // Untagged leads keep whatever the team typed in J:M.
   const leads = (await listLeads()).filter(l => l.tagged_at && (all || l.sheet_dirty));
   if (!leads.length) return 0;
   const n = await require('./adLeadsSheet').writeBack(leads.map(l => ({
-    email: l.email, status: l.state, last_touch: l.last_touch_label || '',
+    email: l.email, status: l.state, last_touch: l.last_touch_label || '', touches: touchesSoFar(l),
     next_touch: l.running ? (l.pending_approval ? `${l.next_touch_label || ''} (waiting on Vincent)` : l.next_touch_label || '')
       : l.state === 'done' ? 'Done: no reply' : l.state === 'opted_out' ? 'Texted STOP' : l.manual ? 'Manual (Vincent)' : '',
   })));
@@ -915,5 +934,5 @@ async function status() {
 module.exports = {
   MODE, importLeads, updateLead, startLead, setOutcome, markNoShow, listLeads, getLead, refreshNext, nextStep,
   listCopy, saveCopy, approve, skip, dispatch, tick, checkReplies, syncSheet, dryRun, status, inWindow, intoWindow,
-  approvalsCol, queueStep, drainNutshell, ping, fullName, esc, DASHBOARD_URL,
+  approvalsCol, queueStep, drainNutshell, touchesSoFar, ping, fullName, esc, DASHBOARD_URL,
 };

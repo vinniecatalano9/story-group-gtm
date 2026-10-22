@@ -1,8 +1,8 @@
 // services/adLeadsSheet.js — the shared "AD LEADS LIST_2026" Google Sheet.
 //
 // Reads the lead rows for the dashboard import, and writes the cadence's
-// Outreach Status (J), Last Touch (K) and Next Touch (L) back on the row whose
-// Email (C) matches. Auth is the backend's service account
+// Outreach Status (J), Last Touch (K), Next Touch (L) and Touches So Far (M)
+// back on the row whose Email (C) matches. Auth is the backend's service account
 // (GOOGLE_APPLICATION_CREDENTIALS), so the sheet has to be shared with it as
 // Editor and the Sheets API enabled on its Google Cloud project. Until then
 // every call warns and returns null; nothing crashes.
@@ -12,7 +12,7 @@ const { google } = require('googleapis');
 const SHEET_ID = () => process.env.AD_LEADS_SHEET_ID || '1qMYNGAEELfc8GLkg5hoLrBXAr2rXx6kLa40WfUxI1ZQ';
 const TAB = () => process.env.AD_LEADS_SHEET_TAB || '2026 ADs list';
 const EMAIL_COL = 'C';
-const WRITE_COLS = ['J', 'K', 'L']; // Outreach Status, Last Touch, Next Touch
+const WRITE_COLS = ['J', 'M']; // J Outreach Status, K Last Touch, L Next Touch, M Touches So Far
 const REP = () => process.env.AD_LEADS_REP || 'Vincent'; // only rows assigned to him
 
 // Cadence state -> the Outreach Status dropdown (Not contacted, In sequence,
@@ -103,9 +103,9 @@ async function readLeads() {
 }
 
 /**
- * Write J/K/L for these leads, matched on column C. Returns rows written, or
+ * Write J:M for these leads, matched on column C. Returns rows written, or
  * null when the sheet can't be reached (logged, never thrown).
- * @param updates [{ email, status, last_touch, next_touch }]
+ * @param updates [{ email, status, last_touch, next_touch, touches }]
  */
 async function writeBack(updates) {
   if (!updates.length) return 0;
@@ -125,8 +125,8 @@ async function writeBack(updates) {
       const i = emails.indexOf(String(u.email).toLowerCase());
       if (i < 1) continue;
       data.push({
-        range: `${q(tab)}!${WRITE_COLS[0]}${i + 1}:${WRITE_COLS[2]}${i + 1}`,
-        values: [[map[u.status] || u.status || '', u.last_touch || '', u.next_touch || '']],
+        range: `${q(tab)}!${WRITE_COLS[0]}${i + 1}:${WRITE_COLS[1]}${i + 1}`,
+        values: [[map[u.status] || u.status || '', u.last_touch || '', u.next_touch || '', u.touches || '']],
       });
     }
     if (!data.length) return 0;
