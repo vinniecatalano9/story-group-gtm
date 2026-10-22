@@ -9,7 +9,7 @@
 // `approved: false` would stay blocked until he approves it on the dashboard;
 // his saved edits (Firestore cadence_copy/{step id}) override the copy here.
 //
-// Template variables: {first} {frustration_line} {work_phrase} {visibility_target} {today} {day} {am} {pm}
+// Template variables: {first} {opener} {email_ref} {frustration_line} {work_phrase} {visibility_target} {today} {day} {am} {pm}
 // {time} {meeting_day} {meeting_time} {times_question}. Steps whose copy uses
 // a time get fresh times planned and held when they're queued.
 
@@ -18,17 +18,32 @@
 const SUBJECT = 'Your Story Group request';
 const AD = '"Become Impossible to Ignore"';
 
+// Email 1's opening line, and how Text 1 refers back to that email. Text 1
+// always matches the Email 1 the lead actually got (Vincent, 10/22). Add a new
+// pair on top when the wording changes; older pairs stay so texts to leads who
+// got them still match. The platform wording (Facebook / Instagram / Meta) is
+// not decided yet, so the live pair is still the original "ad" one.
+const OPENERS = [
+  { email: `Thanks for reaching out through our ${AD} ad.`, text: `the ${AD} ad you responded to` },
+];
+
+/** The opener pair this lead's Email 1 used (the live one if it hasn't gone yet). */
+function openerFor(lead) {
+  const sent = String(lead.email1_text || '');
+  return OPENERS.find(o => sent.includes(o.email)) || OPENERS[0];
+}
+
 // `day` counts from the lead's day 1 (the day Email 1 went out, or the day the
 // outcome was set), in the lead's time zone, weekdays only.
 const TRACKS = {
   intro: [
     {
       id: 'email1', channel: 'email', day: 1, label: 'Email 1', approved: true, subject: SUBJECT,
-      template: `Hey {first},\n\nThanks for filling out our ${AD} form on Facebook. {frustration_line} Would love to hop on a quick call to learn what {work_phrase} on and share where we see opportunities to get {visibility_target} more visibility.\n\n{times_question}\n\nBest,\nVincent`,
+      template: `Hey {first},\n\n{opener} {frustration_line} Would love to hop on a quick call to learn what {work_phrase} on and share where we see opportunities to get {visibility_target} more visibility.\n\n{times_question}\n\nBest,\nVincent`,
     },
     {
       id: 'text1', channel: 'sms', day: 1, afterMinutes: 60, label: 'Text 1', approved: true, reuseOffer: 'email1',
-      template: `Hi {first}, it's Vincent with Story Group. Just sent you an email about the ${AD} form you filled out on Facebook. {times_question_text}`,
+      template: `Hi {first}, it's Vincent with Story Group. Just sent you an email about {email_ref}. {times_question_text}`,
     },
     { id: 'text2', channel: 'sms', day: 2, label: 'Text 2', approved: true,
       template: 'Hey {first}, not sure if text or email is better for you. {day} at {time} ET is open for a quick call. Does that work?' },
@@ -150,6 +165,8 @@ function render(template, lead, times = {}, meeting = {}) {
   const vars = {
     first: capFirst(String(lead.greet_name || lead.first_name || '').trim()),
     frustration_line: frustrationLine(lead.frustration),
+    opener: OPENERS[0].email,
+    email_ref: openerFor(lead).text,
     // Role wording (plan section 4): marketing leaders get team / company.
     work_phrase: /marketing/i.test(lead.role || '') ? 'you and your team are working' : "you're working",
     visibility_target: /marketing/i.test(lead.role || '') ? 'the company' : 'you',

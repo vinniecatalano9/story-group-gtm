@@ -687,6 +687,7 @@ async function dispatch(id) {
     };
     if (a.step === 'email1') {
       patch.email1_sent_at = now;
+      patch.email1_text = a.text; // Text 1 matches this email's wording
       patch.day1 = z.dayKey(z.parts(now, lead.tz));
       await metaDoc('state').set({ last_email1_at: now, next_email1_after: new Date(now.getTime() + randomGapMs()) }, { merge: true });
     }
