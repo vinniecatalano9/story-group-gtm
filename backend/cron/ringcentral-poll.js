@@ -29,7 +29,7 @@ async function matchLeadByPhone(phone) {
     const ad = await db.collection('ad_leads').where('phone', 'in', variants).limit(1).get();
     if (ad.empty) return null;
     const a = ad.docs[0].data();
-    return { email: a.email, name: [a.first_name, a.last_name].filter(Boolean).join(' ') || null, company: a.company || null };
+    return { email: /@/.test(a.email || '') ? a.email : null, name: [a.first_name, a.last_name].filter(Boolean).join(' ') || null, company: a.company || null };
   }
   const l = snap.docs[0].data();
   return {

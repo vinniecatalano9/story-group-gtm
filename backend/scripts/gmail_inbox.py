@@ -6,6 +6,11 @@ Reads JSON on stdin, one of:
       -> {"ok": true, "messages": [{from, subject, date, message_id, in_reply_to, snippet, auto}]}
       Every message FROM those addresses since that day, in All Mail (so archived
       replies count). auto = out-of-office / auto-reply.
+  {"op": "bounces", "emails": [...], "message_ids": [...], "since": "2026-10-22"}
+      -> {"ok": true, "bounces": [{lead, message_id, subject, date, snippet}]}
+      Hard bounces (mailer-daemon / postmaster / delivery status notices) since
+      that day that name one of those addresses or reply to one of our
+      Message-IDs. Delay notices ("will retry") don't count.
   {"op": "signature"}
       -> {"ok": true, "html": "..."}  the gmail_signature block from the newest
       sent email that has one ("" when none found).
@@ -82,6 +87,68 @@ def replies(req):
     return {"ok": True, "messages": out}
 
 
+BOUNCE_FROM = re.compile(r"mailer-daemon|postmaster|mail delivery (subsystem|system)", re.I)
+BOUNCE_SUBJ = re.compile(r"delivery status notification|undeliver|delivery (has )?failed|mail delivery failed|returned mail|failure notice|could not be delivered", re.I)
+DELAY = re.compile(r"\(delay\)|delayed|will (retry|keep trying)|temporar(il)?y", re.I)
+
+
+def whole_text(msg):
+    """Every text part, including the delivery-status and returned headers."""
+    out = []
+    for p in msg.walk():
+        if p.get_content_maintype() == "multipart":
+            continue
+        ct = p.get_content_type()
+        try:
+            if ct in ("message/delivery-status", "message/rfc822", "text/rfc822-headers"):
+                out.append(p.as_string())
+            elif ct.startswith("text/"):
+                out.append(p.get_payload(decode=True).decode(p.get_content_charset() or "utf-8", "replace"))
+        except Exception:
+            continue
+    return "\n".join(out)
+
+
+def bounces(req):
+    m = connect()
+    m.select('"[Gmail]/All Mail"', readonly=True)
+    since = datetime.strptime(req["since"][:10], "%Y-%m-%d").strftime("%d-%b-%Y")
+    emails = [e.lower() for e in req.get("emails", []) if e and "@" in e]
+    mids = [i.strip() for i in req.get("message_ids", []) if i]
+    seen, out = set(), []
+    # Multi-word IMAP search values must be quoted.
+    for crit in (["FROM", "mailer-daemon"], ["FROM", "postmaster"], ["SUBJECT", '"Delivery Status Notification"'], ["SUBJECT", "Undeliverable"], ["SUBJECT", '"Mail delivery failed"']):
+        typ, data = m.search(None, *crit, "SINCE", since)
+        if typ != "OK":
+            continue
+        for i in data[0].split()[-200:]:
+            if i in seen:
+                continue
+            seen.add(i)
+            typ, d = m.fetch(i, "(BODY.PEEK[])")
+            msg = email.message_from_bytes(d[0][1])
+            subj = hdr(msg.get("Subject"))
+            sender = hdr(msg.get("From"))
+            if not (BOUNCE_FROM.search(sender) or BOUNCE_SUBJ.search(subj) or msg.get_content_type() == "multipart/report"):
+                continue
+            body = whole_text(msg)
+            if DELAY.search(subj) or (re.search(r"Action:\s*delayed", body, re.I)):
+                continue
+            refs = " ".join([msg.get("In-Reply-To", ""), msg.get("References", "")])
+            low = body.lower()
+            for addr in emails:
+                hit_mid = next((x for x in mids if x and (x in refs or x in body)), None)
+                if addr in low or (hit_mid and addr in low):
+                    try:
+                        date = parsedate_to_datetime(msg.get("Date")).isoformat()
+                    except Exception:
+                        date = None
+                    out.append({"lead": addr, "message_id": msg.get("Message-ID", "").strip(), "subject": subj, "date": date,
+                                "snippet": re.sub(r"\s+", " ", body)[:600]})
+    m.logout()
+    return {"ok": True, "bounces": out}
+
+
 def signature(req):
     m = connect()
     m.select('"[Gmail]/Sent Mail"', readonly=True)
@@ -115,7 +182,7 @@ def signature(req):
 if __name__ == "__main__":
     try:
         req = json.load(sys.stdin)
-        print(json.dumps({"replies": replies, "signature": signature}[req["op"]](req)))
+        print(json.dumps({"replies": replies, "bounces": bounces, "signature": signature}[req["op"]](req)))
     except Exception as e:
         print(json.dumps({"ok": False, "error": str(e)[:300]}))
         sys.exit(1)

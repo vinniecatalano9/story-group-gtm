@@ -179,7 +179,17 @@ async function hadCallWith(phone, since) {
   return (live.records || []).some(r => [r.from && r.from.phoneNumber, r.to && r.to.phoneNumber].includes(num));
 }
 
+// A text RingCentral couldn't deliver (bad number, landline, carrier refusal).
+const FAILED_STATUSES = ['SendingFailed', 'DeliveryFailed'];
+const isNumberFailure = e => !!e && e.status !== 401 && e.status !== 403 && e.status !== 429
+  && /invalid.*(number|recipient)|number.*(invalid|not valid)|landline|not (sms|text|mobile)[- ]?(capable|enabled)|cannot receive|unreachable|MSG-(?:246|247|248)/i.test(`${e.code || ''} ${e.message || ''}`);
+
+/** One sent text's record, for its delivery status. */
+async function getMessage(id) {
+  return api(`/restapi/v1.0/account/~/extension/~/message-store/${encodeURIComponent(id)}`);
+}
+
 const STOP_WORDS = /^\s*(stop|stopall|unsubscribe|cancel|end|quit|stop all|remove me|opt out|optout)\s*[.!]?\s*$/i;
 const isStop = text => STOP_WORDS.test(String(text || ''));
 
-module.exports = { isConfigured, getToken, api, whoAmI, getRecordedCalls, sendSms, getInboundSms, smsStatus, toE164, isStop, hadCallWith };
+module.exports = { isConfigured, getToken, api, whoAmI, getRecordedCalls, sendSms, getInboundSms, smsStatus, toE164, isStop, hadCallWith, getMessage, FAILED_STATUSES, isNumberFailure };

@@ -44,8 +44,14 @@ const TRACKS = {
       id: 'email1', channel: 'email', day: 1, label: 'Email 1', approved: true, subject: SUBJECT,
       template: `Hey {first},\n\n{opener} {frustration_line} Would love to hop on a quick call to learn what {work_phrase} on and share where we see opportunities to get {visibility_target} more visibility.\n\n{times_question}\n\nBest,\nVincent`,
     },
+    // First touch for a lead with no working email (no valid email, or Email 1
+    // bounced before Text 1). [CLAUDE'S DRAFT, adapted from Email 1: off until Vincent approves]
     {
-      id: 'text1', channel: 'sms', day: 1, afterMinutes: 60, label: 'Text 1', approved: true, reuseOffer: 'email1',
+      id: 'text_intro', channel: 'sms', day: 1, immediate: true, label: 'Text intro (no email)', approved: false, onlyWithoutEmail: true,
+      template: "Hi {first}, it's Vincent with Story Group. {opener} {times_question_text}",
+    },
+    {
+      id: 'text1', channel: 'sms', day: 1, afterMinutes: 60, label: 'Text 1', approved: true, reuseOffer: 'email1', after: 'email1', skipWithoutEmail: true,
       template: `Hi {first}, it's Vincent with Story Group. Just sent you an email about {email_ref}. {times_question_text}`,
     },
     { id: 'text2', channel: 'sms', day: 2, label: 'Text 2', approved: true,

@@ -30,6 +30,10 @@ const STATUS = () => ({
   not_interested: 'Not interested',
   opted_out: 'Not interested',
   stopped: 'Not interested',
+  // Channel failures (Vincent, 10/22); added to the J dropdown by ensureStatusOptions().
+  email_bounced: 'Email bounced, texts only',
+  sms_failed: 'Texts failed, email only',
+  dead: 'No working channel',
   ...JSON.parse(process.env.AD_LEADS_STATUS_MAP || '{}'),
 });
 
@@ -115,14 +119,16 @@ async function writeBack(updates) {
     const [header = [], ...rows] = r.data.values || [];
     const repCol = header.findIndex(h => /assigned|rep\b/i.test(String(h)));
     // Only Vincent's rows; never write on a teammate's (McKenna's) row.
-    const emails = [''].concat(rows.map(row => {
-      const mine = repCol < 0 || String(row[repCol] || '').toLowerCase().includes(REP().toLowerCase());
-      return mine ? String(row[2] || '').trim().toLowerCase() : '';
-    }));
+    const { toE164 } = require('./ringcentral');
+    const mineRow = row => repCol < 0 || String(row[repCol] || '').toLowerCase().includes(REP().toLowerCase());
+    const emails = [''].concat(rows.map(row => (mineRow(row) ? String(row[2] || '').trim().toLowerCase() : '')));
+    // Texts-only leads (no valid email) are matched on the phone in column B.
+    const phones = [''].concat(rows.map(row => (mineRow(row) ? toE164(row[1]) || '' : '')));
     const map = STATUS();
     const data = [];
     for (const u of updates) {
-      const i = emails.indexOf(String(u.email).toLowerCase());
+      let i = u.email ? emails.indexOf(String(u.email).toLowerCase()) : -1;
+      if (i < 1 && !u.email && u.phone) i = phones.indexOf(u.phone);
       if (i < 1) continue;
       data.push({
         range: `${q(tab)}!${WRITE_COLS[0]}${i + 1}:${WRITE_COLS[1]}${i + 1}`,
@@ -148,4 +154,30 @@ async function status() {
   }
 }
 
-module.exports = { readLeads, writeBack, status, STATUS };
+/**
+ * Make sure the J dropdown (Vincent's rows) offers every status we write;
+ * the rule is strict, so a missing option would make the whole write fail.
+ */
+async function ensureStatusOptions() {
+  const tab = await tabName();
+  const meta = await sheets().spreadsheets.get({ spreadsheetId: SHEET_ID(), ranges: [`${q(tab)}!J2`], fields: 'sheets(properties(sheetId),data(rowData(values(dataValidation))))' });
+  const sh = meta.data.sheets[0];
+  const dv = (((sh.data[0].rowData || [])[0] || {}).values || [{}])[0].dataValidation;
+  if (!dv || !dv.condition || dv.condition.type !== 'ONE_OF_LIST') return { changed: false, reason: 'no list dropdown on J2' };
+  const have = dv.condition.values.map(v => v.userEnteredValue);
+  const want = [...new Set(Object.values(STATUS()))].filter(v => !have.includes(v));
+  if (!want.length) return { changed: false };
+  const { rows } = await readRows();
+  const repCol = (await readRows()).header.findIndex(h => /assigned|rep\b/i.test(String(h)));
+  const mine = rows.filter(r => repCol < 0 || String(r.raw[repCol] || '').toLowerCase().includes(REP().toLowerCase())).map(r => r.row);
+  const requests = mine.map(row => ({
+    setDataValidation: {
+      range: { sheetId: sh.properties.sheetId, startRowIndex: row - 1, endRowIndex: row, startColumnIndex: 9, endColumnIndex: 10 },
+      rule: { ...dv, condition: { type: 'ONE_OF_LIST', values: [...have, ...want].map(v => ({ userEnteredValue: v })) } },
+    },
+  }));
+  await sheets().spreadsheets.batchUpdate({ spreadsheetId: SHEET_ID(), requestBody: { requests } });
+  return { changed: true, added: want, rows: mine };
+}
+
+module.exports = { readLeads, writeBack, status, STATUS, ensureStatusOptions };

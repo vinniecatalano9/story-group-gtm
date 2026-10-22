@@ -66,7 +66,7 @@ async function sendAsVincent({ to, subject, text, html, inReplyTo, references, h
     headers,
   });
   console.log(`[mailer] Sent "${subject}" to ${to} as Vincent (${info.messageId})`);
-  return { messageId: info.messageId || messageId };
+  return { messageId: info.messageId || messageId, rejected: info.rejected || [] };
 }
 
 module.exports = { sendMail, sendAsVincent, isConfigured };

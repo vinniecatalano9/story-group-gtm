@@ -17,12 +17,13 @@ const STATE_STYLE = {
   opted_out: 'bg-red-500/15 text-red-400 border border-red-500/20',
   done: 'bg-white/5 text-white/50 border border-white/10',
   stopped: 'bg-white/5 text-white/40 border border-white/10',
+  dead: 'bg-red-500/15 text-red-400 border border-red-500/20',
 };
 
 const STATE_LABEL = {
   imported: 'Not started', active: 'In cadence', blocked: 'Blocked', replied: 'Replied: set outcome',
   hit_once: 'Hit once', talked_yes: 'Talked yes', meeting: 'Meeting booked', not_interested: 'Not interested',
-  opted_out: 'Texted STOP', done: 'Cadence done', stopped: 'Stopped',
+  opted_out: 'Texted STOP', done: 'Cadence done', stopped: 'Stopped', dead: 'No working channel',
 };
 
 const fmt = (v) => {
@@ -110,7 +111,7 @@ function LeadRow({ lead, api, onChange, setErr }) {
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" onClick={() => setOpen(!open)} className="text-left flex-1 min-w-[220px]">
           <p className="font-semibold text-body">{name} <span className="text-muted text-xs font-normal">{lead.company}</span></p>
-          <p className="text-[11px] text-muted">{lead.email}{lead.phone ? ` · ${lead.phone}` : ' · email only'} · {lead.tz?.split('/')[1]?.replace('_', ' ')} · {lead.role}</p>
+          <p className="text-[11px] text-muted">{lead.text_only ? 'no email · texts only' : lead.email}{lead.email_bounced ? ' (bounced)' : ''}{lead.phone ? ` · ${lead.phone}${lead.sms_failed ? ' (texts failed)' : ''}` : ' · email only'} · {lead.tz?.split('/')[1]?.replace('_', ' ')} · {lead.role}</p>
         </button>
         <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${STATE_STYLE[lead.state] || STATE_STYLE.imported}`}>{STATE_LABEL[lead.state] || lead.state}</span>
         <div className="text-[11px] text-muted min-w-[160px]">
