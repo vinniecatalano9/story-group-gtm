@@ -452,7 +452,7 @@ async function queueStep(lead, step, msg) {
     status: MODE() === 'live' && !step.alwaysApprove ? 'approved' : 'pending', token, created_at: new Date(),
   };
   await ref.set(a);
-  await saveLead(lead.email, { pending_approval: ref.id, sheet_dirty: true, ...(msg.offer ? { offer: a.offer } : {}) });
+  await saveLead(lead.email, { pending_approval: ref.id, pending_approved: a.status === 'approved', sheet_dirty: true, ...(msg.offer ? { offer: a.offer } : {}) });
   await addTimeline(lead.email, timelineEntry('queued', { step: step.id, channel: step.channel, text: msg.text, subject: msg.subject || null, approval: ref.id }));
   if (a.status === 'pending') {
     const url = `${PUBLIC_URL()}/api/cadence/approval/${ref.id}?t=${token}`;
@@ -590,6 +590,7 @@ async function approveMany(ids) {
   const base = Date.now();
   for (const [i, a] of cards.entries()) {
     await approvalsCol().doc(a.id).update({ status: 'approved', approved_at: new Date(base + i), approved_in_batch: true });
+    await saveLead(a.email, { pending_approved: true, sheet_dirty: true });
   }
   const r = await dispatchApproved();
   await refreshBatchCard().catch(e => console.warn('[cadence] batch card:', e.message));
@@ -602,6 +603,7 @@ async function approve(id, { text, subject } = {}) {
   const a = (await ref.get()).data();
   if (!a || a.status !== 'pending') throw new Error(`This card is ${a ? a.status : 'gone'}`);
   const patch = { status: 'approved', approved_at: new Date() };
+  await saveLead(a.email, { pending_approved: true, sheet_dirty: true });
   if (text && text.trim() && text.trim() !== a.text) { patch.text = text.trim(); patch.edited = true; }
   if (subject && subject.trim() && a.channel === 'email') patch.subject = subject.trim();
   await ref.update(patch);
@@ -934,7 +936,7 @@ async function syncSheet({ all = false } = {}) {
   if (!leads.length) return 0;
   const n = await require('./adLeadsSheet').writeBack(leads.map(l => ({
     email: l.email, status: l.state, last_touch: l.last_touch_label || '', touches: touchesSoFar(l),
-    next_touch: l.running ? (l.pending_approval ? `${l.next_touch_label || ''} (waiting on Vincent)` : l.next_touch_label || '')
+    next_touch: l.running ? (l.pending_approval ? `${l.next_touch_label || ''} (${l.pending_approved ? 'approved, sending soon' : 'waiting on Vincent'})` : l.next_touch_label || '')
       : l.state === 'done' ? 'Done: no reply' : l.state === 'opted_out' ? 'Texted STOP' : l.manual ? 'Manual (Vincent)' : '',
   })));
   if (n !== null) await Promise.all(leads.map(l => leadsCol().doc(l.email).update({ sheet_dirty: false })));
