@@ -484,12 +484,18 @@ async function cancelPending(email, why) {
 async function rebuildPending(stepId) {
   const snap = await approvalsCol().where('status', '==', 'pending').get();
   const out = [];
-  for (const d of snap.docs.filter(x => x.data().step === stepId)) {
+  const docs = snap.docs.filter(x => x.data().step === stepId);
+  // Release every old card's holds before planning any new times, so the
+  // first leads rebuilt aren't pushed out by holds about to be freed.
+  for (const d of docs) {
     const a = d.data();
     await d.ref.update({ status: 'cancelled', cancel_reason: 'replaced', updated_at: new Date() });
     await markCard(a, 'Replaced, new card below');
     if (stepId === 'email1') await slots.releaseHolds(holdKey(a.email));
     await saveLead(a.email, { pending_approval: null });
+  }
+  for (const d of docs) {
+    const a = d.data();
     const lead = await getLead(a.email);
     const step = copy.stepById(stepId);
     if (!lead.running || !inWindow(new Date(), lead.tz)) { out.push({ email: a.email, status: 'next run' }); continue; }
