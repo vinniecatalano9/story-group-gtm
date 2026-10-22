@@ -125,4 +125,4 @@ async function pushScorecard(p, progress = () => {}) {
   return out;
 }
 
-module.exports = { isConfigured, call, pushScorecard, USERS };
+module.exports = { isConfigured, call, pushScorecard, findOrCreateContact, USERS };

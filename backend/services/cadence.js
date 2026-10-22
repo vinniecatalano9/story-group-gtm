@@ -101,6 +101,7 @@ async function importLeads(rows) {
   for (const r of rows) {
     const email = String(r.email || '').trim().toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { out.skipped.push({ email, reason: 'no valid email' }); continue; }
+    if (r.rep && !String(r.rep).toLowerCase().includes((process.env.AD_LEADS_REP || 'Vincent').toLowerCase())) { out.skipped.push({ email, reason: `assigned to ${r.rep}` }); continue; }
     const existing = await getLead(email);
     const phone = toE164(r.phone);
     const base = {
@@ -108,7 +109,7 @@ async function importLeads(rows) {
       first_name: r.first_name || '', last_name: r.last_name || '',
       phone_raw: r.phone || '', phone: phone || null,
       role: r.role || '', frustration: r.frustration || '', company: r.company || '',
-      source: r.source || '', sheet_row: r.sheet_row || null,
+      source: r.source || '', sheet_row: r.sheet_row || null, rep: r.rep || '', notes: r.notes || '',
       tz: tzForPhone(phone),
     };
     if (existing) {
@@ -165,6 +166,7 @@ async function startLead(email) {
     day1: null, steps_done: {}, thread: null, offer: null, blocked_reason: null, pending_approval: null, sheet_dirty: true,
   });
   await addTimeline(lead.email, timelineEntry('outcome', { text: 'Tagged: cadence started' }));
+  await logToNutshell(lead, `${today(lead.tz)} Ad lead cadence started ("Become Impossible to Ignore" form lead).`);
   return refreshNext(lead.email);
 }
 
@@ -201,6 +203,7 @@ async function setOutcome(email, outcome, { meeting_at } = {}) {
   // Booked, a no, or stopped: their held times go back in the pool.
   if (['meeting', 'not_interested', 'stop'].includes(outcome)) await slots.releaseHolds(holdKey(lead.email));
   await addTimeline(lead.email, timelineEntry('outcome', { text: o.label + (meetingAt ? `, meeting ${patch.meeting_label}` : '') }));
+  await logToNutshell(lead, `${today(lead.tz)} Outcome: ${o.label}${meetingAt ? `, meeting ${patch.meeting_label}` : ''}.`);
   return refreshNext(lead.email);
 }
 
@@ -526,6 +529,7 @@ async function dispatch(id) {
     }
     await saveLead(lead.email, patch);
     await addTimeline(lead.email, timelineEntry('sent', { step: a.step, channel: a.channel, text: a.text, subject: a.subject || null, edited: !!a.edited }));
+    await logToNutshell(lead, `${shortDate(now, lead.tz)} ${step.label} sent (${a.channel === 'email' ? 'email' : 'text'})\n\n${a.subject ? `Subject: ${a.subject}\n\n` : ''}${a.text}`);
     await markCard(a, `Sent ${z.clock(now, 'America/Chicago')} CT`);
     await refreshNext(lead.email);
     return { status: 'sent' };
@@ -557,6 +561,7 @@ async function onReply(lead, channel, text, at) {
     await saveLead(lead.email, { state: 'replied', running: false, next_step: null, next_due_at: null, next_touch_label: '', replied_at: toDate(at) || new Date(), sheet_dirty: true });
   }
   await addTimeline(lead.email, timelineEntry('reply', { channel, text: String(text).slice(0, 1500), reply_at: toDate(at) || null }));
+  await logToNutshell(lead, `${shortDate(toDate(at) || new Date(), lead.tz)} ${stop ? 'Texted STOP (opted out of texts)' : `Replied by ${channel === 'sms' ? 'text' : 'email'}`}\n\n${String(text).slice(0, 1500)}`);
   await ping([
     stop ? `🛑 <b>${esc(fullName(lead))}</b> texted STOP. Cadence ended for good.` : `💬 <b>${esc(fullName(lead))}</b> replied by ${channel === 'sms' ? 'text' : 'email'}. Cadence paused.`,
     `\n${esc(String(text).slice(0, 1200))}`,
@@ -610,6 +615,63 @@ async function checkReplies() {
   }
   return out;
 }
+
+// ── Nutshell ─────────────────────────────────────────────────────────────────
+// Every touch that actually went out, every reply and every outcome becomes a
+// note on the lead's Nutshell contact (found or created by email on tag).
+// Nutshell takes ~8s a call, so sends only queue a row in nutshell_queue; the
+// cron drains it afterwards and retries failures next run. Never changes
+// Nutshell leads or stages.
+
+const nutshellQueue = () => db().collection('nutshell_queue');
+const REP = () => (process.env.AD_LEADS_REP || 'Vincent').toLowerCase();
+
+async function logToNutshell(lead, text) {
+  if (lead.rep && !String(lead.rep).toLowerCase().includes(REP())) return;
+  try {
+    await nutshellQueue().add({ email: lead.email, text: text || null, status: 'pending', attempts: 0, created_at: new Date() });
+  } catch (e) {
+    console.warn('[cadence] Nutshell queue write failed:', e.message);
+  }
+}
+
+let _draining = false;
+async function drainNutshell({ max = 20 } = {}) {
+  const nutshell = require('./nutshell');
+  if (_draining || !nutshell.isConfigured()) return { skipped: true };
+  _draining = true;
+  let done = 0, failed = 0;
+  try {
+    const snap = await nutshellQueue().where('status', '==', 'pending').get();
+    const rows = snap.docs.sort((a, b) => toDate(a.data().created_at) - toDate(b.data().created_at)).slice(0, max);
+    for (const d of rows) {
+      const job = d.data();
+      try {
+        const lead = await getLead(job.email);
+        if (!lead) { await d.ref.update({ status: 'dropped' }); continue; }
+        let contactId = lead.nutshell_contact_id;
+        if (!contactId) {
+          const c = await nutshell.findOrCreateContact({ name: fullName(lead), email: lead.email });
+          contactId = c.id;
+          await saveLead(lead.email, { nutshell_contact_id: contactId });
+          await addTimeline(lead.email, timelineEntry('note', { text: `Nutshell contact ${c.created ? 'created' : 'found'} (${contactId})` }));
+        }
+        if (job.text) await nutshell.call('newNote', { entity: { entityType: 'Contacts', id: contactId }, note: job.text });
+        await d.ref.update({ status: 'done', done_at: new Date(), contact_id: contactId });
+        done++;
+      } catch (e) {
+        failed++;
+        console.warn('[cadence] Nutshell log failed (retries next run):', e.message);
+        await d.ref.update({ attempts: (job.attempts || 0) + 1, last_error: e.message, last_error_at: new Date() }).catch(() => {});
+      }
+    }
+  } finally {
+    _draining = false;
+  }
+  return { done, failed };
+}
+
+const today = tz => shortDate(new Date(), tz || 'America/Chicago');
 
 // ── Sheet ────────────────────────────────────────────────────────────────────
 
@@ -665,6 +727,8 @@ async function tick() {
   } finally {
     _running = false;
   }
+  // Nutshell is slow: drain in the background so it never holds up a send.
+  drainNutshell().then(r => { if (r.done || r.failed) console.log('[cadence] nutshell', JSON.stringify(r)); }).catch(e => console.warn('[cadence] nutshell drain:', e.message));
   return out;
 }
 
@@ -715,5 +779,5 @@ async function status() {
 module.exports = {
   MODE, importLeads, updateLead, startLead, setOutcome, listLeads, getLead, refreshNext, nextStep,
   listCopy, saveCopy, approve, skip, dispatch, tick, checkReplies, syncSheet, dryRun, status, inWindow, intoWindow,
-  approvalsCol, queueStep,
+  approvalsCol, queueStep, drainNutshell,
 };

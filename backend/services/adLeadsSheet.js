@@ -10,7 +10,7 @@
 const { google } = require('googleapis');
 
 const SHEET_ID = () => process.env.AD_LEADS_SHEET_ID || '1qMYNGAEELfc8GLkg5hoLrBXAr2rXx6kLa40WfUxI1ZQ';
-const TAB = () => process.env.AD_LEADS_SHEET_TAB || ''; // blank = first tab
+const TAB = () => process.env.AD_LEADS_SHEET_TAB || '2026 ADs list';
 const EMAIL_COL = 'C';
 const WRITE_COLS = ['J', 'K', 'L']; // Outreach Status, Last Touch, Next Touch
 const REP = () => process.env.AD_LEADS_REP || 'Vincent'; // only rows assigned to him
@@ -109,8 +109,14 @@ async function writeBack(updates) {
   if (!updates.length) return 0;
   try {
     const tab = await tabName();
-    const r = await sheets().spreadsheets.values.get({ spreadsheetId: SHEET_ID(), range: `${q(tab)}!${EMAIL_COL}1:${EMAIL_COL}` });
-    const emails = (r.data.values || []).map(v => String(v[0] || '').trim().toLowerCase());
+    const r = await sheets().spreadsheets.values.get({ spreadsheetId: SHEET_ID(), range: `${q(tab)}!A1:Z` });
+    const [header = [], ...rows] = r.data.values || [];
+    const repCol = header.findIndex(h => /assigned|rep\b/i.test(String(h)));
+    // Only Vincent's rows; never write on a teammate's (McKenna's) row.
+    const emails = [''].concat(rows.map(row => {
+      const mine = repCol < 0 || String(row[repCol] || '').toLowerCase().includes(REP().toLowerCase());
+      return mine ? String(row[2] || '').trim().toLowerCase() : '';
+    }));
     const map = STATUS();
     const data = [];
     for (const u of updates) {
