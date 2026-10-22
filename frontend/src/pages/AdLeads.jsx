@@ -66,6 +66,82 @@ function parseCsv(text) {
   });
 }
 
+// ── Funnel stats (computed from each lead's own record) ─────────────────────
+
+const STEP_LABEL = {
+  email1: 'Email 1', text_intro: 'Text intro', text1: 'Text 1', text2: 'Text 2', email2: 'Email 2', text3: 'Text 3',
+  email3: 'Email 3', text4: 'Text 4', meet_confirm: 'Booked text', remind24_email: '24h email', remind24_text: '24h text',
+  remind1_email: '1h email', remind1_text: '1h text', noshow: 'No-show text',
+};
+const secs = (v) => (v && (v._seconds ?? v.seconds)) || (v ? new Date(v).getTime() / 1000 : 0);
+const pctOf = (n, d) => (d ? `${Math.round((n / d) * 100)}%` : '–');
+
+function funnelStats(all) {
+  const leads = all.filter(l => !/@storygroup\.io$/i.test(l.email || ''));
+  const tagged = leads.filter(l => l.tagged_at);
+  const st = {
+    tagged: tagged.length,
+    inCadence: tagged.filter(l => l.running).length,
+    blocked: tagged.filter(l => l.running && l.blocked_reason).length,
+    finished: tagged.filter(l => !l.running).length,
+    sent: { email: 0, sms: 0 }, got: { email: 0, sms: 0 }, replied: { email: 0, sms: 0 },
+    outcomes: { hit_once: 0, talked_yes: 0, meeting: 0, not_interested: 0 },
+    problems: {
+      email: leads.filter(l => l.email_bad || l.email_bounced).length,
+      sms: leads.filter(l => l.sms_failed).length,
+      stop: leads.filter(l => l.state === 'opted_out').length,
+    },
+    byStep: {},
+  };
+  for (const l of tagged) {
+    const tl = [...(l.timeline || [])].sort((a, b) => secs(a.at) - secs(b.at));
+    const got = { email: false, sms: false };
+    const replied = { email: false, sms: false };
+    let lastSent = null;
+    for (const t of tl) {
+      if (t.kind === 'sent') { st.sent[t.channel] = (st.sent[t.channel] || 0) + 1; got[t.channel] = true; lastSent = t.step; }
+      if (t.kind === 'reply') {
+        replied[t.channel] = true;
+        const k = STEP_LABEL[lastSent] || lastSent || 'before any send';
+        st.byStep[k] = (st.byStep[k] || 0) + 1;
+      }
+    }
+    for (const ch of ['email', 'sms']) { if (got[ch]) st.got[ch]++; if (replied[ch]) st.replied[ch]++; }
+    if (l.outcome in st.outcomes) st.outcomes[l.outcome]++;
+  }
+  return st;
+}
+
+function Stat({ label, value, sub }) {
+  return (
+    <div className="glass-card rounded-xl p-3 min-w-0">
+      <p className="text-[10px] font-semibold text-muted uppercase tracking-[0.12em] truncate">{label}</p>
+      <p className="font-serif italic text-xl font-bold text-body leading-tight mt-0.5">{value}</p>
+      {sub && <p className="text-[11px] text-muted mt-0.5 leading-snug">{sub}</p>}
+    </div>
+  );
+}
+
+function FunnelStats({ leads }) {
+  const s = funnelStats(leads);
+  const replies = s.replied.email + s.replied.sms;
+  const steps = Object.entries(s.byStep).sort((a, b) => b[1] - a[1]);
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+        <Stat label="Tagged" value={s.tagged} sub={`${s.inCadence} in cadence · ${s.finished} finished${s.blocked ? ` · ${s.blocked} blocked` : ''}`} />
+        <Stat label="Sent" value={s.sent.email + s.sent.sms} sub={`${s.sent.email} emails · ${s.sent.sms} texts`} />
+        <Stat label="Replied" value={replies} sub={`email ${s.replied.email}/${s.got.email} (${pctOf(s.replied.email, s.got.email)}) · text ${s.replied.sms}/${s.got.sms} (${pctOf(s.replied.sms, s.got.sms)})`} />
+        <Stat label="Booked" value={s.outcomes.meeting} sub={`${pctOf(s.outcomes.meeting, s.tagged)} of tagged`} />
+        <Stat label="Outcomes" value={s.outcomes.hit_once + s.outcomes.talked_yes + s.outcomes.meeting + s.outcomes.not_interested}
+          sub={`Hit once ${s.outcomes.hit_once} · Talked yes ${s.outcomes.talked_yes} · Meeting ${s.outcomes.meeting} · Not int. ${s.outcomes.not_interested}`} />
+        <Stat label="Problems" value={s.problems.email + s.problems.sms + s.problems.stop} sub={`email bad ${s.problems.email} · texts failed ${s.problems.sms} · STOP ${s.problems.stop}`} />
+      </div>
+      <p className="text-[11px] text-muted">Replies by the step right before: {steps.length ? steps.map(([k, v]) => `${k} ${v}`).join(' · ') : 'no replies yet'}. Test leads (@storygroup.io) left out.</p>
+    </div>
+  );
+}
+
 function Btn({ children, onClick, kind = 'ghost', disabled }) {
   const cls = kind === 'primary'
     ? 'bg-brand-500 text-white hover:bg-brand-500/90'
@@ -306,6 +382,7 @@ export default function AdLeads({ api }) {
         <Btn onClick={() => setShowAll(!showAll)}>Approve all pending</Btn>
         <Btn onClick={() => setShowCopy(!showCopy)}>Step copy</Btn>
       </div>
+      {data.leads.length > 0 && <FunnelStats leads={data.leads} />}
       {err && <p className="text-sm text-red-400">{err}</p>}
       {msg && <p className="text-sm text-green-400">{msg}</p>}
       {showPaste && (
