@@ -47,7 +47,7 @@ function parseCsv(text) {
   const [head = [], ...body] = rows.filter(r => r.some(v => v.trim()));
   const h = head.map(x => x.trim().toLowerCase());
   const col = (...names) => h.findIndex(x => names.some(n => x.includes(n)));
-  const ix = { name: col('full name', 'name'), first: col('first'), last: col('last'), email: col('email'), phone: col('phone', 'mobile', 'cell'), role: col('role', 'title', 'describes'), fr: col('frustrat', 'challenge'), co: col('company', 'business'), rep: col('assigned'), notes: col('notes') };
+  const ix = { name: col('full name', 'name'), first: col('first name'), last: col('last name'), email: col('email'), phone: col('phone', 'mobile', 'cell'), role: col('role', 'title', 'describes'), fr: col('frustrat', 'challenge'), co: col('company', 'business'), rep: col('assigned'), notes: col('notes') };
   return body.map((r, i) => {
     const full = ix.name >= 0 ? r[ix.name] || '' : '';
     return {

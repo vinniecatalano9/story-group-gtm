@@ -80,8 +80,10 @@ async function readLeads() {
   const { rows, header, tab } = await readRows();
   const leads = rows.map(({ row, values, raw }) => {
     const full = pick(values, 'full name', 'name');
-    const first = pick(values, 'first') || full.split(/\s+/)[0] || '';
-    const last = pick(values, 'last') || full.split(/\s+/).slice(1).join(' ');
+    // 'first name' / 'last name' exactly: plain 'last' would hit "Last Touch".
+    const cap = n => (n && n === n.toLowerCase() ? n.charAt(0).toUpperCase() + n.slice(1) : n);
+    const first = cap(pick(values, 'first name') || full.split(/\s+/)[0] || '');
+    const last = pick(values, 'last name') || full.split(/\s+/).slice(1).join(' ');
     return {
       sheet_row: row,
       email: (raw[2] || pick(values, 'email')).trim().toLowerCase(),

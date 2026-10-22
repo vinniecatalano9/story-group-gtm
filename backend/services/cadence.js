@@ -178,7 +178,7 @@ const OUTCOMES = {
   stop: { state: 'stopped', track: null, label: 'Stopped by Vincent' },
 };
 
-async function setOutcome(email, outcome, { meeting_at } = {}) {
+async function setOutcome(email, outcome, { meeting_at, source = '' } = {}) {
   const o = OUTCOMES[outcome];
   if (!o) throw new Error(`Unknown outcome ${outcome}`);
   const lead = await getLead(email);
@@ -202,8 +202,8 @@ async function setOutcome(email, outcome, { meeting_at } = {}) {
   await saveLead(lead.email, patch);
   // Booked, a no, or stopped: their held times go back in the pool.
   if (['meeting', 'not_interested', 'stop'].includes(outcome)) await slots.releaseHolds(holdKey(lead.email));
-  await addTimeline(lead.email, timelineEntry('outcome', { text: o.label + (meetingAt ? `, meeting ${patch.meeting_label}` : '') }));
-  await logToNutshell(lead, `${today(lead.tz)} Outcome: ${o.label}${meetingAt ? `, meeting ${patch.meeting_label}` : ''}.`);
+  await addTimeline(lead.email, timelineEntry('outcome', { text: o.label + (meetingAt ? `, meeting ${patch.meeting_label}` : '') + (source ? ` (${source})` : '') }));
+  await logToNutshell(lead, `${today(lead.tz)} Outcome: ${o.label}${meetingAt ? `, meeting ${patch.meeting_label}` : ''}.${source ? ` (${source})` : ''}`, { outcome });
   return refreshNext(lead.email);
 }
 
@@ -620,16 +620,23 @@ async function checkReplies() {
 // Every touch that actually went out, every reply and every outcome becomes a
 // note on the lead's Nutshell contact (found or created by email on tag).
 // Nutshell takes ~8s a call, so sends only queue a row in nutshell_queue; the
-// cron drains it afterwards and retries failures next run. Never changes
-// Nutshell leads or stages.
+// cron drains it afterwards and retries failures next run.
+//
+// The ad form leads already sit in Nutshell as leads named after the person
+// (Kickstart / Diagnostic Pipeline, created by Annette, no contact attached).
+// Notes go on that lead when there's exactly one open lead with the name,
+// else on the contact. Outcome stages (Vincent approved 10/22): Talked yes =
+// Qualified for Kickstart, Meeting yes = Kickstart Call Scheduled, only in
+// that pipeline and only forward. Not interested = Lost, but the API can't
+// close a lead, so Vincent gets a Telegram line to click Lost himself.
 
 const nutshellQueue = () => db().collection('nutshell_queue');
 const REP = () => (process.env.AD_LEADS_REP || 'Vincent').toLowerCase();
 
-async function logToNutshell(lead, text) {
+async function logToNutshell(lead, text, { outcome = null } = {}) {
   if (lead.rep && !String(lead.rep).toLowerCase().includes(REP())) return;
   try {
-    await nutshellQueue().add({ email: lead.email, text: text || null, status: 'pending', attempts: 0, created_at: new Date() });
+    await nutshellQueue().add({ email: lead.email, text: text || null, outcome, status: 'pending', attempts: 0, created_at: new Date() });
   } catch (e) {
     console.warn('[cadence] Nutshell queue write failed:', e.message);
   }
@@ -656,8 +663,23 @@ async function drainNutshell({ max = 20 } = {}) {
           await saveLead(lead.email, { nutshell_contact_id: contactId });
           await addTimeline(lead.email, timelineEntry('note', { text: `Nutshell contact ${c.created ? 'created' : 'found'} (${contactId})` }));
         }
-        if (job.text) await nutshell.call('newNote', { entity: { entityType: 'Contacts', id: contactId }, note: job.text });
-        await d.ref.update({ status: 'done', done_at: new Date(), contact_id: contactId });
+        const leadId = await nutshellLeadFor(await getLead(job.email));
+        if (job.text) {
+          const entity = leadId ? { entityType: 'Leads', id: leadId } : { entityType: 'Contacts', id: contactId };
+          if (!job.note_done) {
+            await nutshell.call('newNote', { entity, note: job.text });
+            await d.ref.update({ note_done: true });
+          }
+        }
+        if (job.outcome) {
+          const line = leadId ? await applyStage(lead, leadId, job.outcome)
+            : 'No single open Nutshell lead with this name: stage not set';
+          if (line) {
+            await addTimeline(lead.email, timelineEntry('note', { text: line }));
+            if (!leadId) await ping(`Nutshell: no single open lead named <b>${esc(fullName(lead))}</b>, so the ${esc(job.outcome)} stage wasn't set. The note is on the contact.`);
+          }
+        }
+        await d.ref.update({ status: 'done', done_at: new Date(), contact_id: contactId, lead_id: leadId || null });
         done++;
       } catch (e) {
         failed++;
@@ -673,10 +695,46 @@ async function drainNutshell({ max = 20 } = {}) {
 
 const today = tz => shortDate(new Date(), tz || 'America/Chicago');
 
+const KICKSTART_STAGESET = 5;
+const STAGE_FOR = { talked_yes: 115, meeting: 116 }; // Qualified for Kickstart, Kickstart Call Scheduled
+const normName = v => String(v || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+/** The one open Nutshell lead named after this person, or null. Cached on the lead. */
+async function nutshellLeadFor(lead) {
+  const nutshell = require('./nutshell');
+  if (lead.nutshell_lead_id) return lead.nutshell_lead_id;
+  if (lead.nutshell_lead_checked_at && Date.now() - toDate(lead.nutshell_lead_checked_at) < 864e5) return null;
+  const hits = await nutshell.call('searchLeads', { string: fullName(lead), limit: 10 });
+  const mine = (hits || []).filter(l => l.status === 0 && normName(l.description) === normName(fullName(lead)));
+  const id = mine.length === 1 ? mine[0].id : null;
+  await saveLead(lead.email, id ? { nutshell_lead_id: id } : { nutshell_lead_checked_at: new Date() });
+  return id;
+}
+
+/** Move the lead forward to the outcome's stage. Returns a line for the timeline. */
+async function applyStage(lead, leadId, outcome) {
+  const nutshell = require('./nutshell');
+  if (outcome === 'not_interested') {
+    await ping(`Nutshell: mark <b>${esc(fullName(lead))}</b> as Lost (Not interested). The API can't close leads: https://app.nutshell.com/lead/${leadId}`);
+    return 'Asked Vincent to mark Lost in Nutshell';
+  }
+  const target = STAGE_FOR[outcome];
+  if (!target) return null;
+  const l = await nutshell.call('getLead', { leadId });
+  if (!l.stageset || l.stageset.id !== KICKSTART_STAGESET) return `Nutshell stage not changed: lead is in ${l.stageset ? l.stageset.name : 'no pipeline'}`;
+  const ms = await nutshell.call('findMilestones', {});
+  const pos = id => (ms.find(m => m.id === id) || {}).position || 0;
+  if (l.milestone && pos(l.milestone.id) >= pos(target)) return `Nutshell stage left at ${l.milestone.name} (already there or past it)`;
+  // editLead takes milestoneId; a { milestone: { id } } stub makes Nutshell 500.
+  await nutshell.call('editLead', { leadId, rev: l.rev, lead: { milestoneId: target } }, { attempts: 1 });
+  return `Nutshell stage set to ${(ms.find(m => m.id === target) || {}).name}`;
+}
+
 // ── Sheet ────────────────────────────────────────────────────────────────────
 
 async function syncSheet({ all = false } = {}) {
-  const leads = (await listLeads()).filter(l => all || l.sheet_dirty);
+  // Untagged leads keep whatever the team typed in J:L.
+  const leads = (await listLeads()).filter(l => l.tagged_at && (all || l.sheet_dirty));
   if (!leads.length) return 0;
   const n = await require('./adLeadsSheet').writeBack(leads.map(l => ({
     email: l.email, status: l.state, last_touch: l.last_touch_label || '',
@@ -697,6 +755,7 @@ async function tick() {
   const out = { queued: [], sent: [], waiting: [], blocked: [] };
   try {
     out.replies = await checkReplies();
+    out.calls = await require('./cadenceCalls').checkCalls().catch(e => ({ error: e.message }));
 
     // Approved cards waiting on a window or the 20-minute spacing.
     const approved = await approvalsCol().where('status', '==', 'approved').get();
@@ -779,5 +838,5 @@ async function status() {
 module.exports = {
   MODE, importLeads, updateLead, startLead, setOutcome, listLeads, getLead, refreshNext, nextStep,
   listCopy, saveCopy, approve, skip, dispatch, tick, checkReplies, syncSheet, dryRun, status, inWindow, intoWindow,
-  approvalsCol, queueStep, drainNutshell,
+  approvalsCol, queueStep, drainNutshell, ping, fullName, esc, DASHBOARD_URL,
 };

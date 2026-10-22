@@ -24,7 +24,13 @@ async function matchLeadByPhone(phone) {
   const variants = phoneVariants(phone);
   if (!variants.length) return null;
   const snap = await leads.where('phone', 'in', variants).limit(1).get();
-  if (snap.empty) return null;
+  if (snap.empty) {
+    // Ad form leads (services/cadence.js) keep their phone as +1XXXXXXXXXX.
+    const ad = await db.collection('ad_leads').where('phone', 'in', variants).limit(1).get();
+    if (ad.empty) return null;
+    const a = ad.docs[0].data();
+    return { email: a.email, name: [a.first_name, a.last_name].filter(Boolean).join(' ') || null, company: a.company || null };
+  }
   const l = snap.docs[0].data();
   return {
     email: l.email || null,
