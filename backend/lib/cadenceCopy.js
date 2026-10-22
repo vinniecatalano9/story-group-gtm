@@ -24,11 +24,11 @@ const TRACKS = {
   intro: [
     {
       id: 'email1', channel: 'email', day: 1, label: 'Email 1', approved: true, subject: SUBJECT,
-      template: `Hey {first},\n\nThanks for reaching out through our ${AD} ad. {frustration_line} Would love to hop on a quick call to learn what {work_phrase} on and share where we see opportunities to get {visibility_target} more visibility.\n\n{times_question}\n\nBest,\nVincent`,
+      template: `Hey {first},\n\nThanks for filling out our ${AD} form on Facebook. {frustration_line} Would love to hop on a quick call to learn what {work_phrase} on and share where we see opportunities to get {visibility_target} more visibility.\n\n{times_question}\n\nBest,\nVincent`,
     },
     {
       id: 'text1', channel: 'sms', day: 1, afterMinutes: 60, label: 'Text 1', approved: true, reuseOffer: 'email1',
-      template: `Hi {first}, it's Vincent with Story Group. Just sent you an email about the ${AD} ad you responded to. {times_question_text}`,
+      template: `Hi {first}, it's Vincent with Story Group. Just sent you an email about the ${AD} form you filled out on Facebook. {times_question_text}`,
     },
     { id: 'text2', channel: 'sms', day: 2, label: 'Text 2', approved: true,
       template: 'Hey {first}, not sure if text or email is better for you. {day} at {time} ET is open for a quick call. Does that work?' },
