@@ -476,6 +476,31 @@ async function cancelPending(email, why) {
   await saveLead(email, { pending_approval: null });
 }
 
+/**
+ * Replace every pending card for a step with a fresh one (new copy, new
+ * times). Old cards read "Replaced, new card below"; their holds go back in
+ * the pool. Sends nothing. Leads outside their window get a card next run.
+ */
+async function rebuildPending(stepId) {
+  const snap = await approvalsCol().where('status', '==', 'pending').get();
+  const out = [];
+  for (const d of snap.docs.filter(x => x.data().step === stepId)) {
+    const a = d.data();
+    await d.ref.update({ status: 'cancelled', cancel_reason: 'replaced', updated_at: new Date() });
+    await markCard(a, 'Replaced, new card below');
+    if (stepId === 'email1') await slots.releaseHolds(holdKey(a.email));
+    await saveLead(a.email, { pending_approval: null });
+    const lead = await getLead(a.email);
+    const step = copy.stepById(stepId);
+    if (!lead.running || !inWindow(new Date(), lead.tz)) { out.push({ email: a.email, status: 'next run' }); continue; }
+    const msg = await buildMessage(lead, step);
+    if (msg.blocked) { out.push({ email: a.email, blocked: msg.blocked }); continue; }
+    const q = await queueStep(lead, step, msg);
+    out.push({ email: a.email, id: q.id, subject: q.subject, text: q.text, times: msg.times });
+  }
+  return out;
+}
+
 /** Approve (with optional edits) from the card's page. Sends now if it can. */
 async function approve(id, { text, subject } = {}) {
   const ref = approvalsCol().doc(id);
@@ -964,5 +989,5 @@ async function status() {
 module.exports = {
   MODE, importLeads, updateLead, startLead, setOutcome, markNoShow, listLeads, getLead, refreshNext, nextStep,
   listCopy, saveCopy, approve, skip, dispatch, tick, checkReplies, syncSheet, dryRun, status, inWindow, intoWindow,
-  approvalsCol, queueStep, drainNutshell, touchesSoFar, dispatchApproved, ping, fullName, esc, DASHBOARD_URL,
+  approvalsCol, queueStep, drainNutshell, touchesSoFar, dispatchApproved, rebuildPending, ping, fullName, esc, DASHBOARD_URL,
 };

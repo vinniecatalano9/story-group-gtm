@@ -9,7 +9,7 @@
 // `approved: false` would stay blocked until he approves it on the dashboard;
 // his saved edits (Firestore cadence_copy/{step id}) override the copy here.
 //
-// Template variables: {first} {frustration_line} {today} {day} {am} {pm}
+// Template variables: {first} {frustration_line} {work_phrase} {visibility_target} {today} {day} {am} {pm}
 // {time} {meeting_day} {meeting_time} {times_question}. Steps whose copy uses
 // a time get fresh times planned and held when they're queued.
 
@@ -22,7 +22,7 @@ const TRACKS = {
   intro: [
     {
       id: 'email1', channel: 'email', day: 1, label: 'Email 1', approved: true, subject: SUBJECT,
-      template: `Hey {first},\n\nThanks for reaching out through our ${AD} ad. {frustration_line} Would love to hop on a quick call to learn what you're working on and share where we see opportunities to get you more visibility.\n\n{times_question}\n\nBest,\nVincent\nStory Group`,
+      template: `Hey {first},\n\nThanks for reaching out through our ${AD} ad. {frustration_line} Would love to hop on a quick call to learn what {work_phrase} on and share where we see opportunities to get {visibility_target} more visibility.\n\n{times_question}\n\nBest,\nVincent`,
     },
     {
       id: 'text1', channel: 'sms', day: 1, afterMinutes: 60, label: 'Text 1', approved: true, reuseOffer: 'email1',
@@ -31,11 +31,11 @@ const TRACKS = {
     { id: 'text2', channel: 'sms', day: 2, label: 'Text 2', approved: true,
       template: 'Hey {first}, not sure if text or email is better for you. {day} at {time} ET is open for a quick call. Does that work?' },
     { id: 'email2', channel: 'email', day: 4, label: 'Email 2', approved: true,
-      template: 'Hey {first},\n\nAny thoughts on my last note? Happy to find 15 to 30 minutes that works for you. What does your week look like?\n\nVincent' },
+      template: 'Hey {first},\n\nAny thoughts on my last note? Happy to find 15 to 30 minutes that works for you. What does your week look like?\n\nBest,\nVincent' },
     { id: 'text3', channel: 'sms', day: 6, label: 'Text 3', approved: true,
       template: "Hey {first}, I'm sure this got buried. Does {day} at {time} ET work for a quick call?" },
     { id: 'email3', channel: 'email', day: 9, label: 'Email 3', approved: true,
-      template: "Hey {first},\n\nI'm sure this got lost in your inbox. Does {day} at {am} or {pm} ET work?\n\nVincent" },
+      template: "Hey {first},\n\nI'm sure this got lost in your inbox. Does {day} at {am} or {pm} ET work?\n\nBest,\nVincent" },
     { id: 'text4', channel: 'sms', day: 14, label: 'Text 4 (breakup)', approved: true,
       template: 'Hey {first}, looks like now might not be the right time. Should I close this out, or is getting more visibility still on your list?' },
   ],
@@ -46,16 +46,16 @@ const TRACKS = {
   // Hit once: talked, no meeting yet. 3 touches, 7 days apart.
   nurture: [
     { id: 'nurture1', channel: 'email', day: 8, label: 'Nurture 1 (day 7 email)', approved: true,
-      template: 'Hey {first},\n\nGood talking last week. Is getting more visibility still on your list for this quarter?\n\nVincent' },
+      template: 'Hey {first},\n\nGood talking last week. Is getting more visibility still on your list for this quarter?\n\nBest,\nVincent' },
     { id: 'nurture2', channel: 'sms', day: 15, label: 'Nurture 2 (day 14 text)', approved: true,
       template: "Hey {first}, it's Vincent from Story Group. Any questions come up since we talked?" },
     { id: 'nurture3', channel: 'email', day: 22, label: 'Nurture 3 (day 21 email)', approved: true,
-      template: "Hey {first},\n\nI'll keep this short. Should I check back in a couple of months, or is now a better time to pick this back up?\n\nVincent" },
+      template: "Hey {first},\n\nI'll keep this short. Should I check back in a couple of months, or is now a better time to pick this back up?\n\nBest,\nVincent" },
   ],
   // Talked yes: email right after the outcome, text if no reply in 24h.
   booking: [
     { id: 'booking1', channel: 'email', immediate: true, label: 'Booking follow-up (email)', approved: true,
-      template: 'Hey {first},\n\nGood talking with you. Does {day} at {am} or {pm} ET work for a proper call?\n\nVincent' },
+      template: 'Hey {first},\n\nGood talking with you. Does {day} at {am} or {pm} ET work for a proper call?\n\nBest,\nVincent' },
     { id: 'booking2', channel: 'sms', afterMinutes: 24 * 60, label: 'Booking follow-up (text, 24h)', approved: true,
       template: 'Hey {first}, just making sure you saw my email. Does {day} at {time} ET work?' },
   ],
@@ -67,11 +67,11 @@ const TRACKS = {
     // Reminders (approved 10/22).
     { id: 'remind24_email', channel: 'email', beforeMeetingMinutes: 24 * 60, label: '24h reminder (email)', approved: true,
       subject: 'Tomorrow at {meeting_time} ET',
-      template: 'Hey {first},\n\nLooking forward to our call tomorrow at {meeting_time} ET. Still good for you?\n\nVincent' },
+      template: 'Hey {first},\n\nLooking forward to our call tomorrow at {meeting_time} ET. Still good for you?\n\nBest,\nVincent' },
     { id: 'remind24_text', channel: 'sms', beforeMeetingMinutes: 24 * 60 - 5, label: '24h reminder (text)', approved: true,
       template: "Hey {first}, it's Vincent from Story Group. Still good for tomorrow at {meeting_time} ET?" },
     { id: 'remind1_email', channel: 'email', beforeMeetingMinutes: 60, label: '1h reminder (email)', approved: true,
-      template: 'Hey {first}, talking at {meeting_time} ET. Still good?' },
+      template: 'Hey {first}, talking at {meeting_time} ET. Still good?\n\nBest,\nVincent' },
     { id: 'remind1_text', channel: 'sms', beforeMeetingMinutes: 55, label: '1h reminder (text)', approved: true,
       template: 'Hey {first}, talking at {meeting_time} ET. Still good?' },
     // No call 15 minutes after the start (or Vincent marks a no-show). Always a
@@ -103,7 +103,8 @@ const amPm = t => [t.am, t.pm].filter(Boolean).join(' or ');
 // Email 1's question. Approved: with and without a today slot. [CLAUDE'S IDEA] calendar-full fallback.
 function timesQuestion(t) {
   if (t.today && t.day) return `Could I give you a call today at ${t.today} ET, or does ${t.day} at ${amPm(t)} ET work better?`;
-  if (t.day) return `Does ${t.day} at ${amPm(t)} ET work for a quick call?`;
+  // The email body already says "hop on a quick call" (Vincent, 10/22).
+  if (t.day) return `Does ${t.day} at ${amPm(t)} ET work?`;
   if (t.today) return `Could I give you a call today at ${t.today} ET?`;
   return 'What does your week look like for a quick call?';
 }
@@ -147,6 +148,9 @@ function render(template, lead, times = {}, meeting = {}) {
   const vars = {
     first: capFirst(String(lead.greet_name || lead.first_name || '').trim()),
     frustration_line: frustrationLine(lead.frustration),
+    // Role wording (plan section 4): marketing leaders get team / company.
+    work_phrase: /marketing/i.test(lead.role || '') ? 'you and your team are working' : "you're working",
+    visibility_target: /marketing/i.test(lead.role || '') ? 'the company' : 'you',
     today: t.today, day: t.day, am: t.am, pm: t.pm, time: t.time,
     times_question: timesQuestion(t),
     times_question_text: timesQuestionText(t),
