@@ -9,6 +9,13 @@
 // button (track switch, sheet J:L, Nutshell note and stage) and sends Vincent
 // one Telegram line with the pick and why, so he can override on the page.
 // When the call is unclear it sets nothing and asks him instead.
+//
+// The Nutshell note carries the call itself (Vincent, 10/22): a short summary,
+// what they asked for, the agreed next step, and a revisit date if they gave
+// one. The revisit date is only written down; no task or check-in is made.
+// The sheet shows the call too: Last Touch "10/22 Call, 23 min", "Call" in
+// Touches So Far, and one short line appended to Notes (never replacing it),
+// once per transcript.
 
 const { db, transcripts } = require('./db');
 const { claudeJSON } = require('./claude');
@@ -32,10 +39,56 @@ Outcomes (pick exactly one):
 
 The call happened ${callDate ? new Date(callDate).toISOString() : 'recently'}. If the outcome is "meeting", give the meeting start as an ISO 8601 datetime with offset in "meeting_at" (assume Eastern time if they said ET or no zone); if the day or time is not stated clearly, use outcome "talked_yes" instead.
 
-Return only JSON: {"outcome": "...", "meeting_at": "... or null", "reason": "one short sentence quoting or paraphrasing what they said"}
+Also write the CRM note fields, from what was actually said (never invent anything):
+- "one_line": the call in one line, under 15 words, for a spreadsheet note.
+- "summary": 2 to 3 plain sentences on what the call covered: their business, what they want, where they stand.
+- "asked_for": what the prospect asked Vincent to send or do (info, pricing, a proposal, a follow up call...), or null if they asked for nothing.
+- "next_step": the next step both sides agreed on, or null if none was agreed.
+- "revisit": if they said to check back later, when, as they said it plus the approximate date (e.g. "in about 3 months, around late January 2027"), else null.
+Write like a person typing a CRM note: short, plain words, no dashes of any kind (use commas or periods).
+
+Return only JSON: {"outcome": "...", "meeting_at": "... or null", "reason": "one short sentence quoting or paraphrasing what they said", "one_line": "...", "summary": "...", "asked_for": "... or null", "next_step": "... or null", "revisit": "... or null"}
 
 TRANSCRIPT:
 ${text}`;
+}
+
+const clean = v => (v && !/^(null|none|n\/a)$/i.test(String(v).trim()) ? String(v).trim().replace(/[ \t]+[\u2013\u2014-]+[ \t]+/g, ', ').replace(/[\u2013\u2014]/g, ', ') : '');
+const md = (d, tz) => new Date(d).toLocaleDateString('en-US', { timeZone: tz || 'America/Chicago', month: 'numeric', day: 'numeric' });
+
+/** The Nutshell note body from the call read. */
+function callNote(r, link = '') {
+  return [
+    clean(r.summary) && `Call summary: ${clean(r.summary)}`,
+    `They asked for: ${clean(r.asked_for) || 'nothing specific'}`,
+    `Next step: ${clean(r.next_step) || 'none agreed'}`,
+    clean(r.revisit) && `Revisit: ${clean(r.revisit)}`,
+    link && `Transcript: ${link}`,
+  ].filter(Boolean).join('\n');
+}
+
+/** The line appended to the sheet's Notes cell. */
+function sheetLine(r, date, tz) {
+  const what = clean(r.one_line) || clean(r.reason);
+  return `${md(date, tz)} call: ${what.replace(/\.$/, '')}, next: ${(clean(r.next_step) || 'none agreed').replace(/\.$/, '')}`;
+}
+
+/** Last Touch, Touches So Far and Notes on the sheet show the call. */
+async function markCallOnSheet(lead, t, id, r) {
+  const { FieldValue } = require('firebase-admin').firestore;
+  const mins = Math.round(Number(t.duration) || 0);
+  const label = `${md(t.date, lead.tz)} Call${mins ? `, ${mins} min` : ''}`;
+  await db.collection('ad_leads').doc(lead.email).update({
+    last_touch_at: new Date(t.date), last_touch_label: label, sheet_dirty: true,
+    timeline: FieldValue.arrayUnion({ at: new Date(t.date), kind: 'call', text: label, transcript: id }),
+  });
+  try {
+    await db.collection('postcall_claims').doc(`${id}_sheet`).create({ at: new Date(), email: lead.email });
+  } catch {
+    return; // Notes line already written for this transcript
+  }
+  const ok = await require('./adLeadsSheet').appendNote({ email: cadence.realEmail(lead), phone: lead.phone, line: sheetLine(r, t.date, lead.tz) });
+  if (ok === null) await db.collection('postcall_claims').doc(`${id}_sheet`).delete().catch(() => {});
 }
 
 /** Ad lead this transcript is with: participant email first, then the call title's name. */
@@ -67,7 +120,7 @@ async function checkCalls() {
       const full = await require('./fireflies').getTranscript(t.fireflies_id || doc.id);
       const text = transcriptText(full || t);
       let r = { outcome: 'unclear', reason: 'No transcript text yet' };
-      if (text && text.length > 200) r = await claudeJSON(prompt(lead, text, t.date), { maxTokens: 400, timeout: 180000 });
+      if (text && text.length > 200) r = await claudeJSON(prompt(lead, text, t.date), { maxTokens: 900, timeout: 180000 });
       await ref.update({ calls_read: FieldValue.arrayUnion(doc.id) });
       const link = t.transcript_url ? `\n${t.transcript_url}` : '';
       if (!LABEL[r.outcome] || (r.outcome === 'meeting' && isNaN(new Date(r.meeting_at)))) {
@@ -76,8 +129,9 @@ async function checkCalls() {
         out.asked++;
         continue;
       }
-      await cadence.setOutcome(lead.email, r.outcome, { meeting_at: r.outcome === 'meeting' ? r.meeting_at : undefined, source: 'set from call transcript' });
+      await cadence.setOutcome(lead.email, r.outcome, { meeting_at: r.outcome === 'meeting' ? r.meeting_at : undefined, source: 'set from call transcript', note: callNote(r, t.transcript_url) });
       await cadence.ping(`📞 Call with <b>${cadence.esc(cadence.fullName(lead))}</b>: set to <b>${LABEL[r.outcome]}</b>${r.outcome === 'meeting' ? ` (${cadence.esc(new Date(r.meeting_at).toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }))} ET)` : ''}. ${cadence.esc(r.reason || '')}\nWrong? Change it on the Ad Leads page: ${cadence.DASHBOARD_URL()}${link}`);
+      await markCallOnSheet(lead, t, doc.id, r).catch(e => console.warn(`[cadenceCalls] sheet for ${lead.email}:`, e.message));
       out.set++;
     } catch (e) {
       // Not marked read, so the next run tries again.
@@ -87,4 +141,4 @@ async function checkCalls() {
   return out;
 }
 
-module.exports = { checkCalls, matchLead };
+module.exports = { checkCalls, matchLead, prompt, callNote, sheetLine, markCallOnSheet };

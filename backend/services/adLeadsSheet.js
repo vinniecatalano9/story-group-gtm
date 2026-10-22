@@ -2,7 +2,8 @@
 //
 // Reads the lead rows for the dashboard import, and writes the cadence's
 // Outreach Status (J), Last Touch (K), Next Touch (L) and Touches So Far (M)
-// back on the row whose Email (C) matches. Auth is the backend's service account
+// back on the row whose Email (C) matches. After a call, one line is appended
+// to Notes (I) (appendNote); Notes is never overwritten. Auth is the backend's service account
 // (GOOGLE_APPLICATION_CREDENTIALS), so the sheet has to be shared with it as
 // Editor and the Sheets API enabled on its Google Cloud project. Until then
 // every call warns and returns null; nothing crashes.
@@ -146,6 +147,39 @@ async function writeBack(updates) {
 }
 
 /**
+ * Append one line to Notes (I) on Vincent's row for this lead, matched like
+ * writeBack (email in C, else phone in B). Reads the cell first and keeps what
+ * the team wrote there; nothing in Notes is ever replaced. Returns true when
+ * written, false when there was nothing to do, null when the sheet failed.
+ */
+async function appendNote({ email, phone, line }) {
+  if (!line) return false;
+  try {
+    const tab = await tabName();
+    const r = await sheets().spreadsheets.values.get({ spreadsheetId: SHEET_ID(), range: `${q(tab)}!A1:Z` });
+    const [header = [], ...rows] = r.data.values || [];
+    const repCol = header.findIndex(h => /assigned|rep\b/i.test(String(h)));
+    const notesCol = header.findIndex(h => /^notes?$/i.test(String(h).trim()));
+    if (notesCol < 0 || notesCol > 25) return false;
+    const { toE164 } = require('./ringcentral');
+    const mine = row => repCol < 0 || String(row[repCol] || '').toLowerCase().includes(REP().toLowerCase());
+    let i = email ? rows.findIndex(row => mine(row) && String(row[2] || '').trim().toLowerCase() === String(email).toLowerCase()) : -1;
+    if (i < 0 && !email && phone) i = rows.findIndex(row => mine(row) && toE164(row[1]) === phone);
+    if (i < 0) return false;
+    const cur = String(rows[i][notesCol] || '').trimEnd();
+    if (cur.includes(line)) return false;
+    await sheets().spreadsheets.values.update({
+      spreadsheetId: SHEET_ID(), range: `${q(tab)}!${String.fromCharCode(65 + notesCol)}${i + 2}`, valueInputOption: 'RAW',
+      requestBody: { values: [[cur ? `${cur}\n${line}` : line]] },
+    });
+    return true;
+  } catch (e) {
+    console.warn('[adLeadsSheet] Notes append failed:', e.message);
+    return null;
+  }
+}
+
+/**
  * Add one lead row (A:H only: Notes in I and the cadence's J:M are left alone)
  * below the last row, with the same dropdowns as Vincent's rows. Returns the row number.
  * @param cells [Full Name, Phone, Email, role, frustration, Channel, Lead Status, Assigned Rep]
@@ -210,4 +244,4 @@ async function ensureStatusOptions() {
   return { changed: true, added: want, rows: mine };
 }
 
-module.exports = { readLeads, readRows, appendLead, writeBack, status, STATUS, ensureStatusOptions };
+module.exports = { appendNote, readLeads, readRows, appendLead, writeBack, status, STATUS, ensureStatusOptions };

@@ -101,8 +101,11 @@ async function storeAndMatch(transcript) {
  * Generate a follow-up email draft for a transcript's matched contact,
  * store it on the transcript doc, and log a follow-up task to CoterieHQ.
  * Idempotent unless force=true. Returns { followup_draft } or { skipped }.
+ * auto=true is the after-call path (cron/fireflies-poll.js processCall): a
+ * draft only when the prospect asked for something, and it also goes into
+ * Vincent's Gmail drafts. Never sends.
  */
-async function generateDraftForTranscript(transcript, matchedContacts, { force = false, email = null } = {}) {
+async function generateDraftForTranscript(transcript, matchedContacts, { force = false, email = null, auto = false } = {}) {
   // Recipient: explicit override → matched CRM contact → any external
   // participant on the call (LinkedIn/Calendly-booked prospects aren't in
   // the leads DB yet, but they still need a follow-up).
@@ -117,16 +120,19 @@ async function generateDraftForTranscript(transcript, matchedContacts, { force =
     if (doc.exists && doc.data().followup_draft) return { skipped: 'draft already exists', followup_draft: doc.data().followup_draft };
   }
 
-  const draft = await generateFollowupDraft(transcript, target.email);
+  const draft = await generateFollowupDraft(transcript, target.email, { onlyIfAsked: auto });
+  if (draft.asked === false) return { skipped: 'no ask on the call' };
   const followup_draft = {
     to: target.email,
     subject: draft.subject,
     body: draft.body,
+    ask: draft.ask || null,
     generated_at: new Date().toISOString(),
     status: 'draft',
   };
+  if (auto) followup_draft.gmail_draft = await require('../services/gmailDraft').createGmailDraft(followup_draft);
   await ref.set({ followup_draft }, { merge: true });
-  console.log(`[fireflies] Follow-up draft generated for ${target.email} ("${draft.subject}")`);
+  console.log(`[fireflies] Follow-up draft generated for ${target.email} ("${draft.subject}")${auto ? (followup_draft.gmail_draft ? ', in Gmail drafts' : ', Gmail draft failed') : ''}`);
 
   try {
     await coteriehq.logCallFollowup({
@@ -172,14 +178,15 @@ router.post('/webhook', async (req, res) => {
     if (!transcript) return res.status(404).json({ error: 'Transcript not found' });
 
     console.log(`[fireflies] Storing transcript "${transcript.title}" (${(transcript.participants || []).length} participants)`);
-    const { matchedReplies, matchedLeads, matchedContacts } = await storeAndMatch(transcript);
+    const { matchedReplies, matchedLeads } = await storeAndMatch(transcript);
 
     // Fire-and-forget: Claude drafting takes 30-120s and Fireflies retries slow
-    // webhooks, so respond now and attach the draft when it lands.
-    // Drafts for matched contacts OR any external participant.
-    generateDraftForTranscript(transcript, matchedContacts)
-      .then(r => r.skipped && console.log(`[fireflies] Draft skipped: ${r.skipped}`))
-      .catch(e => console.error('[fireflies] Draft generation failed:', e.message));
+    // webhooks, so respond now. Draft (only if they asked for something) and
+    // recap go through the same claimed path as the 15-min poll, so a call
+    // gets one of each however many times it is seen.
+    require('../cron/fireflies-poll').processCall(transcript.id, { full: transcript })
+      .then(r => r.skipped && console.log(`[fireflies] After-call skipped: ${r.skipped}`))
+      .catch(e => console.error('[fireflies] After-call failed:', e.message));
 
     console.log(`[fireflies] Done — matched ${matchedReplies} replies, ${matchedLeads} leads`);
     res.json({

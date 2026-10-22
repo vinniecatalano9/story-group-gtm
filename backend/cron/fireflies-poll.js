@@ -1,5 +1,5 @@
 const fireflies = require('../services/fireflies');
-const { transcripts } = require('../services/db');
+const { db, transcripts } = require('../services/db');
 const { storeAndMatch, generateDraftForTranscript } = require('../routes/fireflies');
 
 // Only auto-draft calls this recent — protects the backlog of old
@@ -25,7 +25,8 @@ async function sendRecap(id) {
     'WHAT YOU NEED TO DO',
     t.action_items || '(no action items)',
     '',
-    d ? `FOLLOW-UP DRAFT (to ${d.to}, not sent)\nSubject: ${d.subject}\n\n${d.body}` : 'No follow-up draft: the number did not match a lead with an email.',
+    d ? `FOLLOW-UP DRAFT (to ${d.to}, not sent${d.gmail_draft ? ', in your Gmail drafts' : ''})${d.ask ? `\nThey asked for: ${d.ask}` : ''}\nSubject: ${d.subject}\n\n${d.body}`
+      : `No follow-up draft: ${t.followup_skipped === 'no ask on the call' ? 'they did not ask for anything on the call' : (t.followup_skipped || 'no prospect email on this call')}.`,
     '',
     `Dashboard: https://story-group-gtm.web.app/transcripts`,
     t.transcript_url ? `Full transcript: ${t.transcript_url}` : '',
@@ -34,57 +35,83 @@ async function sendRecap(id) {
   await transcripts.doc(id).set({ recap_sent_at: new Date().toISOString() }, { merge: true });
 }
 
+// One claim per transcript (postcall_claims/<id>, Firestore create()) before
+// any draft or recap: the webhook and the poll both see a new call, and before
+// this Ethelyn got two drafts and two recaps from one transcript. A run that
+// fails drops its claim so the next poll tries again.
+const claims = () => db.collection('postcall_claims');
+
+/**
+ * After-call work for one stored transcript: a follow-up draft only if the
+ * prospect asked for something (also put in Gmail drafts, never sent), then
+ * the recap email for phone calls. Both the webhook and the poll call this.
+ */
+async function processCall(id, { full = null } = {}) {
+  const t = (await transcripts.doc(id).get()).data();
+  if (!t) return { skipped: 'not stored yet' };
+  const ageHours = t.date ? (Date.now() - new Date(t.date).getTime()) / 36e5 : Infinity;
+  if (ageHours > DRAFT_WINDOW_HOURS) return { skipped: 'older than the draft window' };
+  const wantDraft = !t.followup_draft && !t.followup_skipped;
+  const wantRecap = !!RECAP_TO() && !t.recap_sent_at && (isPhoneCall(t) || process.env.CALL_RECAP_ALL === 'true');
+  if (!wantDraft && !wantRecap) return { skipped: 'already done' };
+
+  try {
+    await claims().doc(id).create({ status: 'claimed', at: new Date(), title: t.title || null });
+  } catch {
+    return { skipped: 'claimed by another run' };
+  }
+  const out = { drafted: false, recapped: false };
+  try {
+    if (wantDraft) {
+      full = full || await fireflies.getTranscript(id);
+      const r = await generateDraftForTranscript(full, t.matched_contacts || [], { auto: true });
+      if (r.followup_draft) out.drafted = true;
+      else if (r.skipped) await transcripts.doc(id).set({ followup_skipped: r.skipped }, { merge: true });
+    }
+    if (wantRecap) { await sendRecap(id); out.recapped = true; }
+    await claims().doc(id).set({ status: 'done', done_at: new Date() }, { merge: true });
+  } catch (e) {
+    await claims().doc(id).delete().catch(() => {});
+    throw e;
+  }
+  return out;
+}
+
 /**
  * Poll Fireflies for new transcripts (webhook safety net).
- * Stores + matches anything new, then drafts follow-ups for
- * matched calls from the last 72h that don't have one yet.
+ * Stores + matches anything new, then runs processCall on each.
+ * Never overlaps itself: a slow run (Claude drafting) makes the next tick skip.
  */
+let _polling = false;
 async function pollFireflies() {
   if (!process.env.FIREFLIES_API_KEY) return { skipped: 'no FIREFLIES_API_KEY' };
-
-  const recent = await fireflies.getRecentTranscripts(10);
+  if (_polling) return { skipped: 'previous poll still running' };
+  _polling = true;
   let stored = 0, drafted = 0;
-
-  for (const t of recent) {
-    try {
-      const doc = await transcripts.doc(t.id).get();
-      const isNew = !doc.exists;
-      const hasDraft = doc.exists && !!doc.data().followup_draft;
-      const alreadySkipped = doc.exists && !!doc.data().followup_skipped;
-
-      let matchedContacts = doc.exists ? (doc.data().matched_contacts || []) : [];
-      let full = null;
-
-      if (isNew) {
-        full = await fireflies.getTranscript(t.id);
-        const r = await storeAndMatch(full);
-        matchedContacts = r.matchedContacts;
-        stored++;
-        console.log(`[fireflies-poll] Stored "${full.title}" — ${matchedContacts.length} contact(s) matched`);
-      }
-
-      const callAgeHours = t.date ? (Date.now() - new Date(t.date).getTime()) / 36e5 : Infinity;
-      if (!hasDraft && !alreadySkipped && callAgeHours <= DRAFT_WINDOW_HOURS) {
-        full = full || await fireflies.getTranscript(t.id);
-        const r = await generateDraftForTranscript(full, matchedContacts);
-        if (r.followup_draft) drafted++;
-        // Remember internal/no-prospect calls so we don't re-check every 15 min
-        if (r.skipped && r.skipped.startsWith('no external')) {
-          await transcripts.doc(t.id).set({ followup_skipped: r.skipped }, { merge: true });
+  try {
+    const recent = await fireflies.getRecentTranscripts(10);
+    for (const t of recent) {
+      try {
+        const doc = await transcripts.doc(t.id).get();
+        let full = null;
+        if (!doc.exists) {
+          full = await fireflies.getTranscript(t.id);
+          const r = await storeAndMatch(full);
+          stored++;
+          console.log(`[fireflies-poll] Stored "${full.title}" — ${r.matchedContacts.length} contact(s) matched`);
         }
+        const r = await processCall(t.id, { full });
+        if (r.drafted) drafted++;
+      } catch (e) {
+        console.error(`[fireflies-poll] Failed on transcript ${t.id} ("${t.title}"):`, e.message);
       }
-
-      const recapDone = doc.exists && !!doc.data().recap_sent_at;
-      if (RECAP_TO() && !recapDone && callAgeHours <= DRAFT_WINDOW_HOURS && (isPhoneCall(t) || process.env.CALL_RECAP_ALL === 'true')) {
-        await sendRecap(t.id);
-      }
-    } catch (e) {
-      console.error(`[fireflies-poll] Failed on transcript ${t.id} ("${t.title}"):`, e.message);
     }
+  } finally {
+    _polling = false;
   }
 
   if (stored || drafted) console.log(`[fireflies-poll] Done — ${stored} new transcript(s), ${drafted} draft(s)`);
   return { stored, drafted };
 }
 
-module.exports = { pollFireflies };
+module.exports = { pollFireflies, processCall };

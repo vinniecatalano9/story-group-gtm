@@ -227,7 +227,7 @@ const OUTCOMES = {
   stop: { state: 'stopped', track: null, label: 'Stopped by Vincent' },
 };
 
-async function setOutcome(email, outcome, { meeting_at, source = '' } = {}) {
+async function setOutcome(email, outcome, { meeting_at, source = '', note = '' } = {}) {
   const base = OUTCOMES[outcome];
   if (!base) throw new Error(`Unknown outcome ${outcome}`);
   // After-contact tracks are off (Vincent, 10/22): the outcome's effects still
@@ -257,7 +257,7 @@ async function setOutcome(email, outcome, { meeting_at, source = '' } = {}) {
   // Booked, a no, or stopped: their held times go back in the pool.
   if (['meeting', 'not_interested', 'stop'].includes(outcome)) await slots.releaseHolds(holdKey(lead.email));
   await addTimeline(lead.email, timelineEntry('outcome', { outcome, text: o.label + (meetingAt ? `, meeting ${patch.meeting_label}` : '') + (source ? ` (${source})` : '') }));
-  await logToNutshell(lead, `${today(lead.tz)} Outcome: ${o.label}${meetingAt ? `, meeting ${patch.meeting_label}` : ''}.${source ? ` (${source})` : ''}`, { outcome });
+  await logToNutshell(lead, `${today(lead.tz)} Outcome: ${o.label}${meetingAt ? `, meeting ${patch.meeting_label}` : ''}.${source ? ` (${source})` : ''}${note ? `\n\n${note}` : ''}`, { outcome });
   return refreshNext(lead.email);
 }
 
@@ -1078,7 +1078,8 @@ async function drainNutshell({ max = 20 } = {}) {
           await saveLead(lead.email, { nutshell_contact_id: contactId });
           await addTimeline(lead.email, timelineEntry('note', { text: `Nutshell contact ${c.created ? 'created' : 'found'} (${contactId})` }));
         }
-        const leadId = await nutshellLeadFor(await getLead(job.email));
+        let leadId = await nutshellLeadFor(await getLead(job.email));
+        if (!leadId && CREATE_FOR.includes(job.outcome)) leadId = await ensureNutshellLead(lead, contactId);
         if (job.text) {
           const entity = leadId ? { entityType: 'Leads', id: leadId } : { entityType: 'Contacts', id: contactId };
           if (!job.note_done) {
@@ -1114,15 +1115,41 @@ const KICKSTART_STAGESET = 5;
 const STAGE_FOR = { talked_yes: 115, meeting: 116 }; // Qualified for Kickstart, Kickstart Call Scheduled
 const normName = v => String(v || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
+/** Open Nutshell leads named exactly after this person. */
+async function openLeadsNamed(lead) {
+  const hits = await require('./nutshell').call('searchLeads', { string: fullName(lead), limit: 10 });
+  return (hits || []).filter(l => l.status === 0 && normName(l.description) === normName(fullName(lead)));
+}
+
 /** The one open Nutshell lead named after this person, or null. Cached on the lead. */
 async function nutshellLeadFor(lead) {
-  const nutshell = require('./nutshell');
   if (lead.nutshell_lead_id) return lead.nutshell_lead_id;
   if (lead.nutshell_lead_checked_at && Date.now() - toDate(lead.nutshell_lead_checked_at) < 864e5) return null;
-  const hits = await nutshell.call('searchLeads', { string: fullName(lead), limit: 10 });
-  const mine = (hits || []).filter(l => l.status === 0 && normName(l.description) === normName(fullName(lead)));
+  const mine = await openLeadsNamed(lead);
   const id = mine.length === 1 ? mine[0].id : null;
   await saveLead(lead.email, id ? { nutshell_lead_id: id } : { nutshell_lead_checked_at: new Date() });
+  return id;
+}
+
+// A call outcome needs a Nutshell lead to move (Vincent, 10/22: "moving the
+// lead where it needs to be"). With no open lead by that name, make one in the
+// Kickstart pipeline like Annette's (Paid Social, Vincent's), contact attached.
+// Two or more open leads with the name: none made, Vincent is pinged.
+const CREATE_FOR = ['hit_once', 'talked_yes', 'meeting'];
+async function ensureNutshellLead(lead, contactId) {
+  const mine = await openLeadsNamed(lead); // fresh: Annette may have added it since the cached check
+  if (mine.length > 1) return null;
+  let id = mine.length ? mine[0].id : null, line = `Nutshell lead found (${id})`;
+  if (!id) {
+    const made = await require('./nutshell').newPipelineLead({
+      description: fullName(lead), contactId, stagesetId: KICKSTART_STAGESET, milestoneId: 114, sourceId: 14, assigneeId: 3,
+    });
+    id = made.id;
+    line = `Nutshell lead created (${id})${made.stage ? `, in Kickstart at ${made.stage}` : ': not in the Kickstart pipeline, set it by hand'}`;
+    if (!made.stage) await ping(`Nutshell: made a lead for <b>${esc(fullName(lead))}</b> but couldn't put it in the Kickstart pipeline. Set it here: https://app.nutshell.com/lead/${id}`);
+  }
+  await saveLead(lead.email, { nutshell_lead_id: id });
+  await addTimeline(lead.email, timelineEntry('note', { text: line }));
   return id;
 }
 
@@ -1147,7 +1174,7 @@ async function applyStage(lead, leadId, outcome) {
 
 /**
  * Column M "Touches So Far": what really happened, in order. Sent steps,
- * replies and outcomes; skipped, queued or unapproved steps don't count.
+ * replies, calls (services/cadenceCalls.js) and outcomes; skipped, queued or unapproved steps don't count.
  */
 const OUTCOME_SHORT = { hit_once: 'Hit once', talked_yes: 'Talked yes', meeting: 'Meeting yes', not_interested: 'Not interested', stop: 'Stopped', no_show: 'No-show' };
 function touchesSoFar(lead) {
@@ -1162,6 +1189,7 @@ function touchesSoFar(lead) {
         return (st ? st.label : t.step).replace(/ \(.*\)$/, '') + (failed ? ' (failed)' : '');
       }
       if (t.kind === 'reply') return t.channel === 'sms' && rc.isStop(t.text) ? 'Texted STOP' : `Replied (${t.channel === 'sms' ? 'text' : 'email'})`;
+      if (t.kind === 'call') return 'Call';
       if (t.kind === 'outcome' && t.outcome) return OUTCOME_SHORT[t.outcome] || null;
       return null;
     })

@@ -125,4 +125,31 @@ async function pushScorecard(p, progress = () => {}) {
   return out;
 }
 
-module.exports = { isConfigured, call, pushScorecard, findOrCreateContact, USERS };
+/**
+ * Create a lead in a pipeline with one contact attached. The caller searches
+ * first (a timed-out newLead often lands, so no blind retry here). newLead
+ * may ignore stagesetId, so the stage is checked after and set by milestoneId.
+ * Returns { id, stage } where stage is the milestone name it ended up at.
+ */
+async function newPipelineLead({ description, contactId, stagesetId, milestoneId, sourceId: src, assigneeId }) {
+  const lead = { description };
+  if (contactId) lead.contacts = [{ id: contactId }];
+  if (src) lead.sources = [{ id: src }];
+  if (assigneeId) lead.assignee = { entityType: 'Users', id: assigneeId };
+  let made;
+  try {
+    made = await call('newLead', { lead: { ...lead, stagesetId } }, { attempts: 1 });
+  } catch (e) {
+    if (/abort|timeout|HTTP 5/i.test(e.message)) throw e; // may have landed: the caller's search catches it next run
+    made = await call('newLead', { lead }, { attempts: 1 });
+  }
+  let l = await call('getLead', { leadId: made.id });
+  if (milestoneId && (!l.stageset || l.stageset.id !== stagesetId || !l.milestone)) {
+    await call('editLead', { leadId: made.id, rev: l.rev, lead: { milestoneId } }, { attempts: 1 });
+    l = await call('getLead', { leadId: made.id });
+  }
+  const inPipeline = l.stageset && l.stageset.id === stagesetId;
+  return { id: made.id, stage: inPipeline && l.milestone ? l.milestone.name : null };
+}
+
+module.exports = { isConfigured, call, pushScorecard, findOrCreateContact, newPipelineLead, USERS };
