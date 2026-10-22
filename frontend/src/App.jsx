@@ -8,6 +8,7 @@ import LeadCleaner from './pages/LeadCleaner';
 import Transcripts from './pages/Transcripts';
 import Tracker from './pages/Tracker';
 import Command from './pages/Command';
+import AdLeads from './pages/AdLeads';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -37,6 +38,7 @@ function Nav() {
       {link('/', 'Dashboard')}
       {link('/command', 'Command')}
       {/* {link('/leads', 'Leads')} */}
+      {link('/ad-leads', 'Ad Leads')}
       {link('/replies', 'Email Replies')}
       {link('/linkedin', 'LinkedIn')}
       {/* {link('/scrapers', 'Scrapers')} */}
@@ -109,6 +111,7 @@ export default function App() {
           <Route path="/cleaner" element={<LeadCleaner api={API} />} />
           <Route path="/tracker" element={<Tracker />} />
           <Route path="/command" element={<Command api={API} />} />
+          <Route path="/ad-leads" element={<AdLeads api={API} />} />
         </Routes>
       </main>
     </div>

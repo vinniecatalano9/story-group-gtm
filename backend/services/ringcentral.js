@@ -67,4 +67,106 @@ async function getRecordedCalls(dateFrom) {
   return (data.records || []).filter(r => r.recording?.contentUri);
 }
 
-module.exports = { isConfigured, getToken, api, whoAmI, getRecordedCalls };
+// ── SMS ──────────────────────────────────────────────────────────────────────
+// Needs the SMS and Read Messages scopes on the RingCentral app (developer
+// console > the app > Settings > Application scopes). Until they're added the
+// API answers 403 and these return null with a warning; nothing crashes.
+
+const SMS_FROM = () => process.env.RINGCENTRAL_SMS_FROM; // optional; else the extension's SMS-capable number
+let _smsFrom = null;
+
+async function post(path, body) {
+  const res = await fetch(`${SERVER()}${path}`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${await getToken()}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(`RingCentral ${path} ${res.status}: ${data.message || data.errorCode || res.statusText}`);
+    err.status = res.status;
+    err.code = data.errorCode;
+    throw err;
+  }
+  return data;
+}
+
+const scopeMissing = e => e && (e.status === 403 || /InsufficientPermissions|\b403\b/.test(e.message));
+
+/** "+15125551234" from any US format, or null. Fake 555-5555 style numbers count as none. */
+function toE164(raw) {
+  const digits = String(raw || '').replace(/\D/g, '');
+  const ten = digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits;
+  if (ten.length !== 10 || /^[01]/.test(ten) || /5555555$/.test(ten) || ten.slice(3, 6) === '555' && ten.slice(6, 8) === '01') return null;
+  return `+1${ten}`;
+}
+
+/** The registered (10DLC) number texts go out from. */
+async function smsFromNumber() {
+  if (SMS_FROM()) return toE164(SMS_FROM()) || SMS_FROM();
+  if (_smsFrom) return _smsFrom;
+  const data = await api('/restapi/v1.0/account/~/extension/~/phone-number', { perPage: '100' });
+  const n = (data.records || []).find(r => (r.features || []).includes('SmsSender'));
+  if (!n) throw new Error('No SMS-capable number on this extension (set RINGCENTRAL_SMS_FROM)');
+  _smsFrom = n.phoneNumber;
+  return _smsFrom;
+}
+
+/** Send one text. Returns the message record, or null when SMS isn't set up yet. */
+async function sendSms(to, text) {
+  if (!isConfigured()) { console.warn('[ringcentral] not configured: text not sent'); return null; }
+  const num = toE164(to);
+  if (!num) throw new Error(`Not a textable number: ${to}`);
+  try {
+    return await post('/restapi/v1.0/account/~/extension/~/sms', {
+      from: { phoneNumber: await smsFromNumber() },
+      to: [{ phoneNumber: num }],
+      text,
+    });
+  } catch (e) {
+    if (scopeMissing(e)) { console.warn('[ringcentral] SMS scope missing on the app: text not sent.', e.message); return null; }
+    throw e;
+  }
+}
+
+/**
+ * Inbound texts since dateFrom (ISO), oldest first: [{ id, from, text, at }].
+ * Returns null (not []) when the Read Messages scope is missing, so callers can
+ * tell "no texts" from "can't look".
+ */
+async function getInboundSms(dateFrom) {
+  if (!isConfigured()) return null;
+  try {
+    const out = [];
+    for (let page = 1; page <= 10; page++) {
+      const data = await api('/restapi/v1.0/account/~/extension/~/message-store', {
+        messageType: 'SMS', direction: 'Inbound', dateFrom, perPage: '100', page: String(page),
+      });
+      for (const m of data.records || []) {
+        out.push({ id: String(m.id), from: m.from && m.from.phoneNumber, text: m.subject || '', at: m.creationTime });
+      }
+      if (!data.navigation || !data.navigation.nextPage) break;
+    }
+    return out.sort((a, b) => new Date(a.at) - new Date(b.at));
+  } catch (e) {
+    if (scopeMissing(e)) { console.warn('[ringcentral] Read Messages scope missing: inbound texts unreadable.', e.message); return null; }
+    throw e;
+  }
+}
+
+/** Can this app send and read texts yet? For the status endpoint. */
+async function smsStatus() {
+  if (!isConfigured()) return { configured: false };
+  const out = { configured: true };
+  try { out.from = await smsFromNumber(); } catch (e) { out.from_error = e.message; }
+  try {
+    await api('/restapi/v1.0/account/~/extension/~/message-store', { messageType: 'SMS', perPage: '1' });
+    out.read_messages = true;
+  } catch (e) { out.read_messages = false; out.read_error = e.message; }
+  return out;
+}
+
+const STOP_WORDS = /^\s*(stop|stopall|unsubscribe|cancel|end|quit|stop all|remove me|opt out|optout)\s*[.!]?\s*$/i;
+const isStop = text => STOP_WORDS.test(String(text || ''));
+
+module.exports = { isConfigured, getToken, api, whoAmI, getRecordedCalls, sendSms, getInboundSms, smsStatus, toE164, isStop };

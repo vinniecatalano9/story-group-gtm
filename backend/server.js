@@ -31,6 +31,7 @@ app.use('/api/calendar', require('./routes/calendar'));
 app.use('/api/nutshell', require('./routes/nutshell'));
 app.use('/api/assist', require('./routes/assist'));
 app.use('/api/approve', require('./routes/approve'));
+app.use('/api/cadence', require('./routes/cadence'));
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -902,6 +903,17 @@ cron.schedule('*/10 * * * *', async () => {
     await pollRingCentral();
   } catch (e) {
     console.error('[cron] RingCentral poll error:', e.message);
+  }
+}, { timezone: 'America/Chicago', recoverMissedExecutions: true });
+
+// Ad lead cadence: every 10 min — replies (IMAP + RingCentral texts), due
+// steps (Telegram approval cards unless CADENCE_MODE=live), sheet write-back.
+cron.schedule('*/10 * * * *', async () => {
+  try {
+    const { runCadence } = require('./cron/cadence');
+    await runCadence();
+  } catch (e) {
+    console.error('[cron] cadence error:', e.message);
   }
 }, { timezone: 'America/Chicago', recoverMissedExecutions: true });
 

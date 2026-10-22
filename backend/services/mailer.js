@@ -41,4 +41,32 @@ async function sendMail({ to, cc, subject, html, text, fromName = 'Story Group G
   return info;
 }
 
-module.exports = { sendMail, isConfigured };
+/**
+ * One email from Vincent himself, as part of a thread. Pass the first email's
+ * Message-ID as inReplyTo (and every earlier one in references) to keep
+ * follow-ups in the same Gmail thread. Gmail files SMTP sends in Sent Mail.
+ * Returns { messageId } or null when SMTP isn't configured.
+ */
+async function sendAsVincent({ to, subject, text, html, inReplyTo, references, headers = {} }) {
+  if (!isConfigured()) {
+    console.warn('[mailer] SMTP_USER/SMTP_PASS not configured — email not sent');
+    return null;
+  }
+  const domain = SMTP_USER().split('@')[1];
+  const messageId = `<${Date.now().toString(36)}.${Math.random().toString(36).slice(2, 10)}@${domain}>`;
+  const info = await getTransport().sendMail({
+    from: `"${process.env.CADENCE_FROM_NAME || 'Vincent Catalano'}" <${SMTP_USER()}>`,
+    to,
+    subject,
+    text,
+    html,
+    messageId,
+    ...(inReplyTo ? { inReplyTo } : {}),
+    ...(references && references.length ? { references } : {}),
+    headers,
+  });
+  console.log(`[mailer] Sent "${subject}" to ${to} as Vincent (${info.messageId})`);
+  return { messageId: info.messageId || messageId };
+}
+
+module.exports = { sendMail, sendAsVincent, isConfigured };
