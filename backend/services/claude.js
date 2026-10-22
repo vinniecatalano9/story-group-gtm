@@ -1,4 +1,5 @@
 const { execFile } = require('child_process');
+const os = require('os');
 
 // Which LLM runs every prompt in the backend. Switch by editing .env, no code change:
 //   LLM_PROVIDER=claude-cli (default) | anthropic | openai | gemini
@@ -12,12 +13,12 @@ const FALLBACK = () => (process.env.LLM_FALLBACK_PROVIDER || '').toLowerCase();
 const ANTHROPIC_MODELS = { sonnet: 'claude-sonnet-5-5', opus: 'claude-opus-5-5', haiku: 'claude-haiku-5-5' };
 
 /** Claude Code CLI (claude -p). Needs a logged-in Claude account on the box. */
-function runCli(prompt, { timeout, model }) {
+function runCli(prompt, { timeout, model, args = [], cwd }) {
   return new Promise((resolve, reject) => {
     const child = execFile(
       CLAUDE_PATH(),
-      ['-p', '--output-format', 'text', ...(model ? ['--model', model] : [])],
-      { timeout, maxBuffer: 1024 * 1024, env: { ...process.env, HOME: process.env.CLAUDE_HOME || '/root' } },
+      ['-p', '--output-format', 'text', ...(model ? ['--model', model] : []), ...args],
+      { timeout, maxBuffer: 1024 * 1024, cwd, env: { ...process.env, HOME: process.env.CLAUDE_HOME || '/root' } },
       (error, stdout, stderr) => {
         if (error) {
           console.error('[claude] Error:', error.message, '| killed:', error.killed, '| signal:', error.signal, '| code:', error.code);
@@ -129,4 +130,27 @@ async function claudeJSON(prompt, options = {}) {
   }
 }
 
-module.exports = { claudePrompt, claudeJSON };
+/**
+ * Web research through the CLI's own WebSearch/WebFetch (Claude usage, no Apify).
+ * --restricted plus --tools leaves only those two tools and skips settings files,
+ * --strict-mcp-config skips MCP servers, and it runs from the temp dir so no
+ * project CLAUDE.md loads: a fetched page can't steer it into anything else.
+ * The prompt must ask for a single JSON object.
+ */
+async function claudeWebJSON(prompt, { timeout = 240000, model = 'sonnet' } = {}) {
+  if (PROVIDER() !== 'claude-cli') throw new Error(`web research needs LLM_PROVIDER=claude-cli, not ${PROVIDER()}`);
+  const raw = await runCli(prompt, {
+    timeout, model, cwd: os.tmpdir(),
+    args: ['--restricted', '--tools', 'WebSearch,WebFetch', '--allowedTools', 'WebSearch,WebFetch', '--strict-mcp-config'],
+  });
+  const block = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const json = block ? block[1] : raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1);
+  try {
+    return JSON.parse(json);
+  } catch (e) {
+    console.error('[claude] Web research JSON parse failed:', raw.substring(0, 200));
+    throw new Error(`Claude web research returned invalid JSON: ${e.message}`);
+  }
+}
+
+module.exports = { claudePrompt, claudeJSON, claudeWebJSON };

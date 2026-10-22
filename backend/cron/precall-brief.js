@@ -1,8 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { getTodaysEvents } = require('../services/calendar');
-const { scrapeWebsite, searchNews, searchGoogle } = require('../services/apify');
-const { claudePrompt } = require('../services/claude');
+const { claudePrompt, claudeWebJSON } = require('../services/claude');
 const { sendMail, isConfigured } = require('../services/mailer');
 const { transcripts, db } = require('../services/db');
 const fireflies = require('../services/fireflies');
@@ -71,21 +70,54 @@ function loadCaseStudies() {
   }
 }
 
-// Apify is one shared $39/month account (Vincent's research skills use it too).
-// Past the cap every run returns 403 "Monthly usage hard limit exceeded" until
-// the cycle resets on the 19th, and briefs came back with no research at all.
-// Now: the company site comes from a plain fetch first (free), Apify only fills
-// gaps, the first cap 403 turns Apify off for the rest of the run, and the
-// brief says research was skipped instead of looking empty.
-let apifyCapped = false;
-async function viaApify(fn, ...args) {
-  if (apifyCapped) throw new Error('skipped, Apify monthly cap hit earlier in this run');
+// Web research runs on Claude's own WebSearch/WebFetch, so it spends Claude usage,
+// not Apify (Vincent 10/21: no Apify spend on research). Apify's $39 cap used to
+// 403 every run until the 19th, and briefs went out with no research at all.
+// If the CLI call fails, the brief still goes out (Call 1 keeps the free site
+// fetch) and the Telegram note says research failed.
+let researchFailed = 0;
+async function webResearch(q) {
   try {
-    return await fn(...args);
+    return await claudeWebJSON(researchPrompt(q), { timeout: 300000, model: 'sonnet' });
   } catch (e) {
-    if (/\(403\)|hard limit/i.test(e.message)) apifyCapped = true;
-    throw e;
+    console.warn(`[precall-brief] Web research failed for ${q.name || q.email}:`, e.message);
+    researchFailed++;
+    return null;
   }
+}
+
+function researchPrompt({ newsOnly, name, email, domain, company, title, needSite }) {
+  const news = 'News from the last 18 months about the company, or about the person as its leader: funding, launches, partnerships, expansion, awards, leadership changes, lawsuits or bad press. Skip their own blog posts and directory listings.';
+  const find = newsOnly ? `Find: ${news}` : `Find:
+1. The person: current role and company, their LinkedIn profile URL if a search result shows it, and a short background from public pages (company team page, interviews, podcasts, press).
+2. The company's real name and what it does.
+3. ${news}${needSite ? `
+4. The company site could not be read directly. Fetch it and summarize what they sell, to whom, and any proof points or team size signals. If you can't read it either, site_summary is null.` : ''}`;
+  return `You are researching a sales prospect before a call with Story Group (earned media and PR for executives). Use WebSearch and WebFetch. Work fast: about 6 searches and 4 page fetches at most.
+
+PROSPECT: ${name || 'name unknown'} (${domain ? `email domain: ${domain}` : `email: ${email}`})
+COMPANY (a guess, may just be the domain label): ${company || 'unknown'}
+COMPANY SITE: ${domain ? `https://${domain}` : 'none, personal email'}
+CALL: "${title}"
+
+${find}
+
+Rules: report only what you saw on a page or search result in this session. If you are not sure a result is this person or this company (common names), leave it out. Never guess a LinkedIn URL. Plain words, no em dashes or en dashes.
+
+Return ONLY this JSON object, no other text:
+{"company": string or null, "person": {"name": string or null, "title": string or null, "linkedin_url": string or null, "summary": string or null}, "news": [{"title": string, "outlet": string, "date": "YYYY-MM", "url": string, "summary": string}], "site_summary": string or null}`;
+}
+
+const text = v => (typeof v === 'string' ? v.trim() : '');
+
+/** Research news items -> the brief's news block + the scorecard's news lines. */
+function applyNews(r, news) {
+  const items = (Array.isArray(news) ? news : []).filter(n => n && text(n.title)).slice(0, 5);
+  r.news = items.map(n => {
+    const meta = [text(n.outlet), text(n.date)].filter(Boolean).join(', ');
+    return `${text(n.title)}${meta ? ` (${meta})` : ''}: ${text(n.summary)} ${text(n.url)}`.trim();
+  }).join('\n').substring(0, 3000) || null;
+  r.newsTitles = items.map(n => text(n.title)).slice(0, 3);
 }
 
 /** Free first pass at a company site: homepage + about page, tags stripped. */
@@ -114,7 +146,7 @@ function prospectsOf(event) {
   });
 }
 
-/** Research one prospect: site scrape + news + person search. Degrades gracefully. */
+/** Research one prospect: free site fetch, then Claude web research. Degrades gracefully. */
 async function research(prospect, event) {
   const domain = prospect.email.split('@')[1];
   const hasCompanySite = !FREE_MAIL.includes(domain);
@@ -124,31 +156,24 @@ async function research(prospect, event) {
 
   const out = { domain: hasCompanySite ? domain : null, company, website: null, news: null, person: null, newsTitles: [], personTitles: [], linkedin: null };
 
-  if (hasCompanySite) {
-    out.website = await fetchSiteText(domain);
-    if (!out.website || out.website.length < 500) {
-      try { out.website = (await viaApify(scrapeWebsite, domain)) || out.website; }
-      catch (e) { console.warn(`[precall-brief] Site scrape failed for ${domain}:`, e.message); }
-    }
-  }
-  if (company) {
-    try {
-      const pages = await viaApify(searchNews, company);
-      const items = pages.flatMap(p => p.organicResults || []);
-      out.news = items.map(n => `${n.title || ''}: ${n.description || n.snippet || ''}`).join('\n').substring(0, 3000) || null;
-      out.newsTitles = items.map(n => n.title).filter(Boolean).slice(0, 3);
-    } catch (e) { console.warn(`[precall-brief] News search failed for ${company}:`, e.message); }
-  }
-  try {
-    const q = prospect.name ? `"${prospect.name}" ${company || domain}` : `"${prospect.email}"`;
-    const pages = await viaApify(searchGoogle, q);
-    const items = pages.flatMap(p => p.organicResults || []);
-    out.person = items.map(n => `${n.title || ''}: ${n.description || n.snippet || ''}`).join('\n').substring(0, 2000) || null;
-    out.personTitles = items.map(n => n.title).filter(Boolean).slice(0, 2);
-    // "Jane Doe - CEO - Acme | LinkedIn" -> "CEO"
-    const li = items.find(n => /linkedin\.com\/in\//i.test(n.url || ''));
-    if (li) out.linkedin = { url: li.url, title: ((li.title || '').split(' | ')[0].split(' - ')[1] || '').trim() || null };
-  } catch (e) { console.warn('[precall-brief] Person search failed:', e.message); }
+  if (hasCompanySite) out.website = await fetchSiteText(domain);
+  const needSite = hasCompanySite && (!out.website || out.website.length < 500);
+  const web = await webResearch({ name: prospect.name, email: prospect.email, domain: out.domain, company, title: event.title, needSite });
+  if (!web) return out;
+
+  // A domain label ("nkadgroup") or a call title ("Nadia Khan PR Referral Call") is
+  // only a guess; the name Claude read off the web is better
+  if (text(web.company) && (!companyFromTitle || /\bcall\b/i.test(companyFromTitle))) out.company = text(web.company);
+  if (needSite && text(web.site_summary)) out.website = text(web.site_summary).substring(0, 8000);
+  applyNews(out, web.news);
+  const p = web.person || {};
+  const name = prospect.name || text(p.name);
+  const role = text(p.title);
+  const li = /^https?:\/\/([a-z]{2,3}\.)?linkedin\.com\/in\//i.test(text(p.linkedin_url)) ? text(p.linkedin_url) : null;
+  out.person = [!prospect.name && name && `Name: ${name}`, role && `Role: ${role}`, li && `LinkedIn: ${li}`, text(p.summary)].filter(Boolean).join('\n').substring(0, 2000) || null;
+  // First sentence, without splitting on initials ("Denine E. Harper")
+  out.personTitles = [role && `${name || prospect.email}: ${role}`, text(p.summary).split(/(?<=[a-z0-9)]\.)\s+(?=[A-Z])/)[0].slice(0, 200)].filter(Boolean);
+  if (li) out.linkedin = { url: li, title: role || null };
 
   return out;
 }
@@ -330,8 +355,8 @@ async function sendBriefTelegram(b, note) {
   }
 }
 
-async function runPrecallBrief({ send = true, force = false } = {}) {
-  apifyCapped = false;
+async function briefTodaysCalls({ send = true, force = false } = {}) {
+  researchFailed = 0;
   const events = await getTodaysEvents();
   const caseLibrary = loadCaseStudies();
 
@@ -370,16 +395,13 @@ async function runPrecallBrief({ send = true, force = false } = {}) {
         } catch (e) { console.warn('[precall-brief] Prior transcript fetch failed:', e.message); }
         // Call 2 prep leans on the Call 1 transcript; skip the site scrape
         let r = { news: null };
-        try {
-          const company = (event.title.match(/story ?group\s*[&x]\s*(.+?)(?:\s+(?:discovery|intro|solutions|strategy).*)?$/i) || [])[1];
-          if (company) {
-            const pages = await viaApify(searchNews, company);
-            const items = pages.flatMap(p => p.organicResults || []);
-            r.news = items.map(n => `${n.title || ''}: ${n.description || n.snippet || ''}`).join('\n').substring(0, 3000) || null;
-            r.newsTitles = items.map(n => n.title).filter(Boolean).slice(0, 3);
-            r.company = company;
-          }
-        } catch (e) { console.warn('[precall-brief] News search failed:', e.message); }
+        const company = (event.title.match(/story ?group\s*[&x]\s*(.+?)(?:\s+(?:discovery|intro|solutions|strategy).*)?$/i) || [])[1];
+        if (company) {
+          const d = prospect.email.split('@')[1];
+          const web = await webResearch({ newsOnly: true, name: prospect.name, email: prospect.email, domain: FREE_MAIL.includes(d) ? null : d, company, title: event.title });
+          if (web) applyNews(r, web.news);
+          r.company = company;
+        }
         brief = await claudePrompt(call2Prompt(event, prospect, priorCalls, priorSentences, r, caseLibrary), { timeout: 180000 });
         link = scorecardLink(event, prospect, r, callType);
       } else {
@@ -412,7 +434,7 @@ async function runPrecallBrief({ send = true, force = false } = {}) {
   const html = renderHtml(briefs);
 
   const result = { calls: briefs.length, sent: false, telegram: 0, briefs: briefs.map(b => ({ title: b.event.title, to: b.prospect.email })) };
-  const note = apifyCapped ? 'Web research partly skipped: Apify monthly cap hit (resets on the 19th).' : null;
+  const note = researchFailed ? `Web research failed for ${researchFailed} call${researchFailed > 1 ? 's' : ''}, so no news or person research there (see the gtm-engine log).` : null;
 
   if (send) {
     // Telegram (Work Bot) is Vincent's feed. PRECALL_TELEGRAM=off / PRECALL_EMAIL=off turn either side off.
@@ -462,4 +484,17 @@ async function runPrecallBrief({ send = true, force = false } = {}) {
   return result;
 }
 
-module.exports = { runPrecallBrief };
+// One pass at a time. Web research takes a minute or two per call, so a busy
+// morning can outlast the 30-minute catch-up, and two overlapping passes would
+// both brief the same calls (the ledger is only written after sending).
+let running = false;
+async function runPrecallBrief(opts) {
+  if (running) {
+    console.log('[precall-brief] Previous pass still running, skipping this one');
+    return { calls: 0, sent: false, busy: true };
+  }
+  running = true;
+  try { return await briefTodaysCalls(opts); } finally { running = false; }
+}
+
+module.exports = { runPrecallBrief, research };
