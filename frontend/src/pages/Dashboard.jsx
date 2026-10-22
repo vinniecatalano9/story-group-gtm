@@ -7,6 +7,7 @@ import {
   fmtMoney, pct,
   SAMEER_TARGET_CLOSE_RATE, SAMEER_MRR_GOAL_ADDED, SAMEER_AVG_RETAINER
 } from '../lib/funnelMath';
+import { AdLeadsSummary, OpenTimes } from '../components/HomeCards';
 
 const CLASSIFICATION_COLORS = {
   interested:      'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25',
@@ -88,6 +89,10 @@ export default function Dashboard({ api }) {
           <Link to="/tracker" className="px-5 py-2.5 rounded-xl text-sm font-semibold border border-navy-border text-body hover:border-brand-500/60 transition-all">Print Coaching Prep</Link>
         </div>
       </div>
+
+      {/* Ad leads and Vincent's unpromised times: always on the main page */}
+      <AdLeadsSummary api={api} />
+      <OpenTimes api={api} />
 
       {/* Sameer's 6 KPIs */}
       <SameerStrip li7={li7} em7={em7} fn7={fn7} path={path} />

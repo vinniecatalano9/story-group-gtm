@@ -75,7 +75,7 @@ const STEP_LABEL = {
   remind1_email: '1h email', remind1_text: '1h text', noshow: 'No-show text',
 };
 const secs = (v) => (v && (v._seconds ?? v.seconds)) || (v ? new Date(v).getTime() / 1000 : 0);
-const pctOf = (n, d) => (d ? `${Math.round((n / d) * 100)}%` : '–');
+const pctOf = (n, d) => (d ? `${Math.round((n / d) * 100)}%` : '0%');
 
 function funnelStats(all) {
   const leads = all.filter(l => !/@storygroup\.io$/i.test(l.email || ''));
@@ -123,7 +123,7 @@ function Stat({ label, value, sub }) {
   );
 }
 
-function FunnelStats({ leads }) {
+export function FunnelStats({ leads }) {
   const s = funnelStats(leads);
   const replies = s.replied.email + s.replied.sms;
   const steps = Object.entries(s.byStep).sort((a, b) => b[1] - a[1]);

@@ -43,6 +43,8 @@ router.get('/pending', wrap(() => cadence.pendingCards().then(cs => cs.map(({ to
 router.post('/approve-all', (req, res, next) => (req.body && req.body.t ? next()
   : wrap(r => cadence.approveMany(Array.isArray(r.body.ids) ? r.body.ids : []))(req, res)));
 router.post('/sync-sheet', wrap(() => cadence.syncSheet({ all: true })));
+// Vincent's open times: free and not yet offered, plus what's promised to whom.
+router.get('/open-times', wrap(req => require('../services/cadenceSlots').openTimes({ days: Math.min(Math.max(Number(req.query.days) || 5, 1), 10) })));
 
 // Auto-booking (services/autoBook.js): is the Apps Script reachable, and a
 // dry run of the reply match for one lead (books nothing).

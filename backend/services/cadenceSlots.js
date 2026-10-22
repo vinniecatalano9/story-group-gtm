@@ -197,4 +197,42 @@ async function releaseHolds(key) {
   return snap.size;
 }
 
-module.exports = { planOffer, holdOffer, releaseHolds, labels, slotLabel, dayLabel, calendarBusy, CALENDARS };
+/**
+ * Vincent's own view (10/22): every 30 min in the cadence's windows (10 to 12
+ * and 2 to 5 ET) from today through the next `days` business days, split into
+ * open (free on the calendar, offered to no one) and promised (held for a
+ * lead or a LinkedIn reply). Times and lead names only, never event titles:
+ * the dashboard and the cadence API have no login yet.
+ */
+async function openTimes({ days = LOOKAHEAD_DAYS } = {}) {
+  const now = new Date();
+  const nowEt = z.parts(now, ET);
+  const today = { y: nowEt.y, m: nowEt.m, d: nowEt.d, dow: nowEt.dow };
+  const list = z.isWeekday(today) ? [today] : [];
+  for (let x = z.addDays(today, 1), n = 0; n < days; x = z.addDays(x, 1)) if (z.isWeekday(x)) { list.push(x); n++; }
+  const last = list[list.length - 1];
+
+  const { busy, unreadable } = await calendarBusy(z.instant(ET, today.y, today.m, today.d), z.instant(ET, last.y, last.m, last.d, 23, 59));
+  const { db } = require('./db');
+  const holds = (await db.collection('slot_holds').where('end', '>', now).get()).docs.map(d => d.data()).map(h => ({
+    start: toDate(h.start), end: toDate(h.end), name: h.name || '', source: h.source || (h.reply_id ? 'linkedin' : ''),
+  }));
+
+  const out = { days: [], promised: [], unreadable: unreadable.map(u => u.id), as_of: now };
+  for (const day of list) {
+    const slots = [...candidates(day, 10, 12), ...candidates(day, 14, 17)].filter(t => t > now);
+    const open = [];
+    for (const t of slots) {
+      const held = overlaps(t, holds);
+      const onCalendar = overlaps(t, busy).length > 0;
+      if (held.length) {
+        const names = [...new Set(held.map(h => h.name || 'unnamed'))];
+        out.promised.push({ start: t, names, source: [...new Set(held.map(h => h.source).filter(Boolean))], on_calendar: onCalendar });
+      } else if (!onCalendar) open.push(t);
+    }
+    out.days.push({ date: z.dayKey(day), label: `${z.DOW[day.dow]} ${MONTHS[day.m - 1]} ${day.d}`, open });
+  }
+  return out;
+}
+
+module.exports = { planOffer, holdOffer, releaseHolds, labels, slotLabel, dayLabel, calendarBusy, openTimes, CALENDARS };
