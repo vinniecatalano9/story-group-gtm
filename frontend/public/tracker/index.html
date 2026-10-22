@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Story Group — Daily Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy:#00193B; --pink:#FF2257; --coral:#FF743F; --body:#E8ECF1;
+    --muted:#8A99B0; --card:#0D1F3C; --border:#2A3F5F;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--navy);color:var(--body);font-family:'Montserrat',sans-serif;font-size:14px;line-height:1.5;min-height:100%}
+  .container{max-width:1180px;margin:0 auto;padding:24px 20px 80px}
+
+  header{display:flex;align-items:baseline;gap:8px;padding-bottom:14px;border-bottom:1px solid var(--border);margin-bottom:20px;flex-wrap:wrap}
+  .logo-story{font-family:'Playfair Display',serif;font-style:italic;font-weight:700;color:var(--pink);font-size:28px;line-height:1}
+  .logo-group{color:var(--muted);font-size:18px;font-weight:500}
+  .logo-divider{color:var(--muted);font-size:14px}
+  .logo-sub{color:var(--muted);font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin-left:auto;font-weight:600}
+  .header-nav{display:flex;align-items:center;gap:16px;margin-left:auto}
+  .header-nav a{color:var(--muted);font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;text-decoration:none;transition:color .15s}
+  .header-nav a:hover{color:var(--body)}
+  .header-nav a.active{color:var(--pink)}
+  .logo-link{display:flex;align-items:baseline;gap:8px;text-decoration:none;cursor:pointer}
+  .logo-link:hover .logo-story{filter:brightness(1.1)}
+  .logo-link:hover .logo-group{color:var(--body)}
+
+  h2{font-family:'Playfair Display',serif;font-weight:700;font-size:22px;color:var(--body);margin-bottom:14px;letter-spacing:.01em}
+  h3{font-family:'Playfair Display',serif;font-weight:700;font-size:17px;color:var(--body);margin-bottom:10px}
+  .label-tiny{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+
+  .rollup{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:24px}
+  .rollup .card{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:14px 16px}
+  .rollup .card .label-tiny{margin-bottom:6px}
+  .rollup .card .big{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:var(--body);line-height:1.1}
+  .rollup .card .sub{font-size:11px;color:var(--muted);margin-top:4px}
+  .rollup .card.accent{border-left:3px solid var(--pink)}
+  .rollup .card.coral{border-left:3px solid var(--coral)}
+
+  .trend-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:24px}
+  .trend-card{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:14px 16px}
+  .trend-card .label-tiny{margin-bottom:10px}
+  .sparkline{display:flex;align-items:flex-end;gap:3px;height:68px}
+  .spark-col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;height:100%;min-width:0}
+  .spark-val{font-size:9px;color:var(--body);text-align:center;height:13px;line-height:13px;font-weight:700;letter-spacing:.04em}
+  .spark-bar{background:var(--pink);min-height:2px;border-radius:2px 2px 0 0;opacity:.9}
+  .spark-bar.alt{background:var(--coral)}
+  .spark-col:hover .spark-bar{opacity:1}
+  .spark-axis{display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:6px;letter-spacing:.05em}
+
+  .tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px;flex-wrap:wrap}
+  .tab-btn{background:transparent;color:var(--muted);border:none;padding:12px 18px;font-family:'Montserrat',sans-serif;font-size:11px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;font-weight:600;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab-btn:hover{color:var(--body)}
+  .tab-btn.active{color:var(--pink);border-bottom-color:var(--pink)}
+
+  .tab-panel{display:none}
+  .tab-panel.active{display:block}
+
+  form.entry{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:18px;margin-bottom:18px}
+  form.entry .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:12px}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .field input, .field select{background:var(--navy);border:1px solid var(--border);border-radius:3px;padding:9px 11px;color:var(--body);font-family:'Montserrat',sans-serif;font-size:13px}
+  .field input:focus, .field select:focus{outline:none;border-color:var(--pink)}
+  .field input[type="checkbox"]{width:auto;align-self:flex-start;margin-top:4px;accent-color:var(--pink)}
+  .field.check{flex-direction:row;align-items:center;gap:8px}
+  .field.check label{font-size:11px;letter-spacing:.06em;text-transform:none;color:var(--body);font-weight:500}
+
+  button.primary{background:var(--pink);color:#fff;border:none;border-radius:3px;padding:10px 18px;font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+  button.primary:hover{filter:brightness(1.08)}
+  button.ghost{background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:3px;padding:8px 14px;font-family:'Montserrat',sans-serif;font-size:10px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;font-weight:600}
+  button.ghost:hover{color:var(--body);border-color:var(--pink)}
+  button.danger{color:var(--coral);border-color:var(--coral)}
+  button.danger:hover{color:#fff;background:var(--coral);border-color:var(--coral)}
+
+  .actions-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+
+  table.history{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--border);border-radius:4px;overflow:hidden}
+  table.history th{text-align:left;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:11px 12px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.15)}
+  table.history td{font-size:13px;color:var(--body);padding:10px 12px;border-bottom:1px solid var(--border)}
+  table.history tr:last-child td{border-bottom:none}
+  table.history tr:hover td{background:rgba(255,34,87,.04)}
+  table.history td .row-del{color:var(--muted);background:transparent;border:none;cursor:pointer;font-size:14px;padding:0 4px}
+  table.history td .row-del:hover{color:var(--pink)}
+  /* Status badge dropdown */
+  .status-select{font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:5px 8px;border-radius:3px;cursor:pointer;border:1px solid var(--border);background:var(--navy);color:var(--muted);min-width:106px}
+  .status-select:hover{border-color:var(--pink)}
+  .status-select.s-showed{color:var(--body);border-color:var(--muted)}
+  .status-select.s-qualified{background:rgba(255,34,87,.18);color:#fff;border-color:var(--pink)}
+  .status-select.s-second{background:var(--pink);color:#fff;border-color:var(--pink)}
+  .status-select.s-won{background:#1F8C5E;color:#fff;border-color:#1F8C5E}
+  .status-select.s-lost{background:var(--coral);color:#fff;border-color:var(--coral)}
+  .status-select.s-lost_no_budget{background:#8B3A1A;color:#fff;border-color:#8B3A1A}
+  .status-select.s-noshow{background:transparent;color:var(--coral);border:1px dashed var(--coral)}
+  .src-select{font-family:'Montserrat',sans-serif;font-size:11px;background:var(--navy);border:1px solid var(--border);color:var(--body);border-radius:3px;padding:5px 7px;cursor:pointer;max-width:170px}
+  .src-select:hover{border-color:var(--pink)}
+  .src-select option{background:var(--card);color:var(--body)}
+
+  /* Filter row */
+  .filter-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:4px}
+  .filter-pill{background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:99px;padding:5px 11px;font-family:'Montserrat',sans-serif;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:pointer}
+  .filter-pill:hover{color:var(--body);border-color:var(--pink)}
+  .filter-pill.on{background:var(--pink);color:#fff;border-color:var(--pink)}
+  .filter-search{background:var(--navy);border:1px solid var(--border);color:var(--body);font-family:'Montserrat',sans-serif;font-size:12px;border-radius:3px;padding:6px 10px;margin-left:auto;min-width:180px}
+  .filter-search:focus{outline:none;border-color:var(--pink)}
+  .filter-count{font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;font-weight:600;margin-left:6px}
+
+  /* Tags on notes */
+  .tag{display:inline-block;background:rgba(255,34,87,.12);color:var(--body);border:1px solid rgba(255,34,87,.35);border-radius:99px;padding:1px 7px;font-size:9px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;margin-right:4px;margin-bottom:2px}
+  .tag.t-budget{background:rgba(255,116,63,.14);border-color:rgba(255,116,63,.45)}
+  .tag.t-timing{background:rgba(255,34,87,.14);border-color:rgba(255,34,87,.45)}
+  .tag.t-fit{background:rgba(138,153,176,.18);border-color:rgba(138,153,176,.4);color:var(--muted)}
+
+  .toggle-btn{font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;border-radius:3px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);min-width:36px}
+  .toggle-btn:hover{border-color:var(--pink);color:var(--body)}
+  .toggle-btn.on{background:var(--pink);color:#fff;border-color:var(--pink)}
+  .toggle-btn.lost.on{background:var(--coral);color:#fff;border-color:var(--coral)}
+  .toggle-btn.lost:hover{border-color:var(--coral);color:var(--body)}
+  .retainer-select{background:var(--navy);border:1px solid var(--border);color:var(--body);font-family:'Montserrat',sans-serif;font-size:12px;border-radius:3px;padding:4px 6px;cursor:pointer}
+  .retainer-select:hover{border-color:var(--pink)}
+  .retainer-select option{background:var(--card);color:var(--body)}
+  td.editable{cursor:text;border-bottom:1px dashed transparent}
+  td.editable:hover{border-bottom-color:var(--pink)}
+  td.editable:focus{outline:none;background:rgba(255,34,87,.08);border-bottom-color:var(--pink)}
+  td.notes-cell{min-width:180px;max-width:280px;font-size:12px;color:var(--body)}
+  td.notes-cell:empty::before{content:attr(data-placeholder);color:var(--muted);opacity:.28;font-style:italic;font-size:11px}
+  td.notes-cell:empty:hover::before, td.notes-cell:empty:focus::before{opacity:.65}
+  .table-wrap{overflow-x:auto}
+  .empty-row{text-align:center;color:var(--muted);padding:20px;font-style:italic}
+
+  /* Coaching Call Prep */
+  .prep-section{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:22px;margin-bottom:18px}
+  .prep-section .label-tiny{margin-bottom:10px;color:var(--pink)}
+  .prep-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:14px}
+  .prep-stat{border-left:2px solid var(--pink);padding-left:10px}
+  .prep-stat .num{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--body);line-height:1.1}
+  .prep-stat .lab{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:3px}
+  .prep-line{font-family:'Playfair Display',serif;font-style:italic;font-weight:700;font-size:15px;color:var(--body);padding:12px 14px;border-left:2px solid var(--pink);background:rgba(255,34,87,.05);margin-top:10px;line-height:1.45}
+  .gap-bad{color:var(--coral)}
+  .gap-good{color:#7CE0B5}
+
+  @media print {
+    body{background:#fff;color:#000}
+    .no-print{display:none !important}
+    .prep-section{background:#fff;border:1px solid #ccc;color:#000;page-break-inside:avoid}
+    .prep-section .label-tiny{color:#888}
+    .prep-stat{border-left-color:#000}
+    .prep-stat .num, .prep-stat .lab{color:#000}
+    .prep-line{background:#f5f5f5;color:#000;border-left-color:#000}
+    .logo-story{color:#000}
+    .logo-group, .logo-divider, .logo-sub{color:#666}
+    h2, h3{color:#000}
+  }
+
+  @media (max-width: 640px){
+    .container{padding:16px 12px 60px}
+    .logo-story{font-size:22px}
+    h2{font-size:18px}
+    .tab-btn{padding:10px 12px;font-size:10px}
+    form.entry{padding:14px}
+    .rollup .card .big{font-size:22px}
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <a href="/" target="_top" class="logo-link" title="Back to Coaching Snapshot">
+      <span class="logo-story">story</span>
+      <span class="logo-group">group</span>
+      <span class="logo-divider">—</span>
+    </a>
+    <nav class="header-nav">
+      <a href="/" target="_top">Dashboard</a>
+      <a href="/tracker/" class="active">Daily Tracker</a>
+      <a href="/lead-filter/">LinkedIn Lead List Filter</a>
+    </nav>
+  </header>
+
+  <!-- Rollup -->
+  <div class="rollup" id="rollup"></div>
+
+  <!-- 7-day trend per channel -->
+  <div class="trend-row" id="trendRow"></div>
+
+  <!-- Global actions -->
+  <div class="actions-row no-print">
+    <button class="ghost" id="exportAllBtn">Export All (JSON)</button>
+    <button class="ghost" id="importBtn">Import JSON</button>
+    <input type="file" id="importFile" accept="application/json" style="display:none" />
+    <button class="ghost danger" id="wipeBtn">Wipe All</button>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs no-print" role="tablist">
+    <button class="tab-btn active" data-tab="funnel">Sales Funnel</button>
+    <button class="tab-btn" data-tab="prep">Coaching Call Prep</button>
+    <button class="tab-btn" data-tab="linkedin">LinkedIn</button>
+    <button class="tab-btn" data-tab="email">Cold Email</button>
+  </div>
+
+  <!-- LinkedIn -->
+  <section class="tab-panel" id="tab-linkedin">
+    <h2>LinkedIn Outbound</h2>
+    <form class="entry" id="form-linkedin">
+      <div class="row">
+        <div class="field"><label>Date</label><input type="date" name="date" required /></div>
+        <div class="field"><label>Account</label>
+          <select name="account" id="li-account-select" required>
+            <option value="">Loading accounts…</option>
+          </select>
+        </div>
+        <div class="field"><label>Requests Sent</label><input type="number" min="0" name="requestsSent" value="0" /></div>
+        <div class="field"><label>Requests Accepted</label><input type="number" min="0" name="requestsAccepted" value="0" /></div>
+        <div class="field"><label>InMails Sent</label><input type="number" min="0" name="inmailsSent" value="0" /></div>
+        <div class="field"><label>Positive Replies</label><input type="number" min="0" name="positiveReplies" value="0" /></div>
+        <div class="field"><label>Normal Replies</label><input type="number" min="0" name="normalReplies" value="0" /></div>
+        <div class="field"><label>Meetings Booked</label><input type="number" min="0" name="meetingsBooked" value="0" /></div>
+      </div>
+      <div class="actions-row">
+        <button type="submit" class="primary">Save Entry</button>
+        <button type="button" class="ghost" id="pullHeyreachBtn">Pull Today From Heyreach</button>
+        <button type="button" class="ghost" id="pullHeyreachAllBtn">Pull Today For All Accounts</button>
+        <button type="button" class="ghost" data-export="linkedin">Export CSV</button>
+      </div>
+      <div id="heyreachStatus" class="label-tiny" style="margin-top:8px;color:var(--muted)"></div>
+    </form>
+    <div class="table-wrap">
+      <table class="history" id="table-linkedin">
+        <thead><tr><th>Date</th><th>Account</th><th>Sent</th><th>Accept</th><th>InMail</th><th>Pos</th><th>Norm</th><th>Mtgs</th><th>Accept %</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Cold Email -->
+  <section class="tab-panel" id="tab-email">
+    <h2>Cold Email</h2>
+    <form class="entry" id="form-email">
+      <div class="row">
+        <div class="field"><label>Date</label><input type="date" name="date" required /></div>
+        <div class="field"><label>Campaign</label>
+          <select name="campaign" id="emailCampaignSelect" required>
+            <option value="">Loading campaigns…</option>
+          </select>
+        </div>
+        <div class="field"><label>Emails Sent</label><input type="number" min="0" name="emailsSent" value="0" /></div>
+        <div class="field"><label>Open Rate (%)</label><input type="number" min="0" max="100" step="0.1" name="openRate" value="0" /></div>
+        <div class="field"><label>Positive Replies</label><input type="number" min="0" name="positiveReplies" value="0" /></div>
+        <div class="field"><label>Meetings Booked</label><input type="number" min="0" name="meetingsBooked" value="0" /></div>
+      </div>
+      <div class="actions-row">
+        <button type="submit" class="primary">Save Entry</button>
+        <button type="button" class="ghost" id="pullInstantlyBtn">Pull Today From Instantly</button>
+        <button type="button" class="ghost" data-export="email">Export CSV</button>
+      </div>
+      <div id="instantlyStatus" class="label-tiny" style="margin-top:8px;color:var(--muted)"></div>
+    </form>
+    <div class="table-wrap">
+      <table class="history" id="table-email">
+        <thead><tr><th>Date</th><th>Campaign</th><th>Sent</th><th>Open %</th><th>Pos Reply</th><th>Mtgs</th><th>Reply %</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Sales Funnel -->
+  <section class="tab-panel active" id="tab-funnel">
+    <h2>Sales Funnel</h2>
+    <form class="entry" id="form-funnel">
+      <div class="row">
+        <div class="field"><label>Date Booked</label><input type="date" name="dateBooked" required /></div>
+        <div class="field"><label>Prospect</label><input type="text" name="prospect" placeholder="First Last" required /></div>
+        <div class="field"><label>Company</label><input type="text" name="company" placeholder="Company name" /></div>
+        <div class="field"><label>Source Channel</label>
+          <select name="sourceChannel" required>
+            <option value="">Pick channel</option>
+            <option>LinkedIn</option>
+            <option>Cold Email</option>
+            <option>Inbound</option>
+            <option>Referral</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="field"><label>Source Account / Campaign</label><input type="text" name="sourceAccount" placeholder="auto-filled when imported" /></div>
+        <div class="field"><label>Retainer ($)</label>
+          <select name="retainer">
+            <option value="0">Not closed</option>
+            <option value="5500">$5,500 — Kickstart (one-time)</option>
+            <option value="7500">$7,500 — Business Growth</option>
+            <option value="10000">$10,000 — Visibility</option>
+            <option value="20000">$20,000 — Influence</option>
+            <option value="30000">$30,000 — Command</option>
+            <option value="33500">$33,500 — Command &amp; Digital Growth</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field check"><input type="checkbox" name="showed" id="showed" /><label for="showed">Showed</label></div>
+        <div class="field check"><input type="checkbox" name="qualified" id="qualified" /><label for="qualified">Qualified</label></div>
+        <div class="field check"><input type="checkbox" name="secondCall" id="secondCall" /><label for="secondCall">Booked 2nd Call</label></div>
+        <div class="field check"><input type="checkbox" name="closed" id="closed" /><label for="closed">Closed (Won)</label></div>
+        <div class="field check"><input type="checkbox" name="closedLost" id="closedLost" /><label for="closedLost">Closed (Lost)</label></div>
+      </div>
+      <div class="row">
+        <div class="field" style="grid-column:1 / -1"><label>Notes</label><input type="text" name="notes" placeholder="Optional — e.g. not a good fit / budget too low / bad timing" /></div>
+      </div>
+      <div class="actions-row">
+        <button type="submit" class="primary">Save Entry</button>
+        <button type="button" class="ghost" id="pullCalendarBtn">Pull Recent From Calendar</button>
+        <select id="calendarDaysBack" class="ghost" style="background:var(--navy);border:1px solid var(--border);color:var(--body);border-radius:3px;padding:8px 10px;font-family:'Montserrat',sans-serif;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:600">
+          <option value="7">Last 7 Days</option>
+          <option value="14">Last 14 Days</option>
+          <option value="30">Last 30 Days</option>
+        </select>
+        <button type="button" class="ghost" data-export="funnel">Export CSV</button>
+      </div>
+      <div id="calendarStatus" class="label-tiny" style="margin-top:8px;color:var(--muted)"></div>
+    </form>
+    <div class="filter-row no-print">
+      <button type="button" class="filter-pill on" data-filter="all">All</button>
+      <button type="button" class="filter-pill" data-filter="pending">Pending</button>
+      <button type="button" class="filter-pill" data-filter="showed">Showed</button>
+      <button type="button" class="filter-pill" data-filter="qualified">Qualified</button>
+      <button type="button" class="filter-pill" data-filter="second">2nd Booked</button>
+      <button type="button" class="filter-pill" data-filter="won">Won</button>
+      <button type="button" class="filter-pill" data-filter="lost">Lost</button>
+      <button type="button" class="filter-pill" data-filter="noshow">No-Show</button>
+      <span class="filter-count" id="filterCount"></span>
+      <input type="search" class="filter-search" id="filterSearch" placeholder="Search prospect or company…" />
+    </div>
+    <div class="table-wrap">
+      <table class="history" id="table-funnel">
+        <thead><tr><th>Date</th><th>Prospect</th><th>Company</th><th>Channel</th><th>Account / Campaign</th><th>Status</th><th>Retainer</th><th>Notes</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Coaching Call Prep -->
+  <section class="tab-panel" id="tab-prep">
+    <h2>Coaching Call Prep — Last 7 Days</h2>
+    <div class="actions-row no-print">
+      <button class="primary" id="printPrep">Print This View</button>
+      <span class="label-tiny" style="align-self:center">Bring this to Thursday 5:30pm with Sameer</span>
+    </div>
+    <div id="prepBody"></div>
+  </section>
+</div>
+
+<script src="funnel_math.js"></script>
+<script>
+(function(){
+  const FM = window.FunnelMath;
+  const KEY = { linkedin:'sg.tracker.linkedin', email:'sg.tracker.email', funnel:'sg.tracker.funnel' };
+
+  // Backend proxy for Heyreach. When tracker is hosted on story-group-gtm.web.app, route through the gtm-api backend.
+  // When opened as a local file, hit the Hostinger backend directly.
+  const API_BASE = (function(){
+    const override = new URLSearchParams(window.location.search).get('api');
+    if (override) return override.replace(/\/$/, '');
+    if (location.hostname === 'story-group-gtm.web.app' || location.hostname === 'story-group-gtm.firebaseapp.com') {
+      return 'https://gtm-api.srv1364275.hstgr.cloud';
+    }
+    return 'https://gtm-api.srv1364275.hstgr.cloud';
+  })();
+
+  function load(k){
+    try { return JSON.parse(localStorage.getItem(k) || '[]'); }
+    catch(e){ return []; }
+  }
+  function save(k, v){ localStorage.setItem(k, JSON.stringify(v)); }
+
+  function todayISO(){ return new Date().toISOString().slice(0,10); }
+
+  // Seed date inputs
+  document.querySelectorAll('input[type="date"]').forEach(function(el){ if (!el.value) el.value = todayISO(); });
+
+  // --- Heyreach integration ---
+  const heyreachStatus = document.getElementById('heyreachStatus');
+  function setHRStatus(msg, isErr){
+    heyreachStatus.textContent = msg || '';
+    heyreachStatus.style.color = isErr ? 'var(--coral)' : 'var(--muted)';
+  }
+
+  let heyreachAccounts = []; // [{id, fullName}]
+  async function loadHeyreachAccounts(){
+    const sel = document.getElementById('li-account-select');
+    try {
+      const r = await fetch(API_BASE + '/api/heyreach/accounts');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const data = await r.json();
+      heyreachAccounts = data.items || [];
+      if (!heyreachAccounts.length){
+        sel.innerHTML = '<option value="">No accounts connected in Heyreach yet</option>';
+        setHRStatus('Connect LinkedIn sender accounts in Heyreach, then refresh.');
+        return;
+      }
+      sel.innerHTML = '<option value="">Pick account</option>' +
+        heyreachAccounts.map(function(a){
+          return '<option value="' + a.id + '">' + (a.fullName || ('Account ' + a.id)) + '</option>';
+        }).join('');
+      setHRStatus(heyreachAccounts.length + ' Heyreach accounts loaded.');
+    } catch (e) {
+      sel.innerHTML = '<option value="">Heyreach offline — type manually</option>';
+      setHRStatus('Could not reach Heyreach proxy. ' + e.message, true);
+    }
+  }
+  loadHeyreachAccounts();
+
+  // Populate the cold-email campaign dropdown from Instantly
+  async function loadInstantlyCampaigns() {
+    const sel = document.getElementById('emailCampaignSelect');
+    if (!sel) return;
+    try {
+      const r = await fetch(API_BASE + '/api/instantly/campaigns');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const data = await r.json();
+      const items = data.items || [];
+      if (!items.length) {
+        sel.innerHTML = '<option value="">No Instantly campaigns found</option>';
+        return;
+      }
+      sel.innerHTML = '<option value="">Pick campaign</option>' +
+        items.map(function(c) {
+          return '<option value="' + escapeHTML(c.name) + '" data-id="' + escapeHTML(c.id || '') + '">' + escapeHTML(c.name) + '</option>';
+        }).join('');
+    } catch (e) {
+      sel.innerHTML = '<option value="">Failed to load campaigns</option>';
+      console.warn('[tracker] Instantly campaigns load failed:', e.message);
+    }
+  }
+  loadInstantlyCampaigns();
+
+  // One-time auto-dedupe of cold-email rows on load.
+  (function dedupeEmailOnLoad(){
+    const rows = load(KEY.email);
+    const map = new Map();
+    rows.forEach(function(r){
+      const key = (r.date || '') + '|' + (r.campaignId || r.campaign || '');
+      const existing = map.get(key);
+      if (!existing) { map.set(key, r); return; }
+      const sumA = (existing.emailsSent || 0) + (existing.positiveReplies || 0) + (existing.meetingsBooked || 0);
+      const sumB = (r.emailsSent || 0) + (r.positiveReplies || 0) + (r.meetingsBooked || 0);
+      if (sumB > sumA) map.set(key, r);
+      else if (sumB === sumA && new Date(r.createdAt || 0) > new Date(existing.createdAt || 0)) map.set(key, r);
+    });
+    const deduped = Array.from(map.values()).sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+    if (deduped.length !== rows.length) {
+      save(KEY.email, deduped);
+      console.log('[tracker] Auto-deduped cold-email rows:', rows.length, '->', deduped.length);
+    }
+  })();
+
+  // One-time auto-dedupe of LinkedIn rows on load.
+  // Same (date, account) pairs collapse to the highest-value row (handles old broken pulls).
+  (function dedupeLinkedinOnLoad(){
+    const rows = load(KEY.linkedin);
+    const map = new Map();
+    rows.forEach(function(r){
+      const key = (r.date || '') + '|' + ((r.heyreachAccountId || '') + ':' + (r.account || ''));
+      const existing = map.get(key);
+      if (!existing) { map.set(key, r); return; }
+      // Keep the row with higher requestsSent (or the most recent createdAt as tiebreak)
+      const sumA = (existing.requestsSent || 0) + (existing.requestsAccepted || 0) + (existing.normalReplies || 0) + (existing.positiveReplies || 0);
+      const sumB = (r.requestsSent || 0) + (r.requestsAccepted || 0) + (r.normalReplies || 0) + (r.positiveReplies || 0);
+      if (sumB > sumA) map.set(key, r);
+      else if (sumB === sumA && new Date(r.createdAt || 0) > new Date(existing.createdAt || 0)) map.set(key, r);
+    });
+    const deduped = Array.from(map.values()).sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+    if (deduped.length !== rows.length) {
+      save(KEY.linkedin, deduped);
+      console.log('[tracker] Auto-deduped LinkedIn rows:', rows.length, '->', deduped.length);
+    }
+  })();
+
+  async function pullToday(accountId){
+    const dateEl = document.querySelector('#form-linkedin input[name="date"]');
+    const isoDate = dateEl.value || todayISO();
+    const qs = '?from=' + isoDate + '&to=' + isoDate + (accountId ? '&accountIds=' + accountId : '');
+    setHRStatus('Pulling ' + isoDate + ' from Heyreach…');
+    const r = await fetch(API_BASE + '/api/heyreach/stats' + qs);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    return data.summary || {};
+  }
+
+  document.getElementById('pullHeyreachBtn').addEventListener('click', async function(){
+    try {
+      const sel = document.getElementById('li-account-select');
+      const accountId = sel.value;
+      if (!accountId){ setHRStatus('Pick an account first.', true); return; }
+      const s = await pullToday(accountId);
+      const f = document.getElementById('form-linkedin');
+      f.requestsSent.value     = s.requestsSent || 0;
+      f.requestsAccepted.value = s.requestsAccepted || 0;
+      f.inmailsSent.value      = s.inmailsSent || 0;
+      f.positiveReplies.value  = s.positiveReplies || 0;
+      f.normalReplies.value    = s.normalReplies || 0;
+      f.meetingsBooked.value   = s.meetingsBooked || 0;
+      setHRStatus('Pulled. Review and Save Entry to commit.');
+    } catch (e) { setHRStatus('Pull failed: ' + e.message, true); }
+  });
+
+  // --- Instantly cold-email pull ---
+  const instantlyStatus = document.getElementById('instantlyStatus');
+  function setInstStatus(msg, isErr){
+    if (!instantlyStatus) return;
+    instantlyStatus.textContent = msg || '';
+    instantlyStatus.style.color = isErr ? 'var(--coral)' : 'var(--muted)';
+  }
+  document.getElementById('pullInstantlyBtn').addEventListener('click', async function(){
+    try {
+      const dateEl = document.querySelector('#form-email input[name="date"]');
+      const isoDate = dateEl.value || todayISO();
+      setInstStatus('Pulling ' + isoDate + ' from Instantly…');
+      const r = await fetch(API_BASE + '/api/instantly/daily-stats?date=' + isoDate);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const data = await r.json();
+      const items = (data.items || []).filter(function(it){ return it.emailsSent > 0 || it.positiveReplies > 0; });
+      if (!items.length){ setInstStatus('Instantly returned no activity for ' + isoDate + '.'); return; }
+      const rows = load(KEY.email);
+      let added = 0, updated = 0;
+      items.forEach(function(it){
+        const newRow = {
+          date: isoDate,
+          campaign: it.campaign,
+          campaignId: it.campaignId,
+          emailsSent: it.emailsSent || 0,
+          openRate: it.openRate || 0,
+          positiveReplies: it.positiveReplies || 0,
+          meetingsBooked: it.meetingsBooked || 0,
+          createdAt: new Date().toISOString(),
+          source: 'instantly-auto'
+        };
+        // Upsert by (date, campaignId) — clicking Pull twice updates instead of duplicating
+        const existingIdx = rows.findIndex(function(r){
+          return r.date === isoDate && (
+            (r.campaignId && r.campaignId === it.campaignId) ||
+            (r.campaign === it.campaign)
+          );
+        });
+        if (existingIdx >= 0) { rows[existingIdx] = newRow; updated++; }
+        else { rows.unshift(newRow); added++; }
+      });
+      save(KEY.email, rows);
+      renderAll();
+      setInstStatus('Saved for ' + isoDate + ': ' + added + ' new, ' + updated + ' updated.');
+    } catch (e) { setInstStatus('Pull failed: ' + e.message, true); }
+  });
+
+  // --- Calendar pull (Sales Funnel) ---
+  const calendarStatus = document.getElementById('calendarStatus');
+  function setCalStatus(msg, isErr){
+    if (!calendarStatus) return;
+    calendarStatus.textContent = msg || '';
+    calendarStatus.style.color = isErr ? 'var(--coral)' : 'var(--muted)';
+  }
+  document.getElementById('pullCalendarBtn').addEventListener('click', async function(){
+    try {
+      const daysBack = Number(document.getElementById('calendarDaysBack').value || 7);
+      const to = new Date();
+      const from = new Date(); from.setDate(from.getDate() - daysBack);
+      const fromISO = from.toISOString().slice(0,10);
+      const toISO   = to.toISOString().slice(0,10);
+      setCalStatus('Scanning calendar ' + fromISO + ' → ' + toISO + '…');
+      const r = await fetch(API_BASE + '/api/calendar/sync-meetings?from=' + fromISO + '&to=' + toISO);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const data = await r.json();
+      const items = data.items || [];
+      if (!items.length){ setCalStatus('Scanned ' + (data.eventsScanned||0) + ' events. No "Story Group & …" meetings matched.'); return; }
+
+      const existing = load(KEY.funnel);
+      const seenIds = new Set(existing.map(function(r){ return r.eventId; }).filter(Boolean));
+      let added = 0, skipped = 0;
+      items.forEach(function(it){
+        if (seenIds.has(it.eventId)) { skipped++; return; }
+        existing.unshift({
+          eventId: it.eventId,
+          dateBooked: it.dateBooked,
+          prospect: it.prospect,
+          company: it.company,
+          sourceChannel: it.sourceChannel || 'Calendar',
+          sourceAccount: it.sourceAccount || '',
+          callType: it.callType,
+          showed: !!it.showed,
+          qualified: false,
+          secondCall: !!it.secondCall,
+          closed: false,
+          retainer: 0,
+          prospectEmail: it.prospectEmail,
+          title: it.title,
+          htmlLink: it.htmlLink,
+          createdAt: new Date().toISOString(),
+          source: 'calendar-auto'
+        });
+        added++;
+      });
+      save(KEY.funnel, existing);
+      renderAll();
+      setCalStatus('Imported ' + added + ' new meetings, skipped ' + skipped + ' duplicates. Click each row to mark qualified/closed.');
+    } catch (e) { setCalStatus('Calendar pull failed: ' + e.message, true); }
+  });
+
+  document.getElementById('pullHeyreachAllBtn').addEventListener('click', async function(){
+    try {
+      const dateEl = document.querySelector('#form-linkedin input[name="date"]');
+      const isoDate = dateEl.value || todayISO();
+      setHRStatus('Pulling all accounts for ' + isoDate + '…');
+      const r = await fetch(API_BASE + '/api/heyreach/stats/per-account?from=' + isoDate + '&to=' + isoDate);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const data = await r.json();
+      const items = (data.items || []).filter(function(it){ return it.summary; });
+      if (!items.length){ setHRStatus('Heyreach returned no data. ' + (data.note || ''), true); return; }
+      const rows = load(KEY.linkedin);
+      let added = 0, updated = 0;
+      items.forEach(function(it){
+        const s = it.summary;
+        const accountName = it.fullName || ('Heyreach #' + it.id);
+        const newRow = {
+          date: isoDate,
+          account: accountName,
+          heyreachAccountId: it.id,
+          requestsSent: s.requestsSent || 0,
+          requestsAccepted: s.requestsAccepted || 0,
+          inmailsSent: s.inmailsSent || 0,
+          positiveReplies: s.positiveReplies || 0,
+          normalReplies: s.normalReplies || 0,
+          meetingsBooked: s.meetingsBooked || 0,
+          createdAt: new Date().toISOString(),
+          source: 'heyreach-auto'
+        };
+        // Upsert: if there's already a row for this date+account, replace it
+        const existingIdx = rows.findIndex(function(r){
+          return r.date === isoDate && (
+            (r.heyreachAccountId && r.heyreachAccountId === it.id) ||
+            (r.account === accountName)
+          );
+        });
+        if (existingIdx >= 0) { rows[existingIdx] = newRow; updated++; }
+        else { rows.unshift(newRow); added++; }
+      });
+      save(KEY.linkedin, rows);
+      renderAll();
+      setHRStatus('Saved for ' + isoDate + ': ' + added + ' new, ' + updated + ' updated.');
+    } catch (e) { setHRStatus('Pull failed: ' + e.message, true); }
+  });
+
+  // Tab switching
+  document.querySelectorAll('.tab-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+      document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+      btn.classList.add('active');
+      const id = 'tab-' + btn.dataset.tab;
+      document.getElementById(id).classList.add('active');
+      if (btn.dataset.tab === 'prep') renderPrep();
+    });
+  });
+
+  // Form: LinkedIn
+  document.getElementById('form-linkedin').addEventListener('submit', function(e){
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const row = {
+      date: fd.get('date'),
+      account: fd.get('account'),
+      requestsSent: Number(fd.get('requestsSent')||0),
+      requestsAccepted: Number(fd.get('requestsAccepted')||0),
+      inmailsSent: Number(fd.get('inmailsSent')||0),
+      positiveReplies: Number(fd.get('positiveReplies')||0),
+      normalReplies: Number(fd.get('normalReplies')||0),
+      meetingsBooked: Number(fd.get('meetingsBooked')||0),
+      createdAt: new Date().toISOString()
+    };
+    const rows = load(KEY.linkedin); rows.unshift(row); save(KEY.linkedin, rows);
+    e.target.reset();
+    document.querySelector('#form-linkedin input[name="date"]').value = todayISO();
+    renderAll();
+  });
+
+  // Form: Email
+  document.getElementById('form-email').addEventListener('submit', function(e){
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const row = {
+      date: fd.get('date'),
+      campaign: fd.get('campaign'),
+      emailsSent: Number(fd.get('emailsSent')||0),
+      openRate: Number(fd.get('openRate')||0),
+      positiveReplies: Number(fd.get('positiveReplies')||0),
+      meetingsBooked: Number(fd.get('meetingsBooked')||0),
+      createdAt: new Date().toISOString()
+    };
+    const rows = load(KEY.email); rows.unshift(row); save(KEY.email, rows);
+    e.target.reset();
+    document.querySelector('#form-email input[name="date"]').value = todayISO();
+    renderAll();
+  });
+
+  // Form: Funnel
+  document.getElementById('form-funnel').addEventListener('submit', function(e){
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const row = {
+      dateBooked: fd.get('dateBooked'),
+      prospect: fd.get('prospect'),
+      company: fd.get('company'),
+      sourceChannel: fd.get('sourceChannel'),
+      sourceAccount: fd.get('sourceAccount'),
+      showed: e.target.showed.checked,
+      qualified: e.target.qualified.checked,
+      secondCall: e.target.secondCall.checked,
+      closed: e.target.closed.checked,
+      closedLost: e.target.closedLost.checked,
+      retainer: Number(fd.get('retainer')||0),
+      notes: (fd.get('notes')||'').toString(),
+      createdAt: new Date().toISOString()
+    };
+    const rows = load(KEY.funnel); rows.unshift(row); save(KEY.funnel, rows);
+    e.target.reset();
+    document.querySelector('#form-funnel input[name="dateBooked"]').value = todayISO();
+    renderAll();
+  });
+
+  // Row delete
+  function bindRowDelete(tableId, storeKey){
+    document.getElementById(tableId).addEventListener('click', function(e){
+      const btn = e.target.closest('.row-del');
+      if (!btn) return;
+      const idx = Number(btn.dataset.idx);
+      if (isNaN(idx)) return;
+      if (!confirm('Delete this entry?')) return;
+      const rows = load(storeKey); rows.splice(idx, 1); save(storeKey, rows);
+      renderAll();
+    });
+  }
+  bindRowDelete('table-linkedin', KEY.linkedin);
+  bindRowDelete('table-email', KEY.email);
+  bindRowDelete('table-funnel', KEY.funnel);
+
+  // CSV export
+  function toCSV(rows, fields){
+    const head = fields.join(',');
+    const body = rows.map(function(r){
+      return fields.map(function(f){
+        let v = r[f];
+        if (v == null) v = '';
+        if (typeof v === 'boolean') v = v ? 'true' : 'false';
+        v = String(v).replace(/"/g,'""');
+        if (/[",\n]/.test(v)) v = '"' + v + '"';
+        return v;
+      }).join(',');
+    }).join('\n');
+    return head + '\n' + body;
+  }
+  function download(name, contents, mime){
+    const blob = new Blob([contents], {type: mime || 'text/plain'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 0);
+  }
+  document.querySelectorAll('[data-export]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      const which = btn.dataset.export;
+      const stamp = todayISO();
+      if (which === 'linkedin'){
+        const csv = toCSV(load(KEY.linkedin), ['date','account','requestsSent','requestsAccepted','inmailsSent','positiveReplies','normalReplies','meetingsBooked','createdAt']);
+        download('sg_linkedin_' + stamp + '.csv', csv, 'text/csv');
+      } else if (which === 'email'){
+        const csv = toCSV(load(KEY.email), ['date','campaign','emailsSent','openRate','positiveReplies','meetingsBooked','createdAt']);
+        download('sg_email_' + stamp + '.csv', csv, 'text/csv');
+      } else if (which === 'funnel'){
+        const csv = toCSV(load(KEY.funnel), ['dateBooked','prospect','company','sourceChannel','sourceAccount','showed','qualified','secondCall','closed','retainer','createdAt']);
+        download('sg_funnel_' + stamp + '.csv', csv, 'text/csv');
+      }
+    });
+  });
+
+  // Export all JSON
+  document.getElementById('exportAllBtn').addEventListener('click', function(){
+    const snapshot = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      linkedin: load(KEY.linkedin),
+      email: load(KEY.email),
+      funnel: load(KEY.funnel)
+    };
+    download('sg_tracker_snapshot_' + todayISO() + '.json', JSON.stringify(snapshot, null, 2), 'application/json');
+  });
+
+  // Import JSON
+  document.getElementById('importBtn').addEventListener('click', function(){ document.getElementById('importFile').click(); });
+  document.getElementById('importFile').addEventListener('change', function(e){
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = function(){
+      try {
+        const data = JSON.parse(r.result);
+        const mode = confirm('OK = REPLACE existing data with import. Cancel = MERGE (append rows).');
+        if (mode){
+          if (data.linkedin) save(KEY.linkedin, data.linkedin);
+          if (data.email)    save(KEY.email,    data.email);
+          if (data.funnel)   save(KEY.funnel,   data.funnel);
+        } else {
+          if (data.linkedin) save(KEY.linkedin, (data.linkedin || []).concat(load(KEY.linkedin)));
+          if (data.email)    save(KEY.email,    (data.email    || []).concat(load(KEY.email)));
+          if (data.funnel)   save(KEY.funnel,   (data.funnel   || []).concat(load(KEY.funnel)));
+        }
+        renderAll();
+        alert('Import complete.');
+      } catch(err){ alert('Import failed: ' + err.message); }
+    };
+    r.readAsText(f);
+    e.target.value = '';
+  });
+
+  // Wipe
+  document.getElementById('wipeBtn').addEventListener('click', function(){
+    if (!confirm('Wipe ALL tracker data? Export a JSON backup first.')) return;
+    if (!confirm('Really wipe? This cannot be undone.')) return;
+    save(KEY.linkedin, []); save(KEY.email, []); save(KEY.funnel, []);
+    renderAll();
+  });
+
+  // Print prep
+  document.getElementById('printPrep').addEventListener('click', function(){ window.print(); });
+
+  // Renderers
+  function renderRollup(){
+    const li = load(KEY.linkedin);
+    const em = load(KEY.email);
+    const fn = load(KEY.funnel);
+    const liW = FM.linkedinRollup(FM.lastNDays(li, 'date', 7));
+    const emW = FM.emailRollup(FM.lastNDays(em, 'date', 7));
+    const fnRecent = FM.lastNDays(fn, 'dateBooked', 7);
+    const fnW = FM.funnelRollup(fnRecent);
+    const path = FM.pathToGoal(fn, 7);
+
+    // Channel-sourced meeting counts (funnel rows are the source of truth)
+    const liMeetingsFunnel = fnRecent.filter(function(r){ return r.sourceChannel === 'LinkedIn'; }).length;
+    const emMeetingsFunnel = fnRecent.filter(function(r){ return r.sourceChannel === 'Cold Email'; }).length;
+
+    const cards = [
+      {label:'LinkedIn Requests / 7d', big: liW.requestsSent, sub: liW.acceptRate + '% accept rate', accent:'accent'},
+      {label:'LinkedIn Meetings / 7d', big: liMeetingsFunnel || liW.meetingsBooked, sub: 'from funnel rows tagged LinkedIn', accent:'accent'},
+      {label:'Cold Emails Sent / 7d', big: emW.emailsSent.toLocaleString(), sub: emW.avgOpenRate + '% open rate', accent:'coral'},
+      {label:'Email Meetings / 7d', big: emMeetingsFunnel || emW.meetingsBooked, sub: 'from funnel rows tagged Cold Email', accent:'coral'},
+      {label:'Discovery Calls / 7d', big: fnW.booked, sub: fnW.showRate + '% show rate', accent:'accent'},
+      {label:'Closed / 7d', big: fnW.closed, sub: FM.fmtMoney(fnW.mrrClosed) + ' MRR', accent:'accent'},
+      {label:'7d Close Rate', big: fnW.closeRate + '%', sub: 'Target 15% (Sameer)', accent: fnW.closeRate >= 15 ? 'accent' : 'coral'},
+      {label:'Days to $80k @ Pace', big: path.daysToGoalAtPace == null ? '—' : path.daysToGoalAtPace, sub: FM.fmtMoney(path.mrrPerDay) + '/day current', accent:'coral'}
+    ];
+    const root = document.getElementById('rollup');
+    root.innerHTML = cards.map(function(c){
+      return '<div class="card ' + (c.accent||'') + '">'
+        + '<div class="label-tiny">' + c.label + '</div>'
+        + '<div class="big">' + c.big + '</div>'
+        + '<div class="sub">' + c.sub + '</div></div>';
+    }).join('');
+  }
+
+  function renderTrend(){
+    const li = load(KEY.linkedin);
+    const em = load(KEY.email);
+    const fn = load(KEY.funnel);
+    const liTrend = FM.dailyTrend(li, 'date', ['requestsSent','meetingsBooked'], 7);
+    const emTrend = FM.dailyTrend(em, 'date', ['emailsSent','meetingsBooked'], 7);
+    const fnTrend = FM.dailyTrend(fn.map(function(r){ return {dateBooked:r.dateBooked, booked:1, closed: r.closed ? 1 : 0}; }), 'dateBooked', ['booked','closed'], 7);
+
+    function spark(points, field, alt){
+      const max = Math.max.apply(null, points.map(function(p){ return p[field]; }).concat([1]));
+      return '<div class="sparkline">'
+        + points.map(function(p){
+            const v = p[field] || 0;
+            const h = max === 0 ? 2 : Math.max(2, Math.round((v/max)*45));
+            return '<div class="spark-col" title="' + p.date + ': ' + v + '">'
+              + '<div class="spark-val">' + (v > 0 ? v : '·') + '</div>'
+              + '<div class="spark-bar' + (alt ? ' alt' : '') + '" style="height:' + h + 'px"></div>'
+              + '</div>';
+          }).join('')
+        + '</div>'
+        + '<div class="spark-axis"><span>' + points[0].date.slice(5) + '</span><span>' + points[points.length-1].date.slice(5) + '</span></div>';
+    }
+
+    const html = ''
+      + '<div class="trend-card"><div class="label-tiny">LinkedIn requests sent · 7d</div>' + spark(liTrend, 'requestsSent') + '</div>'
+      + '<div class="trend-card"><div class="label-tiny">Cold emails sent · 7d</div>' + spark(emTrend, 'emailsSent', true) + '</div>'
+      + '<div class="trend-card"><div class="label-tiny">Discovery calls booked · 7d</div>' + spark(fnTrend, 'booked') + '</div>';
+    document.getElementById('trendRow').innerHTML = html;
+  }
+
+  function renderTable(tableId, rows, cols){
+    const tbody = document.getElementById(tableId).querySelector('tbody');
+    if (!rows.length){
+      tbody.innerHTML = '<tr><td class="empty-row" colspan="' + (cols.length+1) + '">No entries yet. Log your first day above.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(function(r, i){
+      const cells = cols.map(function(c){
+        let v = c.get ? c.get(r) : r[c.key];
+        if (typeof v === 'boolean') v = v ? 'Y' : '—';
+        if (v == null) v = '';
+        return '<td>' + v + '</td>';
+      }).join('');
+      return '<tr>' + cells + '<td><button class="row-del" data-idx="' + i + '" title="Delete">×</button></td></tr>';
+    }).join('');
+  }
+
+  const RETAINER_OPTIONS = [
+    {v:0,     l:'—'},
+    {v:5500,  l:'$5.5k Kickstart (one-time)'},
+    {v:7500,  l:'$7.5k Business Growth'},
+    {v:10000, l:'$10k Visibility'},
+    {v:20000, l:'$20k Influence'},
+    {v:30000, l:'$30k Command'},
+    {v:33500, l:'$33.5k Command & Digital'}
+  ];
+
+  const CHANNEL_OPTIONS = ['', 'LinkedIn', 'Cold Email', 'Inbound', 'Referral', 'Calendar', 'Other'];
+  let knownSources = { 'LinkedIn': [], 'Cold Email': [] };
+
+  // Auto-tag patterns — derived from real notes Vincent enters
+  const TAG_PATTERNS = [
+    { tag: 'budget',         rx: /\b(budget|money|cost|expensive|cheap|afford|price|pricing|too\s+small|too\s+low|funds|cash|no\s+money|priced)/i },
+    { tag: 'timing',         rx: /\b(timing|too\s+early|long\s*term|later|next\s+year|next\s+quarter|not\s+ready|not\s+yet|not\s+now|future|down\s+the\s+road|q[1-4])/i },
+    { tag: 'fit',            rx: /\b(not\s+a\s+good\s+fit|wrong\s+fit|not\s+(the\s+)?right|not\s+icp|not\s+aligned|different\s+niche|not\s+for\s+us)/i },
+    { tag: 'decision-maker', rx: /\b(not\s+(the\s+)?decision|wrong\s+person|wrong\s+contact|\bdm\b|need\s+to\s+talk|partner|approval|boss|spouse|wife|husband)/i },
+    { tag: 'priorities',     rx: /\b(other\s+priorities|focused\s+on|busy|preoccupied|head[- ]?down)/i },
+    { tag: 'in-house',       rx: /\b(in[- ]?house|internal|do\s+(it\s+)?ourselves|hire\s+(in[- ]?house|internal))/i },
+    { tag: 'competitor',     rx: /\b(already\s+(have|working|using)|using\s+competitor|current\s+agency|other\s+agency|with\s+another)/i },
+    { tag: 'ghost',          rx: /\b(no\s+(response|reply|answer)|ghost|disappeared|never\s+heard|crickets)/i }
+  ];
+
+  function autoTag(notes){
+    if (!notes) return [];
+    const found = [];
+    TAG_PATTERNS.forEach(function(p){ if (p.rx.test(notes)) found.push(p.tag); });
+    return found;
+  }
+  // Expose for prep view + math
+  window.SG_autoTag = autoTag;
+
+  // Compute single status string from row state
+  function statusOf(r){
+    if (r.closed) return 'won';
+    if (r.closedLost && r.lostReason === 'no_budget') return 'lost_no_budget';
+    if (r.closedLost) return 'lost';
+    if (r.noShow) return 'noshow';
+    if (r.secondCall) return 'second';
+    if (r.qualified) return 'qualified';
+    if (r.showed) return 'showed';
+    return 'pending';
+  }
+  const STATUS_LABEL = { pending:'Pending', showed:'Showed', qualified:'Qualified', second:'2nd Booked', won:'Won', lost:'Lost', lost_no_budget:'Lost — No Budget', noshow:'No-Show' };
+
+  // Apply a status string to a row (mutates booleans accordingly)
+  function applyStatus(r, status){
+    r.showed = r.qualified = r.secondCall = r.closed = r.closedLost = r.noShow = false;
+    r.lostReason = null;
+    if (status === 'showed')    { r.showed = true; }
+    else if (status === 'qualified') { r.showed = true; r.qualified = true; }
+    else if (status === 'second')    { r.showed = true; r.qualified = true; r.secondCall = true; }
+    else if (status === 'won')       { r.showed = true; r.qualified = true; r.closed = true; }
+    else if (status === 'lost')      { r.showed = true; r.qualified = true; r.closedLost = true; r.retainer = 0; }
+    else if (status === 'lost_no_budget') {
+      r.showed = true; r.qualified = true; r.closedLost = true; r.retainer = 0;
+      r.lostReason = 'no_budget';
+      // Append to notes so the lost-reason breakdown (regex) tags this as 'budget'
+      if (!/no\s*budget|no\s+money|can.?t\s+afford/i.test(r.notes || '')) {
+        r.notes = ((r.notes || '').trim() + ' — no budget').trim();
+      }
+    }
+    else if (status === 'noshow')    { r.noShow = true; r.retainer = 0; }
+  }
+
+  // Fetch source options on load
+  async function loadSourceOptions(){
+    try {
+      const [accR, campR] = await Promise.all([
+        fetch(API_BASE + '/api/heyreach/accounts').then(r => r.ok ? r.json() : {items:[]}),
+        fetch(API_BASE + '/api/instantly/campaigns').then(r => r.ok ? r.json() : {items:[]})
+      ]);
+      knownSources['LinkedIn']   = (accR.items || []).map(function(a){ return 'Heyreach — ' + (a.fullName || ('Account '+a.id)); });
+      knownSources['Cold Email'] = (campR.items || []).map(function(c){ return 'Instantly — ' + c.name; });
+    } catch(e) { /* swallow */ }
+  }
+  loadSourceOptions();
+
+  // Filter state
+  let activeFilter = 'all';
+  let filterQuery = '';
+
+  function escapeHTML(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function rowMatchesFilter(r){
+    if (activeFilter !== 'all' && statusOf(r) !== activeFilter) return false;
+    if (filterQuery){
+      const hay = ((r.prospect||'') + ' ' + (r.company||'') + ' ' + (r.notes||'') + ' ' + (r.sourceAccount||'')).toLowerCase();
+      if (hay.indexOf(filterQuery) === -1) return false;
+    }
+    return true;
+  }
+
+  function renderFunnelTable(rows){
+    const tbody = document.getElementById('table-funnel').querySelector('tbody');
+    if (!rows.length){
+      tbody.innerHTML = '<tr><td class="empty-row" colspan="9">No meetings yet. Pull from Calendar or log one above.</td></tr>';
+      document.getElementById('filterCount').textContent = '';
+      return;
+    }
+    let visible = 0;
+    tbody.innerHTML = rows.map(function(r, i){
+      if (!rowMatchesFilter(r)) return '';
+      visible++;
+      const st = statusOf(r);
+      const statusOpts = ['pending','showed','qualified','second','won','lost','lost_no_budget','noshow'].map(function(s){
+        return '<option value="' + s + '"' + (s === st ? ' selected' : '') + '>' + STATUS_LABEL[s] + '</option>';
+      }).join('');
+      // Deals closed at earlier pricing keep their amount; show it instead of silently reading "—".
+      const known = RETAINER_OPTIONS.some(function(o){ return o.v === Number(r.retainer||0); });
+      const opts = known ? RETAINER_OPTIONS : RETAINER_OPTIONS.concat([{v:Number(r.retainer), l:'$' + (Number(r.retainer)/1000) + 'k (earlier pricing)'}]);
+      const retOptions = opts.map(function(o){
+        return '<option value="' + o.v + '"' + (Number(r.retainer||0) === o.v ? ' selected' : '') + '>' + o.l + '</option>';
+      }).join('');
+      const channelOpts = CHANNEL_OPTIONS.map(function(c){
+        const label = c || '— pick channel —';
+        return '<option value="' + c + '"' + ((r.sourceChannel||'') === c ? ' selected' : '') + '>' + label + '</option>';
+      }).join('');
+      const accountList = knownSources[r.sourceChannel] || [];
+      const accountOpts = ['<option value="">' + (accountList.length ? '— pick —' : '— (type below)') + '</option>']
+        .concat(accountList.map(function(a){
+          return '<option value="' + escapeHTML(a) + '"' + ((r.sourceAccount||'') === a ? ' selected' : '') + '>' + escapeHTML(a) + '</option>';
+        }));
+      // If current value isn't in the known list, add it as a custom option
+      if (r.sourceAccount && accountList.indexOf(r.sourceAccount) === -1){
+        accountOpts.push('<option value="' + escapeHTML(r.sourceAccount) + '" selected>' + escapeHTML(r.sourceAccount) + ' (custom)</option>');
+      }
+      accountOpts.push('<option value="__other__">Other (type below)</option>');
+      const tags = autoTag(r.notes || '').map(function(t){
+        return '<span class="tag t-' + t + '">' + t + '</span>';
+      }).join('');
+      return '<tr data-idx="' + i + '">' +
+        '<td>' + escapeHTML(r.dateBooked || '') + '</td>' +
+        '<td class="editable" contenteditable="true" data-idx="' + i + '" data-field="prospect">' + escapeHTML(r.prospect || '') + '</td>' +
+        '<td class="editable" contenteditable="true" data-idx="' + i + '" data-field="company">' + escapeHTML(r.company || '') + '</td>' +
+        '<td><select class="src-select src-channel" data-idx="' + i + '">' + channelOpts + '</select></td>' +
+        '<td><select class="src-select src-account" data-idx="' + i + '">' + accountOpts.join('') + '</select>' +
+          (r.sourceAccount && !accountList.length ? '<input class="src-select src-account-text" data-idx="' + i + '" value="' + escapeHTML(r.sourceAccount) + '" placeholder="Type source" style="margin-top:4px;display:block" />' : '') +
+        '</td>' +
+        '<td><select class="status-select s-' + st + '" data-idx="' + i + '">' + statusOpts + '</select></td>' +
+        '<td><select class="retainer-select" data-idx="' + i + '">' + retOptions + '</select></td>' +
+        '<td class="editable notes-cell" contenteditable="true" data-idx="' + i + '" data-field="notes" data-placeholder="Click to add note">' + (tags ? '<div style="margin-bottom:3px">' + tags + '</div>' : '') + escapeHTML(r.notes || '') + '</td>' +
+        '<td><button class="row-del" data-idx="' + i + '" title="Delete">×</button></td>' +
+      '</tr>';
+    }).join('');
+    if (!visible){
+      tbody.innerHTML += '<tr><td class="empty-row" colspan="9">No rows match the current filter.</td></tr>';
+    }
+    document.getElementById('filterCount').textContent = visible + ' of ' + rows.length + ' shown';
+  }
+
+  function renderTables(){
+    renderTable('table-linkedin', load(KEY.linkedin), [
+      {key:'date'}, {key:'account'},
+      {key:'requestsSent'}, {key:'requestsAccepted'}, {key:'inmailsSent'},
+      {key:'positiveReplies'}, {key:'normalReplies'}, {key:'meetingsBooked'},
+      {get:function(r){ return FM.pct(r.requestsAccepted, r.requestsSent) + '%'; }}
+    ]);
+    renderTable('table-email', load(KEY.email), [
+      {key:'date'}, {key:'campaign'}, {key:'emailsSent'}, {key:'openRate'},
+      {key:'positiveReplies'}, {key:'meetingsBooked'},
+      {get:function(r){ return FM.pct(r.positiveReplies, r.emailsSent) + '%'; }}
+    ]);
+    renderFunnelTable(load(KEY.funnel));
+  }
+
+  // Inline edit handlers for the funnel table
+  (function bindFunnelEditors(){
+    const tbl = document.getElementById('table-funnel');
+
+    tbl.addEventListener('change', function(e){
+      const rows = load(KEY.funnel);
+      const idx = Number(e.target.dataset.idx);
+      if (isNaN(idx) || !rows[idx]) return;
+
+      if (e.target.classList.contains('status-select')){
+        applyStatus(rows[idx], e.target.value);
+        save(KEY.funnel, rows); renderAll(); return;
+      }
+      if (e.target.classList.contains('retainer-select')){
+        rows[idx].retainer = Number(e.target.value);
+        if (rows[idx].retainer > 0){
+          rows[idx].closed = true; rows[idx].closedLost = false;
+          rows[idx].showed = true; rows[idx].qualified = true; rows[idx].noShow = false;
+        }
+        save(KEY.funnel, rows); renderAll(); return;
+      }
+      if (e.target.classList.contains('src-channel')){
+        rows[idx].sourceChannel = e.target.value;
+        // Clear account if it's not valid for the new channel
+        const list = knownSources[rows[idx].sourceChannel] || [];
+        if (list.length && rows[idx].sourceAccount && list.indexOf(rows[idx].sourceAccount) === -1){
+          rows[idx].sourceAccount = '';
+        }
+        save(KEY.funnel, rows); renderAll(); return;
+      }
+      if (e.target.classList.contains('src-account')){
+        const v = e.target.value;
+        if (v === '__other__'){
+          const typed = prompt('Source account / campaign name:');
+          rows[idx].sourceAccount = (typed || '').trim();
+        } else {
+          rows[idx].sourceAccount = v;
+        }
+        save(KEY.funnel, rows); renderAll(); return;
+      }
+    });
+
+    tbl.addEventListener('blur', function(e){
+      const td = e.target.closest('td.editable');
+      if (td){
+        const idx = Number(td.dataset.idx);
+        const field = td.dataset.field;
+        const rows = load(KEY.funnel);
+        if (!rows[idx]) return;
+        const v = td.textContent.trim();
+        if (rows[idx][field] === v) return;
+        rows[idx][field] = v;
+        save(KEY.funnel, rows);
+        // If notes changed, re-render so auto-tags refresh
+        if (field === 'notes') renderAll();
+        return;
+      }
+      const txt = e.target.closest('.src-account-text');
+      if (txt){
+        const idx = Number(txt.dataset.idx);
+        const rows = load(KEY.funnel);
+        if (!rows[idx]) return;
+        rows[idx].sourceAccount = txt.value.trim();
+        save(KEY.funnel, rows);
+      }
+    }, true);
+  })();
+
+  // Filter row
+  (function bindFilters(){
+    document.querySelectorAll('.filter-pill').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        document.querySelectorAll('.filter-pill').forEach(function(b){ b.classList.remove('on'); });
+        btn.classList.add('on');
+        activeFilter = btn.dataset.filter;
+        renderFunnelTable(load(KEY.funnel));
+      });
+    });
+    const search = document.getElementById('filterSearch');
+    search.addEventListener('input', function(){
+      filterQuery = search.value.trim().toLowerCase();
+      renderFunnelTable(load(KEY.funnel));
+    });
+  })();
+
+  function renderPrep(){
+    const li = load(KEY.linkedin);
+    const em = load(KEY.email);
+    const fn = load(KEY.funnel);
+    const liW = FM.linkedinRollup(FM.lastNDays(li, 'date', 7));
+    const emW = FM.emailRollup(FM.lastNDays(em, 'date', 7));
+    const fnW = FM.funnelRollup(FM.lastNDays(fn, 'dateBooked', 7));
+    const attr = FM.sourceAttribution(FM.lastNDays(fn, 'dateBooked', 30));
+    const path = FM.pathToGoal(fn, 7);
+
+    // Per-LinkedIn-account breakdown
+    const liByAccount = FM.groupBy(FM.lastNDays(li, 'date', 7), 'account');
+    const liAccountRows = Object.keys(liByAccount).map(function(acc){
+      const roll = FM.linkedinRollup(liByAccount[acc]);
+      return '<tr><td>' + acc + '</td><td>' + roll.requestsSent + '</td><td>' + roll.requestsAccepted + '</td><td>' + roll.acceptRate + '%</td><td>' + roll.positiveReplies + '</td><td>' + roll.meetingsBooked + '</td></tr>';
+    }).join('');
+
+    // Per-campaign breakdown
+    const emByCampaign = FM.groupBy(FM.lastNDays(em, 'date', 7), 'campaign');
+    const emCampaignRows = Object.keys(emByCampaign).map(function(c){
+      const roll = FM.emailRollup(emByCampaign[c]);
+      return '<tr><td>' + c + '</td><td>' + roll.emailsSent + '</td><td>' + roll.avgOpenRate + '%</td><td>' + roll.positiveReplies + '</td><td>' + roll.meetingsBooked + '</td></tr>';
+    }).join('');
+
+    // Attribution
+    const attrChannelRows = Object.keys(attr.byChannel).map(function(k){
+      return '<tr><td>' + k + '</td><td>' + attr.byChannel[k] + '</td><td>' + FM.fmtMoney(attr.mrrByChannel[k]||0) + '</td></tr>';
+    }).join('') || '<tr><td colspan="3" class="empty-row">No closes in last 30 days yet</td></tr>';
+
+    const gapClass = path.closeRateGapPts > 0 ? 'gap-bad' : 'gap-good';
+    const gapSign = path.closeRateGapPts > 0 ? '+' : '';
+    const daysLabel = path.daysToGoalAtPace == null ? 'No closes in last 7 days — can\'t project' : path.daysToGoalAtPace + ' days at current pace';
+
+    const html = ''
+      // PATH TO GOAL
+      + '<div class="prep-section">'
+      +   '<div class="label-tiny">Path to $80k MRR Added</div>'
+      +   '<div class="prep-grid">'
+      +     '<div class="prep-stat"><div class="num">' + FM.fmtMoney(path.mrrAddedRecent) + '</div><div class="lab">MRR Added Last 7d</div></div>'
+      +     '<div class="prep-stat"><div class="num">' + FM.fmtMoney(path.mrrPerDay) + '</div><div class="lab">MRR / Day Pace</div></div>'
+      +     '<div class="prep-stat"><div class="num">' + path.closeRateRecent + '%</div><div class="lab">7d Close Rate</div></div>'
+      +     '<div class="prep-stat"><div class="num ' + gapClass + '">' + gapSign + path.closeRateGapPts + 'pts</div><div class="lab">Gap vs 15% Target</div></div>'
+      +   '</div>'
+      +   '<div class="prep-line">' + daysLabel + '. At a 15% close rate and $14k average retainer, ' + path.dealsNeededAtTarget + ' closes (~' + path.qualifiedNeededAtTarget + ' qualified discoveries) gets you to $80k MRR added.</div>'
+      + '</div>'
+
+      // LINKEDIN
+      + '<div class="prep-section">'
+      +   '<div class="label-tiny">LinkedIn — Last 7 Days</div>'
+      +   '<div class="prep-grid">'
+      +     '<div class="prep-stat"><div class="num">' + liW.requestsSent + '</div><div class="lab">Requests Sent</div></div>'
+      +     '<div class="prep-stat"><div class="num">' + liW.requestsAccepted + '</div><div class="lab">Accepted</div></div>'
+      +     '<div class="prep-stat"><div class="num">' + liW.acceptRate + '%</div><div class="lab">Accept Rate</div></div>'
+      +     '<div class="prep-stat"><div class="num">' + liW.positiveReplies + '</div><div class="lab">Positive Replies</div></div>'
+      +     '<div class="prep-stat"><div class="num">' + liW.positiveReplyRate + '%</div><div class="lab">Pos Reply / Accept</div></div>'
+      +     '<div class="prep-stat"><div class="num">' + liW.meetingsBooked + '</div><div class="lab">Meetings Booked</div></div>'
+      +   '</div>'
+      +   '<h3 style="margin-top:14px">Per Account</h3>'
+      +   '<div class="table-wrap"><table class="history"><thead><tr><th>Account</th><th>Sent</th><th>Accepted</th><th>Accept %</th><th>Pos Reply</th><th>Mtgs</th></tr></thead><tbody>' + (liAccountRows || '<tr><td colspan="6" class="empty-row">No LinkedIn entries in last 7 days</td></tr>') + '</tbody></table></div>'
+      + '</div>'
+
+      // COLD EMAIL
+      + '<div class="prep-section">'
+      +   '<div class="label-tiny">Cold Email — Last 7 Days</div>'
+      +   '<div class="prep-grid">'
+      +     '<div class="prep-stat"><div class="num">' + emW.emailsSent.toLocaleString() + '</div><div class="lab">Emails Sent</div></div>'
+      +     '<div class="prep-stat"><div class="num">' + emW.avgOpenRate + '%</div><div class="lab">Avg Open Rate</div></div>'
+      +     '<div class="prep-stat"><div class="num">' + emW.positiveReplies + '</div><div class="lab">Positive Replies</div></div>'
+      +     '<div class="prep-stat"><div class="num">' + emW.positiveReplyRate + '%</div><div class="lab">Pos Reply / Sent</div></div>'
+      +     '<div class="prep-stat"><div class="num">' + emW.meetingsBooked + '</div><div class="lab">Meetings Booked</div></div>'
+      +     '<div class="prep-stat"><div class="num">' + emW.meetingsPerThousand + '</div><div class="lab">Meetings / 1k Sent</div></div>'
+      +   '</div>'
+      +   '<h3 style="margin-top:14px">Per Campaign</h3>'
+      +   '<div class="table-wrap"><table class="history"><thead><tr><th>Campaign</th><th>Sent</th><th>Open %</th><th>Pos Reply</th><th>Mtgs</th></tr></thead><tbody>' + (emCampaignRows || '<tr><td colspan="5" class="empty-row">No email entries in last 7 days</td></tr>') + '</tbody></table></div>'
+      + '</div>'
+
+      // SALES FUNNEL
+      + '<div class="prep-section">'
+      +   '<div class="label-tiny">Sales Funnel — Last 7 Days</div>'
+      +   '<div class="prep-grid">'
+      +     '<div class="prep-stat"><div class="num">' + fnW.booked + '</div><div class="lab">Booked</div></div>'
+      +     '<div class="prep-stat"><div class="num">' + fnW.showed + '</div><div class="lab">Showed</div></div>'
+      +     '<div class="prep-stat"><div class="num">' + fnW.showRate + '%</div><div class="lab">Show Rate</div></div>'
+      +     '<div class="prep-stat"><div class="num">' + fnW.qualified + '</div><div class="lab">Qualified</div></div>'
+      +     '<div class="prep-stat"><div class="num">' + fnW.qualifiedRate + '%</div><div class="lab">Qualified / Shown</div></div>'
+      +     '<div class="prep-stat"><div class="num">' + fnW.secondCall + '</div><div class="lab">2nd Calls Booked</div></div>'
+      +     '<div class="prep-stat"><div class="num">' + fnW.secondCallRate + '%</div><div class="lab">2nd / Qualified</div></div>'
+      +     '<div class="prep-stat"><div class="num">' + fnW.closed + '</div><div class="lab">Closed</div></div>'
+      +     '<div class="prep-stat"><div class="num">' + fnW.closeRate + '%</div><div class="lab">Close Rate</div></div>'
+      +     '<div class="prep-stat"><div class="num">' + FM.fmtMoney(fnW.avgRetainer) + '</div><div class="lab">Avg Retainer</div></div>'
+      +     '<div class="prep-stat"><div class="num">' + FM.fmtMoney(fnW.mrrClosed) + '</div><div class="lab">MRR Closed</div></div>'
+      +   '</div>'
+      + '</div>'
+
+      // NOTES
+      + (function(){
+          const withNotes = FM.lastNDays(fn, 'dateBooked', 14).filter(function(r){ return r.notes && r.notes.trim(); });
+          if (!withNotes.length) return '';
+          return '<div class="prep-section">'
+            + '<div class="label-tiny">Meeting Notes — Last 14 Days</div>'
+            + '<div class="table-wrap"><table class="history"><thead><tr><th>Date</th><th>Prospect</th><th>Outcome</th><th>Notes</th></tr></thead><tbody>'
+            + withNotes.map(function(r){
+                let outcome = 'pending';
+                if (r.closed) outcome = 'WON ' + FM.fmtMoney(r.retainer);
+                else if (r.closedLost) outcome = 'LOST';
+                else if (r.noShow) outcome = 'NO-SHOW';
+                else if (r.showed && !r.qualified) outcome = 'not qualified';
+                else if (r.qualified && !r.secondCall) outcome = 'qualified · pending 2nd';
+                else if (r.secondCall) outcome = '2nd call booked';
+                return '<tr><td>' + r.dateBooked + '</td><td>' + (r.prospect || r.company || '') + '</td><td>' + outcome + '</td><td>' + (r.notes || '') + '</td></tr>';
+              }).join('')
+            + '</tbody></table></div>'
+            + '</div>';
+        })()
+
+      // ATTRIBUTION
+      + '<div class="prep-section">'
+      +   '<div class="label-tiny">Source Attribution — Last 30 Days (Closed Deals)</div>'
+      +   '<div class="table-wrap"><table class="history"><thead><tr><th>Channel</th><th>Closes</th><th>MRR Closed</th></tr></thead><tbody>' + attrChannelRows + '</tbody></table></div>'
+      + '</div>';
+
+    document.getElementById('prepBody').innerHTML = html;
+  }
+
+  function renderAll(){
+    renderRollup();
+    renderTrend();
+    renderTables();
+    if (document.getElementById('tab-prep').classList.contains('active')) renderPrep();
+  }
+
+  renderAll();
+})();
+</script>
+</body>
+</html>

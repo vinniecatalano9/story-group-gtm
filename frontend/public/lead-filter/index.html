@@ -1,0 +1,993 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Lead List Filter</title>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #161922;
+    --panel-2: #1c2030;
+    --line: #262b3a;
+    --text: #e7eaf0;
+    --muted: #8b94a7;
+    --accent: #4c8bf5;
+    --accent-2: #6ea8ff;
+    --good: #2fb877;
+    --warn: #e0a83f;
+    --bad: #e0625f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  /* Shared nav */
+  .sg-nav {
+    background: #0b0d12;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .sg-nav .sg-brand {
+    color: var(--text);
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 14px;
+  }
+  .sg-nav .sg-links { display: flex; gap: 4px; }
+  .sg-nav .sg-links a {
+    color: var(--muted);
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    transition: all 0.15s;
+  }
+  .sg-nav .sg-links a:hover { color: var(--text); background: var(--panel-2); }
+  .sg-nav .sg-links a.active { color: var(--accent-2); background: var(--panel-2); }
+  header { margin-bottom: 28px; }
+  h1 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
+  header p { margin: 0; color: var(--muted); }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card h2 {
+    margin: 0 0 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .drop {
+    border: 2px dashed var(--line);
+    border-radius: 10px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .drop:hover, .drop.drag { border-color: var(--accent); background: var(--panel-2); }
+  .drop strong { color: var(--accent-2); }
+  .drop small { display: block; color: var(--muted); margin-top: 6px; }
+  input[type=file] { display: none; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  label.field { display: block; margin-bottom: 10px; font-size: 13px; }
+  label.field span { display: block; color: var(--muted); margin-bottom: 4px; font-size: 12px; }
+  select {
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font: inherit;
+  }
+
+  .filter-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .filter-row:last-child { border-bottom: none; }
+  .filter-row input[type=checkbox] { margin-top: 2px; transform: scale(1.2); accent-color: var(--accent); }
+  .filter-row .body { flex: 1; }
+  .filter-row .title { font-weight: 500; }
+  .filter-row .desc { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .filter-row .meta { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .filter-row textarea {
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font: 12px/1.5 -apple-system, monospace;
+    margin-top: 8px;
+    resize: vertical;
+    min-height: 60px;
+  }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 640px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .stat .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  .stat .value { font-size: 22px; font-weight: 600; margin-top: 4px; }
+  .stat.final .value { color: var(--good); }
+
+  button.primary {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 12px 22px;
+    font: inherit;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  button.primary:hover:not(:disabled) { background: var(--accent-2); }
+  button.primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .preview { overflow-x: auto; max-height: 340px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td {
+    text-align: left;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  thead th { background: var(--panel-2); position: sticky; top: 0; font-weight: 600; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+  .hidden { display: none !important; }
+  .row-actions { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+  .row-actions .note { color: var(--muted); font-size: 12px; }
+
+  /* AI Deep Filter section */
+  .ai-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 800px) { .ai-grid { grid-template-columns: 1fr; } }
+  .ai-controls .field { margin-bottom: 14px; }
+  .ai-controls label.field { display: block; }
+  .icp-preview {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 16px;
+    max-height: 360px;
+    overflow-y: auto;
+  }
+  .icp-preview h3 {
+    margin: 0 0 10px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  .icp-preview .keep-block { margin-bottom: 14px; }
+  .icp-preview .keep-label { color: var(--good); font-weight: 600; font-size: 12px; margin-bottom: 6px; }
+  .icp-preview .kill-label { color: var(--bad); font-weight: 600; font-size: 12px; margin-bottom: 6px; }
+  .icp-preview ul { margin: 0; padding-left: 18px; font-size: 12.5px; line-height: 1.5; }
+  .icp-preview li { margin-bottom: 2px; }
+
+  .ai-status {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-top: 14px;
+    font-size: 13px;
+  }
+  .ai-status .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-right: 8px;
+  }
+  .ai-status .badge.running { background: var(--warn); color: #1a1300; }
+  .ai-status .badge.done { background: var(--good); color: white; }
+  .ai-status .badge.error { background: var(--bad); color: white; }
+  .ai-status .progress {
+    margin-top: 8px;
+    height: 6px;
+    background: var(--line);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .ai-status .progress-bar {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.5s;
+  }
+
+  .settings-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .settings-row input {
+    flex: 1;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-size: 12px;
+    font-family: monospace;
+  }
+  .link-btn {
+    background: none;
+    border: none;
+    color: var(--accent-2);
+    cursor: pointer;
+    font: inherit;
+    text-decoration: underline;
+    padding: 0;
+  }
+</style>
+</head>
+<body>
+<nav class="sg-nav">
+  <a class="sg-brand" href="/">Story Group GTM</a>
+  <div class="sg-links">
+    <a href="/">Dashboard</a>
+    <a href="/replies">Email Replies</a>
+    <a href="/linkedin">LinkedIn</a>
+    <a href="/transcripts">Transcripts</a>
+    <a href="/cleaner">Email Cleaner</a>
+    <a href="/tracker">Tracker</a>
+    <a href="/lead-filter/" class="active">Lead Filter</a>
+  </div>
+</nav>
+<div class="wrap">
+  <header>
+    <h1>Lead List Filter</h1>
+    <p>Upload a CSV. Filter by decision-maker title. Drop obvious solo operators. Download the cleaned list.</p>
+  </header>
+
+  <div class="card">
+    <label class="drop" id="drop">
+      <input type="file" id="file" accept=".csv,text/csv" />
+      <div><strong>Click to upload</strong> or drop a CSV here</div>
+      <small>Runs entirely in your browser. Your lead data is never uploaded anywhere.</small>
+    </label>
+  </div>
+
+  <div id="config" class="hidden">
+    <div class="card">
+      <h2>Column mapping</h2>
+      <div class="grid-2" id="mappers"></div>
+    </div>
+
+    <div class="card">
+      <h2>Filters</h2>
+
+      <div class="filter-row">
+        <input type="checkbox" id="f-title" checked />
+        <div class="body">
+          <div class="title">Decision-maker title match</div>
+          <div class="desc">Keep only leads whose Job Title contains one of these keywords (case-insensitive).</div>
+          <textarea id="title-keywords">founder
+owner
+ceo
+chief executive
+managing director
+managing partner
+coo
+chief operating
+cmo
+chief marketing</textarea>
+        </div>
+      </div>
+
+      <div class="filter-row">
+        <input type="checkbox" id="f-solo" checked />
+        <div class="body">
+          <div class="title">Drop obvious solo operators</div>
+          <div class="desc">Removes leads where the company is clearly a one-person shop. Uses signals from company name and headline &mdash; not a perfect filter, but cheap and catches the biggest offenders.</div>
+          <div class="meta">Drops if any of these are true:</div>
+          <ul class="meta" style="margin: 4px 0 0; padding-left: 18px;">
+            <li>Company name contains the person's first or last name</li>
+            <li>Company is "Self-Employed", "Independent", "Freelance", "Self Employed", or empty</li>
+            <li>Headline matches "I help [X]" or similar solo-coach pattern</li>
+            <li>Headline mentions "private practice", "solo practitioner", "1:1 coaching"</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Stats</h2>
+      <div class="stats">
+        <div class="stat"><div class="label">Total uploaded</div><div class="value" id="s-total">0</div></div>
+        <div class="stat"><div class="label">After title filter</div><div class="value" id="s-title">0</div></div>
+        <div class="stat"><div class="label">After solo-op drop</div><div class="value" id="s-solo">0</div></div>
+        <div class="stat final"><div class="label">Final cleaned</div><div class="value" id="s-final">0</div></div>
+      </div>
+      <div class="row-actions">
+        <button class="primary" id="download" disabled>Download cleaned CSV</button>
+        <span class="note" id="download-note"></span>
+      </div>
+    </div>
+
+    <div class="card" id="ai-card">
+      <h2>AI Deep Filter (Stage 2)</h2>
+      <p style="color:var(--muted); font-size:13px; margin: -8px 0 16px;">
+        Stage 1 caught the obvious junk. Pick a vertical and the AI will read every headline against the Story Group ICP, killing the contextual junk regex can't catch.
+      </p>
+      <div class="ai-grid">
+        <div class="ai-controls">
+          <label class="field">
+            <span>Vertical</span>
+            <select id="ai-vertical">
+              <option value="">— pick a vertical —</option>
+              <option value="healthcare">Healthcare</option>
+              <option value="healthcare-ai">Healthcare-AI</option>
+              <option value="tech-b2b-b2c">Tech B2B / B2C</option>
+              <option value="education">Education</option>
+              <option value="frontier-tech">Frontier Tech (defense / climate / crypto)</option>
+              <option value="vc-pe">VC / PE</option>
+            </select>
+          </label>
+          <div class="row-actions">
+            <button class="primary" id="send-ai" disabled>Send to AI Deep Filter</button>
+            <span class="note" id="send-ai-note">Pick a vertical above first.</span>
+          </div>
+
+          <div class="ai-status hidden" id="ai-status">
+            <span class="badge running" id="ai-badge">SUBMITTING</span>
+            <span id="ai-status-text">Uploading...</span>
+            <div class="progress"><div class="progress-bar" id="ai-progress"></div></div>
+          </div>
+
+          <div class="row-actions hidden" id="ai-result-actions">
+            <button class="primary" id="ai-download">Download AI-Filtered CSV</button>
+            <button class="link-btn" id="ai-download-killed">View killed leads</button>
+          </div>
+
+          <div class="hidden" id="heyreach-push" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line);">
+            <label class="field">
+              <span>Push directly to Heyreach campaign</span>
+              <select id="heyreach-campaign">
+                <option value="">— pick a campaign —</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Optional: assign to a specific sender (else Heyreach auto-assigns)</span>
+              <select id="heyreach-account">
+                <option value="">— auto-assign —</option>
+              </select>
+            </label>
+            <div class="row-actions">
+              <button class="primary" id="push-heyreach" disabled>Push to Heyreach</button>
+              <span class="note" id="push-heyreach-note"></span>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <span>API:</span>
+            <input id="api-url" type="text" placeholder="https://...trycloudflare.com" />
+            <input id="api-key" type="password" placeholder="API key" />
+            <button class="link-btn" id="save-api">Save</button>
+          </div>
+        </div>
+        <div class="icp-preview" id="icp-preview">
+          <h3>What this filter will do</h3>
+          <p style="color:var(--muted); font-size:12.5px;">Pick a vertical to see exactly what gets kept vs killed.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Edit ICP definitions</h2>
+      <p style="color:var(--muted); font-size:13px; margin: -8px 0 12px;">
+        Pick a vertical, edit the markdown, click Save. Changes go straight to the VPS skill — next filter run uses the new rules.
+      </p>
+      <label class="field">
+        <span>Vertical to edit</span>
+        <select id="edit-icp-vertical">
+          <option value="">— pick one —</option>
+          <option value="healthcare">Healthcare</option>
+          <option value="healthcare-ai">Healthcare-AI</option>
+          <option value="tech-b2b-b2c">Tech B2B / B2C</option>
+          <option value="education">Education</option>
+          <option value="frontier-tech">Frontier Tech</option>
+          <option value="vc-pe">VC / PE</option>
+        </select>
+      </label>
+      <textarea id="edit-icp-md" style="width:100%; min-height:280px; background:var(--panel-2); border:1px solid var(--line); color:var(--text); border-radius:6px; padding:10px; font:12px/1.5 monospace;" placeholder="Pick a vertical above to load its definition..." disabled></textarea>
+      <div class="row-actions">
+        <button class="primary" id="save-icp" disabled>Save ICP changes</button>
+        <span class="note" id="save-icp-note"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Preview (first 25 rows)</h2>
+      <div class="preview" id="preview"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = "lead-filter-config-v1";
+
+const state = {
+  rows: [],
+  headers: [],
+  mapping: {},
+  filtered: [],
+};
+
+const REQUIRED_FIELDS = [
+  { key: "jobTitle",  label: "Job Title",  hints: ["job title", "title", "position"] },
+  { key: "company",   label: "Company",    hints: ["company", "company name", "organization", "employer"] },
+  { key: "headline",  label: "Headline",   hints: ["headline", "bio", "about", "summary"] },
+  { key: "firstName", label: "First Name", hints: ["first name", "firstname", "given name"] },
+  { key: "lastName",  label: "Last Name",  hints: ["last name", "lastname", "surname", "family name"] },
+];
+
+const dropEl = document.getElementById("drop");
+const fileEl = document.getElementById("file");
+const configEl = document.getElementById("config");
+const mappersEl = document.getElementById("mappers");
+const previewEl = document.getElementById("preview");
+const downloadBtn = document.getElementById("download");
+const downloadNote = document.getElementById("download-note");
+
+dropEl.addEventListener("dragover", e => { e.preventDefault(); dropEl.classList.add("drag"); });
+dropEl.addEventListener("dragleave", () => dropEl.classList.remove("drag"));
+dropEl.addEventListener("drop", e => {
+  e.preventDefault();
+  dropEl.classList.remove("drag");
+  const f = e.dataTransfer.files[0];
+  if (f) handleFile(f);
+});
+fileEl.addEventListener("change", e => {
+  const f = e.target.files[0];
+  if (f) handleFile(f);
+});
+
+function handleFile(file) {
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: (results) => {
+      state.rows = results.data;
+      state.headers = results.meta.fields || [];
+      buildMappers();
+      configEl.classList.remove("hidden");
+      run();
+    }
+  });
+}
+
+function guessColumn(field) {
+  const lowerHeaders = state.headers.map(h => h.toLowerCase());
+  for (const hint of field.hints) {
+    const idx = lowerHeaders.indexOf(hint);
+    if (idx !== -1) return state.headers[idx];
+  }
+  // Loose match
+  for (const hint of field.hints) {
+    const idx = lowerHeaders.findIndex(h => h.includes(hint));
+    if (idx !== -1) return state.headers[idx];
+  }
+  return "";
+}
+
+function buildMappers() {
+  mappersEl.innerHTML = "";
+  REQUIRED_FIELDS.forEach(field => {
+    const guess = guessColumn(field);
+    state.mapping[field.key] = guess;
+
+    const wrap = document.createElement("label");
+    wrap.className = "field";
+    wrap.innerHTML = `<span>${field.label}</span>`;
+    const sel = document.createElement("select");
+    sel.innerHTML = `<option value="">— none —</option>` +
+      state.headers.map(h => `<option value="${escapeHtml(h)}" ${h === guess ? "selected" : ""}>${escapeHtml(h)}</option>`).join("");
+    sel.addEventListener("change", () => { state.mapping[field.key] = sel.value; run(); });
+    wrap.appendChild(sel);
+    mappersEl.appendChild(wrap);
+  });
+}
+
+document.getElementById("f-title").addEventListener("change", run);
+document.getElementById("f-solo").addEventListener("change", run);
+document.getElementById("title-keywords").addEventListener("input", run);
+
+function getKeywords() {
+  return document.getElementById("title-keywords").value
+    .split("\n")
+    .map(s => s.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+const SOLO_COMPANIES = new Set(["", "self-employed", "self employed", "independent", "freelance", "freelancer", "n/a", "none", "-"]);
+const SOLO_HEADLINE_PATTERNS = [
+  /\bi help\b/i,
+  /\bi work with\b/i,
+  /\bprivate practice\b/i,
+  /\bsolo practitioner\b/i,
+  /\b1:1 coach/i,
+  /\bone-on-one coach/i,
+  /\b1 on 1 coach/i,
+  /\blife coach\b/i,
+  /\bonlyfans coach\b/i,
+];
+
+function isSoloOperator(row) {
+  const get = (k) => (state.mapping[k] ? (row[state.mapping[k]] || "") : "").toString().trim();
+  const company = get("company").toLowerCase();
+  const headline = get("headline");
+  const first = get("firstName").toLowerCase();
+  const last = get("lastName").toLowerCase();
+
+  if (SOLO_COMPANIES.has(company)) return true;
+
+  // Company contains the person's name (e.g. "John Smith Coaching")
+  if (first && first.length >= 3 && company.includes(first)) return true;
+  if (last && last.length >= 3 && company.includes(last)) return true;
+
+  // Headline patterns
+  if (headline) {
+    for (const p of SOLO_HEADLINE_PATTERNS) {
+      if (p.test(headline)) return true;
+    }
+  }
+  return false;
+}
+
+function matchesTitle(row, keywords) {
+  const title = (state.mapping.jobTitle ? (row[state.mapping.jobTitle] || "") : "").toString().toLowerCase();
+  return keywords.some(k => title.includes(k));
+}
+
+function run() {
+  const total = state.rows.length;
+  const titleOn = document.getElementById("f-title").checked;
+  const soloOn = document.getElementById("f-solo").checked;
+  const keywords = getKeywords();
+
+  let titlePass = state.rows;
+  if (titleOn) {
+    if (!state.mapping.jobTitle) {
+      downloadNote.textContent = "Map a Job Title column to enable the title filter.";
+    } else {
+      titlePass = state.rows.filter(r => matchesTitle(r, keywords));
+    }
+  }
+
+  let finalRows = titlePass;
+  if (soloOn) {
+    finalRows = titlePass.filter(r => !isSoloOperator(r));
+  }
+
+  state.filtered = finalRows;
+
+  document.getElementById("s-total").textContent = total.toLocaleString();
+  document.getElementById("s-title").textContent = (titleOn ? titlePass.length : total).toLocaleString();
+  document.getElementById("s-solo").textContent = (soloOn ? finalRows.length : titlePass.length).toLocaleString();
+  document.getElementById("s-final").textContent = finalRows.length.toLocaleString();
+
+  downloadBtn.disabled = finalRows.length === 0;
+  if (finalRows.length > 0) downloadNote.textContent = "";
+  renderPreview(finalRows);
+  if (typeof updateSendButtonState === "function") updateSendButtonState();
+}
+
+function renderPreview(rows) {
+  if (rows.length === 0) {
+    previewEl.innerHTML = `<div style="padding:20px; color:var(--muted); text-align:center;">No leads match the current filters.</div>`;
+    return;
+  }
+  const cols = state.headers;
+  const head = `<tr>${cols.map(c => `<th>${escapeHtml(c)}</th>`).join("")}</tr>`;
+  const body = rows.slice(0, 25).map(r => `<tr>${cols.map(c => `<td>${escapeHtml(r[c] || "")}</td>`).join("")}</tr>`).join("");
+  previewEl.innerHTML = `<table><thead>${head}</thead><tbody>${body}</tbody></table>`;
+}
+
+downloadBtn.addEventListener("click", () => {
+  const csv = Papa.unparse(state.filtered, { columns: state.headers });
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `cleaned-leads-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+}
+
+// ────────────────────────────────────────────────────────────────────────
+// AI Deep Filter — Stage 2 integration with VPS
+// ────────────────────────────────────────────────────────────────────────
+
+const DEFAULT_API_URL = "https://187-77-19-152.nip.io";
+const DEFAULT_API_KEY = "KaByyC3Q7RL2XugH9WMIinBCc_XoG8D1H3LzBcl3SmE";
+
+function getApiConfig() {
+  return {
+    url: (localStorage.getItem("ai-filter-api-url") || DEFAULT_API_URL).replace(/\/$/, ""),
+    key: localStorage.getItem("ai-filter-api-key") || DEFAULT_API_KEY,
+  };
+}
+
+const apiUrlEl = document.getElementById("api-url");
+const apiKeyEl = document.getElementById("api-key");
+const verticalEl = document.getElementById("ai-vertical");
+const icpPreviewEl = document.getElementById("icp-preview");
+const sendAiBtn = document.getElementById("send-ai");
+const sendAiNote = document.getElementById("send-ai-note");
+const aiStatusEl = document.getElementById("ai-status");
+const aiBadgeEl = document.getElementById("ai-badge");
+const aiStatusTextEl = document.getElementById("ai-status-text");
+const aiProgressEl = document.getElementById("ai-progress");
+const aiResultActionsEl = document.getElementById("ai-result-actions");
+
+(function initApiConfig() {
+  const cfg = getApiConfig();
+  apiUrlEl.value = cfg.url;
+  apiKeyEl.value = cfg.key;
+})();
+
+document.getElementById("save-api").addEventListener("click", () => {
+  localStorage.setItem("ai-filter-api-url", apiUrlEl.value.trim());
+  localStorage.setItem("ai-filter-api-key", apiKeyEl.value.trim());
+  sendAiNote.textContent = "API config saved.";
+  setTimeout(() => updateSendButtonState(), 800);
+});
+
+verticalEl.addEventListener("change", async () => {
+  const v = verticalEl.value;
+  updateSendButtonState();
+  if (!v) {
+    icpPreviewEl.innerHTML = '<h3>What this filter will do</h3><p style="color:var(--muted); font-size:12.5px;">Pick a vertical to see exactly what gets kept vs killed.</p>';
+    return;
+  }
+  icpPreviewEl.innerHTML = '<h3>Loading ICP definition...</h3>';
+  try {
+    const { url, key } = getApiConfig();
+    const res = await fetch(`${url}/icp/${v}`, { headers: { "X-API-Key": key } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    renderIcpPreview(data);
+  } catch (e) {
+    icpPreviewEl.innerHTML = `<h3>Failed to load ICP</h3><p style="color:var(--bad); font-size:12.5px;">${escapeHtml(e.message)}<br><br>Check API URL + key below, or contact admin if VPS tunnel restarted.</p>`;
+  }
+});
+
+function renderIcpPreview(data) {
+  const fitItems = (data.fit || []);
+  const killItems = (data.kill || []);
+  const fitHtml = fitItems.length
+    ? `<div class="keep-block"><div class="keep-label">WILL KEEP (${fitItems.length})</div><ul>${fitItems.map(x => `<li>${escapeHtml(x)}</li>`).join("")}</ul></div>`
+    : "";
+  const killHtml = killItems.length
+    ? `<div class="keep-block"><div class="kill-label">WILL KILL (${killItems.length})</div><ul>${killItems.map(x => `<li>${escapeHtml(x)}</li>`).join("")}</ul></div>`
+    : "";
+  icpPreviewEl.innerHTML = `<h3>What this filter will do</h3>${fitHtml}${killHtml}`;
+}
+
+function updateSendButtonState() {
+  const hasRows = state.filtered && state.filtered.length > 0;
+  const hasVertical = !!verticalEl.value;
+  sendAiBtn.disabled = !(hasRows && hasVertical);
+  if (!hasRows) sendAiNote.textContent = "Upload a CSV first.";
+  else if (!hasVertical) sendAiNote.textContent = "Pick a vertical above first.";
+  else sendAiNote.textContent = `Ready to send ${state.filtered.length.toLocaleString()} leads. Takes 5-15 min.`;
+}
+
+let aiJobId = null;
+let aiPollTimer = null;
+let aiProgressPct = 0;
+
+const JOB_STORAGE_KEY = "ai-filter-active-job";
+
+function saveActiveJob(jobId, vertical, totalRows) {
+  localStorage.setItem(JOB_STORAGE_KEY, JSON.stringify({
+    jobId, vertical, totalRows, startedAt: Date.now()
+  }));
+}
+
+function clearActiveJob() {
+  localStorage.removeItem(JOB_STORAGE_KEY);
+}
+
+function loadActiveJob() {
+  try {
+    const raw = localStorage.getItem(JOB_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
+}
+
+sendAiBtn.addEventListener("click", async () => {
+  const vertical = verticalEl.value;
+  if (!vertical || !state.filtered.length) return;
+  const { url, key } = getApiConfig();
+
+  aiResultActionsEl.classList.add("hidden");
+  aiStatusEl.classList.remove("hidden");
+  aiBadgeEl.className = "badge running";
+  aiBadgeEl.textContent = "UPLOADING";
+  aiStatusTextEl.textContent = `Uploading ${state.filtered.length} leads...`;
+  aiProgressPct = 10;
+  aiProgressEl.style.width = aiProgressPct + "%";
+  sendAiBtn.disabled = true;
+
+  const csv = Papa.unparse(state.filtered, { columns: state.headers });
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const file = new File([blob], "stage1_filtered.csv", { type: "text/csv" });
+  const formData = new FormData();
+  formData.append("csv", file);
+  formData.append("vertical", vertical);
+
+  try {
+    const res = await fetch(`${url}/filter`, {
+      method: "POST",
+      headers: { "X-API-Key": key },
+      body: formData,
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    aiJobId = data.job_id;
+    saveActiveJob(aiJobId, vertical, data.total_rows);
+    aiBadgeEl.textContent = "RUNNING";
+    aiStatusTextEl.textContent = `Job ${aiJobId}: AI reading ${data.total_rows} headlines... (~5-15 min). Safe to close this tab — refresh later to see progress.`;
+    aiProgressPct = 25;
+    aiProgressEl.style.width = aiProgressPct + "%";
+    aiPollTimer = setInterval(pollAiStatus, 15000);
+  } catch (e) {
+    aiBadgeEl.className = "badge error";
+    aiBadgeEl.textContent = "ERROR";
+    aiStatusTextEl.textContent = e.message;
+    sendAiBtn.disabled = false;
+  }
+});
+
+async function pollAiStatus() {
+  if (!aiJobId) return;
+  const { url, key } = getApiConfig();
+  try {
+    const res = await fetch(`${url}/status/${aiJobId}`, { headers: { "X-API-Key": key } });
+    const status = await res.json();
+    if (status.status === "done") {
+      clearInterval(aiPollTimer);
+      aiBadgeEl.className = "badge done";
+      aiBadgeEl.textContent = "DONE";
+      aiStatusTextEl.textContent = `${status.fit_count} fit, ${status.killed_count} killed (${status.vertical})`;
+      aiProgressEl.style.width = "100%";
+      aiResultActionsEl.classList.remove("hidden");
+      sendAiBtn.disabled = false;
+      clearActiveJob();
+      showHeyreachPush(status.fit_count);
+    } else if (status.status === "error") {
+      clearInterval(aiPollTimer);
+      aiBadgeEl.className = "badge error";
+      aiBadgeEl.textContent = "ERROR";
+      aiStatusTextEl.textContent = status.message || "Unknown error";
+      sendAiBtn.disabled = false;
+      clearActiveJob();
+    } else {
+      if (aiProgressPct < 88) {
+        aiProgressPct += 3;
+        aiProgressEl.style.width = aiProgressPct + "%";
+      }
+    }
+  } catch (e) {
+    // network blip, keep polling
+  }
+}
+
+async function showHeyreachPush(fitCount) {
+  const pushSection = document.getElementById("heyreach-push");
+  const campaignSel = document.getElementById("heyreach-campaign");
+  const accountSel = document.getElementById("heyreach-account");
+  const pushBtn = document.getElementById("push-heyreach");
+  const pushNote = document.getElementById("push-heyreach-note");
+
+  pushSection.classList.remove("hidden");
+  pushNote.textContent = "Loading Heyreach campaigns...";
+
+  const { url, key } = getApiConfig();
+  try {
+    const [campaignsRes, accountsRes] = await Promise.all([
+      fetch(`${url}/heyreach/campaigns`, { headers: { "X-API-Key": key } }),
+      fetch(`${url}/heyreach/accounts`, { headers: { "X-API-Key": key } }),
+    ]);
+    const campaigns = await campaignsRes.json();
+    const accounts = await accountsRes.json();
+
+    campaignSel.innerHTML = '<option value="">— pick a campaign —</option>' +
+      (campaigns.items || [])
+        .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+        .map(c => `<option value="${c.id}">${escapeHtml(c.name)} (${c.status || "?"})</option>`).join("");
+
+    accountSel.innerHTML = '<option value="">— auto-assign —</option>' +
+      (accounts.items || [])
+        .sort((a, b) => (a.fullName || "").localeCompare(b.fullName || ""))
+        .map(a => `<option value="${a.id}">${escapeHtml(a.fullName || a.emailAddress || ("Account " + a.id))}</option>`).join("");
+
+    pushNote.textContent = `${fitCount} leads ready to push.`;
+  } catch (e) {
+    pushNote.textContent = "Failed to load campaigns/accounts: " + e.message;
+  }
+
+  campaignSel.addEventListener("change", () => {
+    pushBtn.disabled = !campaignSel.value;
+  }, { once: true });
+}
+
+document.getElementById("push-heyreach").addEventListener("click", async () => {
+  const campaignSel = document.getElementById("heyreach-campaign");
+  const accountSel = document.getElementById("heyreach-account");
+  const pushBtn = document.getElementById("push-heyreach");
+  const pushNote = document.getElementById("push-heyreach-note");
+  const campaignId = campaignSel.value;
+  const accountId = accountSel.value;
+  if (!campaignId || !aiJobId) return;
+
+  pushBtn.disabled = true;
+  pushNote.textContent = "Pushing leads to Heyreach...";
+
+  const { url, key } = getApiConfig();
+  try {
+    const body = { campaignId: Number(campaignId) };
+    if (accountId) body.linkedInAccountId = Number(accountId);
+
+    const res = await fetch(`${url}/push-to-heyreach/${aiJobId}`, {
+      method: "POST",
+      headers: { "X-API-Key": key, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      pushNote.innerHTML = `<span style="color:var(--bad)">Push failed: ${escapeHtml(data.error || res.statusText)}</span>`;
+      pushBtn.disabled = false;
+      return;
+    }
+    const campaignName = campaignSel.options[campaignSel.selectedIndex].textContent;
+    pushNote.innerHTML = `<span style="color:var(--good)">✓ Pushed ${data.added} leads to "${escapeHtml(campaignName)}"${data.skipped ? `, ${data.skipped} skipped` : ""}.</span>`;
+  } catch (e) {
+    pushNote.innerHTML = `<span style="color:var(--bad)">Network error: ${escapeHtml(e.message)}</span>`;
+    pushBtn.disabled = false;
+  }
+});
+
+document.getElementById("ai-download").addEventListener("click", () => {
+  const { url, key } = getApiConfig();
+  window.open(`${url}/result/${aiJobId}?key=${encodeURIComponent(key)}`);
+});
+
+document.getElementById("ai-download-killed").addEventListener("click", () => {
+  const { url, key } = getApiConfig();
+  window.open(`${url}/result-killed/${aiJobId}?key=${encodeURIComponent(key)}`);
+});
+
+updateSendButtonState();
+
+// ─── Edit ICP admin section ─────────────────────────────────────────────
+const editIcpVerticalEl = document.getElementById("edit-icp-vertical");
+const editIcpMdEl = document.getElementById("edit-icp-md");
+const saveIcpBtn = document.getElementById("save-icp");
+const saveIcpNote = document.getElementById("save-icp-note");
+
+editIcpVerticalEl.addEventListener("change", async () => {
+  const v = editIcpVerticalEl.value;
+  if (!v) {
+    editIcpMdEl.value = "";
+    editIcpMdEl.disabled = true;
+    saveIcpBtn.disabled = true;
+    return;
+  }
+  editIcpMdEl.value = "Loading...";
+  editIcpMdEl.disabled = true;
+  saveIcpNote.textContent = "";
+  try {
+    const { url, key } = getApiConfig();
+    const res = await fetch(`${url}/icp/${v}`, { headers: { "X-API-Key": key } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    editIcpMdEl.value = data.markdown || "";
+    editIcpMdEl.disabled = false;
+    saveIcpBtn.disabled = false;
+  } catch (e) {
+    editIcpMdEl.value = "";
+    saveIcpNote.innerHTML = `<span style="color:var(--bad)">Load failed: ${escapeHtml(e.message)}</span>`;
+  }
+});
+
+saveIcpBtn.addEventListener("click", async () => {
+  const v = editIcpVerticalEl.value;
+  if (!v) return;
+  saveIcpBtn.disabled = true;
+  saveIcpNote.textContent = "Saving...";
+  try {
+    const { url, key } = getApiConfig();
+    const res = await fetch(`${url}/icp/${v}`, {
+      method: "POST",
+      headers: { "X-API-Key": key, "Content-Type": "application/json" },
+      body: JSON.stringify({ markdown: editIcpMdEl.value })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || res.statusText);
+    saveIcpNote.innerHTML = `<span style="color:var(--good)">✓ Saved. Next filter run uses the new rules.</span>`;
+  } catch (e) {
+    saveIcpNote.innerHTML = `<span style="color:var(--bad)">Save failed: ${escapeHtml(e.message)}</span>`;
+  } finally {
+    saveIcpBtn.disabled = false;
+  }
+});
+
+// Auto-reconnect to a job that was started in a previous session.
+(async function restoreActiveJob() {
+  const saved = loadActiveJob();
+  if (!saved || !saved.jobId) return;
+  aiJobId = saved.jobId;
+
+  // Reflect the saved vertical in the dropdown (so the ICP preview matches what's running)
+  if (saved.vertical && verticalEl) {
+    verticalEl.value = saved.vertical;
+    verticalEl.dispatchEvent(new Event("change"));
+  }
+
+  aiStatusEl.classList.remove("hidden");
+  aiBadgeEl.className = "badge running";
+  aiBadgeEl.textContent = "RUNNING";
+  const minsAgo = Math.round((Date.now() - (saved.startedAt || Date.now())) / 60000);
+  aiStatusTextEl.textContent = `Reconnected to job ${saved.jobId} — started ${minsAgo} min ago. Polling...`;
+  aiProgressPct = 50;
+  aiProgressEl.style.width = aiProgressPct + "%";
+
+  if (aiPollTimer) clearInterval(aiPollTimer);
+  aiPollTimer = setInterval(pollAiStatus, 15000);
+  pollAiStatus();
+})();
+</script>
+</body>
+</html>

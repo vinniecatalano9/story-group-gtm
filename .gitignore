@@ -10,3 +10,6 @@ frontend-dist/
 .env.*
 
 .claude/settings.local.json
+.claude/worktrees/
+docs/COTERIE_CRM.md
+.DS_Store
