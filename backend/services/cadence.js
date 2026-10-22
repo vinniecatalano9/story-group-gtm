@@ -224,6 +224,7 @@ const OUTCOMES = {
   talked_yes: { state: 'talked_yes', track: 'booking', label: 'Talked yes (wants a meeting)' },
   meeting: { state: 'meeting', track: 'meeting', label: 'Meeting yes (booked)' },
   not_interested: { state: 'not_interested', track: null, label: 'Not interested' },
+  not_qualified: { state: 'not_qualified', track: null, label: 'Not qualified' },
   stop: { state: 'stopped', track: null, label: 'Stopped by Vincent' },
 };
 
@@ -255,7 +256,7 @@ async function setOutcome(email, outcome, { meeting_at, source = '', note = '' }
   }
   await saveLead(lead.email, patch);
   // Booked, a no, or stopped: their held times go back in the pool.
-  if (['meeting', 'not_interested', 'stop'].includes(outcome)) await slots.releaseHolds(holdKey(lead.email));
+  if (['meeting', 'not_interested', 'not_qualified', 'stop'].includes(outcome)) await slots.releaseHolds(holdKey(lead.email));
   await addTimeline(lead.email, timelineEntry('outcome', { outcome, text: o.label + (meetingAt ? `, meeting ${patch.meeting_label}` : '') + (source ? ` (${source})` : '') }));
   await logToNutshell(lead, `${today(lead.tz)} Outcome: ${o.label}${meetingAt ? `, meeting ${patch.meeting_label}` : ''}.${source ? ` (${source})` : ''}${note ? `\n\n${note}` : ''}`, { outcome });
   return refreshNext(lead.email);
@@ -1135,7 +1136,8 @@ async function nutshellLeadFor(lead) {
 // lead where it needs to be"). With no open lead by that name, make one in the
 // Kickstart pipeline like Annette's (Paid Social, Vincent's), contact attached.
 // Two or more open leads with the name: none made, Vincent is pinged.
-const CREATE_FOR = ['hit_once', 'talked_yes', 'meeting'];
+// Not interested / Not qualified get one too, so the closed lead is on record.
+const CREATE_FOR = ['hit_once', 'talked_yes', 'meeting', 'not_interested', 'not_qualified'];
 async function ensureNutshellLead(lead, contactId) {
   const mine = await openLeadsNamed(lead); // fresh: Annette may have added it since the cached check
   if (mine.length > 1) return null;
@@ -1156,9 +1158,17 @@ async function ensureNutshellLead(lead, contactId) {
 /** Move the lead forward to the outcome's stage. Returns a line for the timeline. */
 async function applyStage(lead, leadId, outcome) {
   const nutshell = require('./nutshell');
-  if (outcome === 'not_interested') {
-    await ping(`Nutshell: mark <b>${esc(fullName(lead))}</b> as Lost (Not interested). The API can't close leads: https://app.nutshell.com/lead/${leadId}`);
-    return 'Asked Vincent to mark Lost in Nutshell';
+  // Closed as Lost through the REST API: Not qualified = "Not a strategic fit",
+  // Not interested = "Lost - Any reason". Still on record, just not open.
+  if (outcome === 'not_interested' || outcome === 'not_qualified') {
+    const why = outcome === 'not_qualified' ? 'Not a strategic fit' : 'Lost - Any reason';
+    try {
+      await nutshell.closeLead(leadId, outcome === 'not_qualified' ? nutshell.LOST.not_fit : nutshell.LOST.any);
+      return `Nutshell lead closed as Lost (${why})`;
+    } catch (e) {
+      await ping(`Nutshell: couldn't close <b>${esc(fullName(lead))}</b> (${esc(e.message)}). Mark it Lost, ${why}: https://app.nutshell.com/lead/${leadId}`);
+      return 'Asked Vincent to mark Lost in Nutshell';
+    }
   }
   const target = STAGE_FOR[outcome];
   if (!target) return null;
@@ -1176,7 +1186,7 @@ async function applyStage(lead, leadId, outcome) {
  * Column M "Touches So Far": what really happened, in order. Sent steps,
  * replies, calls (services/cadenceCalls.js) and outcomes; skipped, queued or unapproved steps don't count.
  */
-const OUTCOME_SHORT = { hit_once: 'Hit once', talked_yes: 'Talked yes', meeting: 'Meeting yes', not_interested: 'Not interested', stop: 'Stopped', no_show: 'No-show' };
+const OUTCOME_SHORT = { hit_once: 'Hit once', talked_yes: 'Talked yes', meeting: 'Meeting yes', not_interested: 'Not interested', not_qualified: 'Not qualified', stop: 'Stopped', no_show: 'No-show' };
 function touchesSoFar(lead) {
   const rc = require('./ringcentral');
   return [...(lead.timeline || [])]
@@ -1208,7 +1218,7 @@ async function syncSheet({ all = false } = {}) {
     status: l.state === 'dead' ? 'dead' : l.running && l.email_bad && realEmail(l) ? 'email_invalid' : l.running && l.email_bounced && realEmail(l) ? 'email_bounced' : l.running && l.sms_failed && l.phone ? 'sms_failed' : l.state,
     last_touch: l.last_touch_label || '',
     next_touch: l.running ? (l.pending_approval ? `${l.next_touch_label || ''} (${l.pending_approved ? 'approved, sending soon' : 'waiting on Vincent'})` : l.next_touch_label || '')
-      : l.state === 'done' ? 'Done: no reply' : l.state === 'opted_out' ? 'Texted STOP' : l.manual ? 'Manual (Vincent)' : '',
+      : l.state === 'done' ? 'Done: no reply' : l.state === 'opted_out' ? 'Texted STOP' : l.state === 'not_qualified' ? 'None: not qualified' : l.state === 'not_interested' ? 'None: not interested' : l.manual ? 'Manual (Vincent)' : '',
   })));
   if (n !== null) await Promise.all(leads.map(l => leadsCol().doc(l.email).update({ sheet_dirty: false })));
   return n;

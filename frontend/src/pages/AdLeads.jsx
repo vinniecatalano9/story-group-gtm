@@ -14,6 +14,7 @@ const STATE_STYLE = {
   talked_yes: 'bg-purple-500/15 text-purple-400 border border-purple-500/20',
   meeting: 'bg-brand-500/20 text-white border border-brand-500/30',
   not_interested: 'bg-white/5 text-white/40 border border-white/10',
+  not_qualified: 'bg-white/5 text-white/40 border border-white/10',
   opted_out: 'bg-red-500/15 text-red-400 border border-red-500/20',
   done: 'bg-white/5 text-white/50 border border-white/10',
   stopped: 'bg-white/5 text-white/40 border border-white/10',
@@ -22,7 +23,7 @@ const STATE_STYLE = {
 
 const STATE_LABEL = {
   imported: 'Not started', active: 'In cadence', blocked: 'Blocked', replied: 'Replied: set outcome',
-  hit_once: 'Hit once', talked_yes: 'Talked yes', meeting: 'Meeting booked', not_interested: 'Not interested',
+  hit_once: 'Hit once', talked_yes: 'Talked yes', meeting: 'Meeting booked', not_interested: 'Not interested', not_qualified: 'Not qualified',
   opted_out: 'Texted STOP', done: 'Cadence done', stopped: 'Stopped', dead: 'No working channel',
 };
 
@@ -219,6 +220,7 @@ function LeadRow({ lead, api, onChange, setErr }) {
             className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-body" title="Meeting time (your local time)" />
           <Btn disabled={busy} onClick={() => outcome('meeting')}>Meeting yes</Btn>
           <Btn kind="danger" disabled={busy} onClick={() => outcome('not_interested')}>Not interested</Btn>
+          <Btn kind="danger" disabled={busy} onClick={() => outcome('not_qualified')}>Not qualified</Btn>
           {lead.track === 'meeting' && lead.running && <Btn disabled={busy} onClick={async () => { if (await call('noshow', {})) onChange(); }}>No-show</Btn>}
           {lead.running && <Btn kind="danger" disabled={busy} onClick={() => outcome('stop')}>Stop</Btn>}
         </div>

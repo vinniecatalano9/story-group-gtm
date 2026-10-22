@@ -29,6 +29,7 @@ const STATUS = () => ({
   talked_yes: 'Talked yes',
   meeting: 'Meeting yes',
   not_interested: 'Not interested',
+  not_qualified: 'Not qualified', // added to the J dropdown by ensureStatusOptions()
   opted_out: 'Not interested',
   stopped: 'Not interested',
   // Channel failures (Vincent, 10/22); added to the J dropdown by ensureStatusOptions().

@@ -152,4 +152,24 @@ async function newPipelineLead({ description, contactId, stagesetId, milestoneId
   return { id: made.id, stage: inPipeline && l.milestone ? l.milestone.name : null };
 }
 
-module.exports = { isConfigured, call, pushScorecard, findOrCreateContact, newPipelineLead, USERS };
+// Closing a lead isn't in the JSON-RPC API; the REST API does it
+// (POST /rest/leads/<id>/status). Outcome ids from GET /rest/outcomes (10/22):
+// 2 Lost - Any reason, 4 Not a strategic fit, 5 Budget or timing mismatch.
+const LOST = { any: 2, not_fit: 4, budget: 5 };
+
+async function closeLead(leadId, outcomeId) {
+  if (!isConfigured()) throw new Error('NUTSHELL_API_KEY is not set on the server');
+  const auth = Buffer.from(`${USERNAME()}:${API_KEY()}`).toString('base64');
+  const res = await fetch(`https://app.nutshell.com/rest/leads/${leadId}/status`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Basic ${auth}` },
+    body: JSON.stringify({ outcomeId: `${outcomeId}-outcomes` }),
+    signal: AbortSignal.timeout(90000),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`Nutshell close lead HTTP ${res.status}: ${text.slice(0, 200)}`);
+  const l = (JSON.parse(text).leads || [])[0] || {};
+  return { status: l.status || null };
+}
+
+module.exports = { isConfigured, call, pushScorecard, findOrCreateContact, newPipelineLead, closeLead, LOST, USERS };
