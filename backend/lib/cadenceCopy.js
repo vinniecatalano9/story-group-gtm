@@ -22,15 +22,18 @@ const AD = '"Become Impossible to Ignore"';
 // always matches the Email 1 the lead actually got (Vincent, 10/22). Add a new
 // pair on top when the wording changes; older pairs stay so texts to leads who
 // got them still match. The platform wording (Facebook / Instagram / Meta) is
-// not decided yet, so the live pair is still the original "ad" one.
+// The first pair is the live one (Vincent, 10/22).
 const OPENERS = [
+  { email: `Thanks for filling out our ${AD} form on Facebook or Instagram.`, text: `the ${AD} form you filled out on Facebook or Instagram` },
   { email: `Thanks for reaching out through our ${AD} ad.`, text: `the ${AD} ad you responded to` },
 ];
 
 /** The opener pair this lead's Email 1 used (the live one if it hasn't gone yet). */
 function openerFor(lead) {
   const sent = String(lead.email1_text || '');
-  return OPENERS.find(o => sent.includes(o.email)) || OPENERS[0];
+  if (!sent) return OPENERS[0];
+  // Sent before we stored the text: those all used the original "ad" line.
+  return OPENERS.find(o => sent.includes(o.email)) || OPENERS[OPENERS.length - 1];
 }
 
 // `day` counts from the lead's day 1 (the day Email 1 went out, or the day the
@@ -52,7 +55,7 @@ const TRACKS = {
     { id: 'text3', channel: 'sms', day: 6, label: 'Text 3', approved: true,
       template: "Hey {first}, I'm sure this got buried. Does {day} at {time} ET work for a quick call?" },
     { id: 'email3', channel: 'email', day: 9, label: 'Email 3', approved: true,
-      template: "Hey {first},\n\nI'm sure this got lost in your inbox. Does {day} at {am} or {pm} ET work?\n\nBest,\nVincent" },
+      template: "Hey {first},\n\nI'm sure this got lost in your inbox. You filled out our form on Facebook or Instagram {when}. Does {day} at {am} or {pm} ET work?\n\nBest,\nVincent" },
     { id: 'text4', channel: 'sms', day: 14, label: 'Text 4 (breakup)', approved: true,
       template: 'Hey {first}, looks like now might not be the right time. Should I close this out, or is getting more visibility still on your list?' },
   ],
@@ -175,6 +178,7 @@ function render(template, lead, times = {}, meeting = {}) {
     times_question_text: timesQuestionText(t),
     noshow_times: (t.today || t.day) ? noshowTimes(t) : null,
     meeting_day: meeting.day, meeting_time: meeting.time,
+    when: meeting.when, // "last week" / "on October 22", from Email 1's send date
   };
   let missing = false;
   const out = String(template).replace(/\{(\w+)\}/g, (m, k) => {

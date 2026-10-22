@@ -370,6 +370,18 @@ function liveTimes(offer, now = new Date()) {
   return slots.labels({ today: keep(offer.today, 60), day: offer.day, am: keep(offer.am, 0), pm: keep(offer.pm, 0) }, now);
 }
 
+/** "last week" if `t` is in the calendar week (Mon to Sun) before `ref`, else "on October 22". */
+function whenLabel(t, ref, tz = 'America/New_York') {
+  if (!t) return null;
+  const monday = d => { const p = z.parts(d, tz); return z.dayKey(z.addDays(p, -((p.dow + 6) % 7))); };
+  const r = z.parts(ref, tz);
+  const lastMonday = z.dayKey(z.addDays(z.addDays(r, -((r.dow + 6) % 7)), -7));
+  if (monday(t) === lastMonday) return 'last week';
+  const p = z.parts(t, tz);
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  return `on ${MONTHS[p.m - 1]} ${p.d}`;
+}
+
 /** "Re: <the subject Email 1 went out with>", so follow-ups stay in that thread. */
 const threadReply = lead => `Re: ${(lead.thread && lead.thread.subject) || copy.SUBJECT}`;
 
@@ -401,6 +413,7 @@ async function buildMessage(lead, step, { sendAt = new Date(), dryRun = false } 
   }
   const m = toDate(lead.meeting_at);
   const meeting = m ? { day: slots.dayLabel(m, sendAt), time: z.clock(m, 'America/New_York') } : {};
+  meeting.when = whenLabel(toDate(lead.email1_sent_at), sendAt, lead.tz);
   const text = copy.render(step, c.template, lead, times, meeting);
   if (text == null) return { blocked: `${step.label}: no open time to offer in the next 5 business days` };
   if (offer && !dryRun) await slots.holdOffer(offer, { key: holdKey(lead.email), name: fullName(lead), only: offeredTimes(c.template, offer) });
