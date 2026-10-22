@@ -712,5 +712,5 @@ async function status() {
 module.exports = {
   MODE, importLeads, updateLead, startLead, setOutcome, listLeads, getLead, refreshNext, nextStep,
   listCopy, saveCopy, approve, skip, dispatch, tick, checkReplies, syncSheet, dryRun, status, inWindow, intoWindow,
-  approvalsCol,
+  approvalsCol, queueStep,
 };
