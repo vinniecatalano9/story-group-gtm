@@ -44,6 +44,18 @@ router.post('/approve-all', (req, res, next) => (req.body && req.body.t ? next()
   : wrap(r => cadence.approveMany(Array.isArray(r.body.ids) ? r.body.ids : []))(req, res)));
 router.post('/sync-sheet', wrap(() => cadence.syncSheet({ all: true })));
 
+// Auto-booking (services/autoBook.js): is the Apps Script reachable, and a
+// dry run of the reply match for one lead (books nothing).
+router.get('/autobook/status', wrap(() => require('../services/autoBook').check()));
+router.post('/autobook/match', wrap(async req => {
+  const ab = require('../services/autoBook');
+  const lead = await cadence.getLead(String(req.body.email || '').toLowerCase());
+  if (!lead) throw new Error('Lead not found');
+  const options = await ab.offeredTimes(lead);
+  const m = await ab.matchReply(req.body.text, options);
+  return { mode: ab.MODE(), offered: options.map(o => `${ab.fullLabel(o.at)} ET (${o.step})`), pick: m ? `${ab.fullLabel(m.at)} ET` : null, why: m ? m.why : null };
+}));
+
 // ── Approval page (link on the Telegram card) ───────────────────────────────
 
 async function loadApproval(req) {
@@ -172,6 +184,36 @@ router.post('/email-decision/:email', express.urlencoded({ extended: false }), a
   try {
     await cadence.setEmailDecision(lead.email, req.body.d === 'send' ? 'send' : 'no');
     res.send(page(`<h1>${req.body.d === 'send' ? 'Emails back on.' : 'No emails to this address.'}</h1>`));
+  } catch (e) {
+    res.status(400).send(page(`<h1>${esc(e.message)}</h1>`));
+  }
+});
+
+// ── Book button (reply card, when a lead picked an offered time) ────────────
+
+router.get('/book/:id', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const ab = require('../services/autoBook');
+  const b = await ab.loadBooking(req.params.id, req.query.t).catch(() => null);
+  if (!b) return res.status(404).send(page('<h1>Link not valid</h1>'));
+  if (b.status !== 'pending') return res.send(page(`<h1>Already ${esc(b.status)}</h1><p class="muted">${esc(b.name)}, ${esc(ab.fullLabel(b.at))} ET</p>`));
+  res.send(page(`
+<h1>Book ${esc(b.name)}?</h1>
+<div class="muted">${esc(ab.fullLabel(b.at))} ET, 30 minutes${b.why ? ` · read as: ${esc(b.why)}` : ''}</div>
+<p class="muted">Checks your calendar once more, then puts the call on it and sends them the invite with a Meet link. The confirm text and reminders follow.</p>
+<form method="post"><input type="hidden" name="t" value="${esc(req.query.t)}"><button class="send">Book it</button></form>`));
+});
+
+router.post('/book/:id', express.urlencoded({ extended: false }), async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  try {
+    const r = await require('../services/autoBook').confirmBooking(req.params.id, req.body.t);
+    const msg = r.status === 'booked' ? `Booked ${r.label} ET.`
+      : r.status === 'taken' ? `Not booked: ${r.label} isn't free anymore.${r.next ? ` Next open: ${r.next} ET.` : ''}`
+      : r.status === 'too_soon' ? 'Not booked: that time is too close now.'
+      : r.status === 'error' ? `Not booked: ${r.error}` : `Already ${r.status}.`;
+    const sub = r.status === 'booked' ? (r.invited ? `Invite with a Meet link sent to ${r.invited}. Confirm text and reminders are queued.` : 'No working email, so it\'s on your calendar as a phone call.') : '';
+    res.send(page(`<h1>${esc(msg)}</h1><p class="muted">${esc(sub)}</p>`));
   } catch (e) {
     res.status(400).send(page(`<h1>${esc(e.message)}</h1>`));
   }

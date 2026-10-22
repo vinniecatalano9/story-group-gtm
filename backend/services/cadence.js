@@ -938,11 +938,14 @@ async function onReply(lead, channel, text, at) {
   }
   await addTimeline(lead.email, timelineEntry('reply', { channel, text: String(text).slice(0, 1500), reply_at: toDate(at) || null }));
   await logToNutshell(lead, `${shortDate(toDate(at) || new Date(), lead.tz)} ${stop ? 'Texted STOP (opted out of texts)' : `Replied by ${channel === 'sms' ? 'text' : 'email'}`}\n\n${String(text).slice(0, 1500)}`);
+  // A clean yes to an offered time books the call (or puts a Book button on this card).
+  const booking = stop ? null : await require('./autoBook').handleReply(lead, text);
   await ping([
     stop ? `🛑 <b>${esc(fullName(lead))}</b> texted STOP. Cadence ended for good.` : `💬 <b>${esc(fullName(lead))}</b> replied by ${channel === 'sms' ? 'text' : 'email'}. Cadence paused.`,
     `\n${esc(String(text).slice(0, 1200))}`,
-    stop ? '' : `\nSet the outcome on the Ad Leads page: ${DASHBOARD_URL()}`,
-  ].filter(Boolean).join('\n'));
+    booking ? `\n${booking.line}` : '',
+    stop || (booking && /Booked/.test(booking.line)) ? '' : `\nSet the outcome on the Ad Leads page: ${DASHBOARD_URL()}`,
+  ].filter(Boolean).join('\n'), booking && booking.button ? { reply_markup: { inline_keyboard: [[booking.button]] } } : {});
 }
 
 /** Look for email and text replies from every lead that's had a touch. */
@@ -1375,5 +1378,5 @@ async function status() {
 module.exports = {
   MODE, importLeads, updateLead, startLead, setOutcome, markNoShow, listLeads, getLead, refreshNext, nextStep,
   listCopy, saveCopy, approve, skip, dispatch, tick, checkReplies, syncSheet, dryRun, status, inWindow, intoWindow,
-  approvalsCol, queueStep, drainNutshell, touchesSoFar, dispatchApproved, rebuildPending, markChannelDead, realEmail, verifyLeadEmail, setEmailDecision, emailGate, emailHeld, pendingCards, approveMany, checkBatchToken, refreshBatchCard, cardTimes, ping, fullName, esc, DASHBOARD_URL, gmailInbox, queueDue, runIntake,
+  approvalsCol, queueStep, drainNutshell, touchesSoFar, dispatchApproved, rebuildPending, markChannelDead, realEmail, verifyLeadEmail, setEmailDecision, emailGate, emailHeld, pendingCards, approveMany, checkBatchToken, refreshBatchCard, cardTimes, ping, fullName, esc, DASHBOARD_URL, gmailInbox, queueDue, runIntake, saveLead, canEmail,
 };
