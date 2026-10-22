@@ -229,6 +229,37 @@ function CopyEditor({ api, setErr }) {
   );
 }
 
+function ApproveAll({ api, onDone, setErr }) {
+  const [cards, setCards] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const load = () => fetch(`${api}/api/cadence/pending`).then(r => r.json()).then(d => Array.isArray(d) ? setCards(d) : setErr(d.error)).catch(e => setErr(e.message));
+  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!cards) return null;
+  if (!cards.length) return <div className="glass-card rounded-xl p-4 text-sm text-muted">Nothing waiting for approval.</div>;
+  const sendAll = async () => {
+    if (!window.confirm(`Send all ${cards.length} messages? First emails go 8 to 13 minutes apart, inside each lead's send window.`)) return;
+    setBusy(true);
+    try {
+      const r = await fetch(`${api}/api/cadence/approve-all`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: cards.map(c => c.id) }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      onDone(`Approved ${d.approved}; ${d.sent} sent so far, the rest go out on their gaps.`);
+    } catch (e) { setErr(e.message); } finally { setBusy(false); }
+  };
+  return (
+    <div className="glass-card rounded-xl p-4 space-y-3">
+      <p className="text-sm text-body font-semibold">{cards.length} waiting, in send order</p>
+      {cards.map((c, i) => (
+        <div key={c.id} className="text-xs">
+          <p className="text-muted">{i + 1}. {c.step_label} to {c.name} · {c.channel === 'email' ? 'email' : 'text'} to {c.to}{c.times ? ` · held: ${c.times} ET` : ''}</p>
+          <pre className="whitespace-pre-wrap text-body/80 bg-white/5 rounded-lg p-3 mt-1">{c.subject ? `Subject: ${c.subject}\n\n` : ''}{c.text}</pre>
+        </div>
+      ))}
+      <Btn kind="primary" disabled={busy} onClick={sendAll}>Send all {cards.length}</Btn>
+    </div>
+  );
+}
+
 export default function AdLeads({ api }) {
   const [data, setData] = useState({ leads: [], mode: '' });
   const [err, setErr] = useState('');
@@ -236,6 +267,7 @@ export default function AdLeads({ api }) {
   const [paste, setPaste] = useState('');
   const [showPaste, setShowPaste] = useState(false);
   const [showCopy, setShowCopy] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   const load = useCallback(() => {
     fetch(`${api}/api/cadence/leads`).then(r => r.json()).then(d => d.leads && setData(d)).catch(e => setErr(e.message));
@@ -261,6 +293,7 @@ export default function AdLeads({ api }) {
         </div>
         <Btn kind="primary" onClick={() => doImport()}>Import from sheet</Btn>
         <Btn onClick={() => setShowPaste(!showPaste)}>Paste rows</Btn>
+        <Btn onClick={() => setShowAll(!showAll)}>Approve all pending</Btn>
         <Btn onClick={() => setShowCopy(!showCopy)}>Step copy</Btn>
       </div>
       {err && <p className="text-sm text-red-400">{err}</p>}
@@ -272,6 +305,7 @@ export default function AdLeads({ api }) {
           <Btn kind="primary" onClick={() => doImport(parseCsv(paste))}>Import pasted rows</Btn>
         </div>
       )}
+      {showAll && <ApproveAll api={api} setErr={setErr} onDone={m => { setMsg(m); setShowAll(false); load(); }} />}
       {showCopy && <CopyEditor api={api} setErr={setErr} />}
       <div className="space-y-3">
         {data.leads.map(l => <LeadRow key={l.email} lead={l} api={api} onChange={load} setErr={setErr} />)}

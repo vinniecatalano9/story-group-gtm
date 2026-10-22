@@ -507,6 +507,79 @@ async function rebuildPending(stepId) {
   return out;
 }
 
+// ── Approve all ──────────────────────────────────────────────────────────────
+// Vincent (10/22): "if there's a bunch of emails set up, I can just click
+// send." With 2+ cards pending, one Telegram summary lists them with an
+// "Approve all (N)" button. Its page shows every message in full and one Send
+// all button. Approving queues them in card order; the Email 1 gaps, windows
+// and stale re-plan still apply.
+
+async function pendingCards() {
+  const snap = await approvalsCol().where('status', '==', 'pending').get();
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => toDate(a.created_at) - toDate(b.created_at));
+}
+
+const cardTimes = a => {
+  const t = slots.labels(a.offer || {});
+  return [t.today && `today ${t.today}`, t.day && `${t.day} ${[t.am, t.pm].filter(Boolean).join(' or ')}`].filter(Boolean).join(', ');
+};
+
+async function batchToken() {
+  const ref = metaDoc('batch');
+  const b = (await ref.get()).data() || {};
+  if (b.token) return { ref, b };
+  b.token = crypto.randomBytes(18).toString('base64url');
+  await ref.set({ token: b.token }, { merge: true });
+  return { ref, b };
+}
+
+async function checkBatchToken(t) {
+  const { b } = await batchToken();
+  return !!t && t.length === b.token.length && crypto.timingSafeEqual(Buffer.from(t), Buffer.from(b.token));
+}
+
+/** Keep the one Telegram summary in step with what's pending (edits only on change). */
+async function refreshBatchCard() {
+  const cards = await pendingCards();
+  const { ref, b } = await batchToken();
+  if (cards.length < 2) {
+    if (b.tg_message_id) {
+      await tg('deleteMessage', { chat_id: CHAT(), message_id: b.tg_message_id }).catch(() => {});
+      await ref.update({ tg_message_id: null, tg_text: null });
+    }
+    return;
+  }
+  const text = [
+    `<b>${cards.length} ad lead messages waiting</b>`,
+    ...cards.map((a, i) => `${i + 1}. ${esc(a.name)}: ${esc(a.step_label)}${cardTimes(a) ? ` (${esc(cardTimes(a))} ET)` : ''}`),
+    '\nApprove all opens every message in full before anything sends.',
+  ].join('\n');
+  if (b.tg_message_id && b.tg_text === text) return;
+  const markup = { inline_keyboard: [[{ text: `Approve all (${cards.length})`, url: `${PUBLIC_URL()}/api/cadence/approve-all?t=${b.token}` }]] };
+  if (b.tg_message_id) {
+    const ok = await tg('editMessageText', { chat_id: CHAT(), message_id: b.tg_message_id, text, parse_mode: 'HTML', disable_web_page_preview: true, reply_markup: markup }).then(() => true).catch(() => false);
+    if (ok) { await ref.update({ tg_text: text }); return; }
+  }
+  const m = await ping(text, { reply_markup: markup });
+  if (m) await ref.update({ tg_message_id: m.message_id, tg_text: text });
+}
+
+/**
+ * Approve exactly these cards (the ones Vincent saw), in card order. Any that
+ * were approved, skipped or cancelled meanwhile drop out.
+ */
+async function approveMany(ids) {
+  const cards = (await pendingCards()).filter(a => ids.includes(a.id));
+  const base = Date.now();
+  for (const [i, a] of cards.entries()) {
+    await approvalsCol().doc(a.id).update({ status: 'approved', approved_at: new Date(base + i), approved_in_batch: true });
+  }
+  const r = await dispatchApproved();
+  await refreshBatchCard().catch(e => console.warn('[cadence] batch card:', e.message));
+  return { approved: cards.length, sent: Object.values((r && r.results) || {}).filter(x => x.status === 'sent').length };
+}
+
 /** Approve (with optional edits) from the card's page. Sends now if it can. */
 async function approve(id, { text, subject } = {}) {
   const ref = approvalsCol().doc(id);
@@ -879,6 +952,7 @@ async function dispatchApproved() {
     return { results: await sendApproved() };
   } finally {
     _running = false;
+    refreshBatchCard().catch(e => console.warn('[cadence] batch card:', e.message));
   }
 }
 async function tick() {
@@ -995,5 +1069,5 @@ async function status() {
 module.exports = {
   MODE, importLeads, updateLead, startLead, setOutcome, markNoShow, listLeads, getLead, refreshNext, nextStep,
   listCopy, saveCopy, approve, skip, dispatch, tick, checkReplies, syncSheet, dryRun, status, inWindow, intoWindow,
-  approvalsCol, queueStep, drainNutshell, touchesSoFar, dispatchApproved, rebuildPending, ping, fullName, esc, DASHBOARD_URL,
+  approvalsCol, queueStep, drainNutshell, touchesSoFar, dispatchApproved, rebuildPending, pendingCards, approveMany, checkBatchToken, refreshBatchCard, cardTimes, ping, fullName, esc, DASHBOARD_URL,
 };

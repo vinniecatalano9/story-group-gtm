@@ -33,6 +33,12 @@ router.get('/copy', wrap(() => cadence.listCopy()));
 router.post('/copy/:step', wrap(async req => { await cadence.saveCopy(req.params.step, req.body || {}); return cadence.listCopy(); }));
 
 router.post('/run', wrap(() => cadence.tick()));
+
+// Dashboard "Approve all pending": the full list, then the exact ids shown.
+router.get('/pending', wrap(() => cadence.pendingCards().then(cs => cs.map(({ token, tg_text, ...a }) => ({ ...a, times: cadence.cardTimes(a) })))));
+// (A form post with the Telegram link's token falls through to the page handler below.)
+router.post('/approve-all', (req, res, next) => (req.body && req.body.t ? next()
+  : wrap(r => cadence.approveMany(Array.isArray(r.body.ids) ? r.body.ids : []))(req, res)));
 router.post('/sync-sheet', wrap(() => cadence.syncSheet({ all: true })));
 
 // ── Approval page (link on the Telegram card) ───────────────────────────────
@@ -95,6 +101,38 @@ router.post('/approval/:id', express.urlencoded({ extended: false }), async (req
       await cadence.skip(req.params.id, { stopLead: true }); msg = 'Lead stopped. Nothing more goes out.';
     } else msg = 'Nothing done.';
     res.send(page(`<h1>${esc(msg)}</h1><p class="muted">${esc(a.step_label)} to ${esc(a.name)}</p>`));
+  } catch (e) {
+    res.status(400).send(page(`<h1>${esc(e.message)}</h1>`));
+  }
+});
+
+// ── Approve-all page (button on the Telegram summary) ───────────────────────
+
+router.get('/approve-all', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  if (!(await cadence.checkBatchToken(String(req.query.t || '')).catch(() => false))) return res.status(404).send(page('<h1>Link not valid</h1>'));
+  const cards = await cadence.pendingCards();
+  if (!cards.length) return res.send(page('<h1>Nothing waiting</h1>'));
+  res.send(page(`
+<h1>${cards.length} messages waiting</h1>
+<div class="muted">Each goes out in this order. First emails go 8 to 13 minutes apart, inside each lead's send window.</div>
+${cards.map((a, i) => `
+<p style="margin:18px 0 4px"><b>${i + 1}. ${esc(a.step_label)} to ${esc(a.name)}</b><br><span class="muted">${a.channel === 'email' ? 'Email' : 'Text'} to ${esc(a.to)}${cadence.cardTimes(a) ? ` · held: ${esc(cadence.cardTimes(a))} ET` : ''}</span></p>
+<div class="box">${esc(a.subject ? `Subject: ${a.subject}\n\n` : '')}${esc(a.text)}</div>`).join('')}
+<form method="post">
+<input type="hidden" name="t" value="${esc(req.query.t)}">
+<input type="hidden" name="ids" value="${esc(cards.map(a => a.id).join(','))}">
+<button class="send" name="action" value="send">Send all ${cards.length}</button>
+</form>
+<p class="muted">To change or skip one, use its own card in Telegram instead.</p>`));
+});
+
+router.post('/approve-all', express.urlencoded({ extended: false }), async (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  if (!(await cadence.checkBatchToken(String(req.body.t)).catch(() => false))) return res.status(404).send(page('<h1>Link not valid</h1>'));
+  try {
+    const r = await cadence.approveMany(String(req.body.ids || '').split(',').filter(Boolean));
+    res.send(page(`<h1>Approved ${r.approved}.</h1><p class="muted">${r.sent} sent so far; the rest go out on their gaps and windows. Each card in Telegram updates as it sends.</p>`));
   } catch (e) {
     res.status(400).send(page(`<h1>${esc(e.message)}</h1>`));
   }
