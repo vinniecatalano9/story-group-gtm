@@ -394,7 +394,9 @@ async function buildMessage(lead, step, { sendAt = new Date(), dryRun = false } 
   const text = copy.render(step, c.template, lead, times, meeting);
   if (text == null) return { blocked: `${step.label}: no open time to offer in the next 5 business days` };
   if (offer && !dryRun) await slots.holdOffer(offer, { key: holdKey(lead.email), name: fullName(lead), only: offeredTimes(c.template, offer) });
-  const subject = step.channel === 'email' ? (c.subject || (step.id === 'email1' ? copy.SUBJECT : `Re: ${copy.SUBJECT}`)) : null;
+  const subject = step.channel === 'email'
+    ? (c.subject ? copy.render(step, c.subject, lead, times, meeting) || c.subject : (step.id === 'email1' ? copy.SUBJECT : `Re: ${copy.SUBJECT}`))
+    : null;
   return { subject, text, offer, times };
 }
 
@@ -424,7 +426,7 @@ async function queueStep(lead, step, msg) {
     to: step.channel === 'email' ? lead.email : lead.phone,
     subject: msg.subject || null, text: msg.text,
     offer: msg.offer ? { today: msg.offer.today, day: msg.offer.day, am: msg.offer.am, pm: msg.offer.pm } : null,
-    status: MODE() === 'live' ? 'approved' : 'pending', token, created_at: new Date(),
+    status: MODE() === 'live' && !step.alwaysApprove ? 'approved' : 'pending', token, created_at: new Date(),
   };
   await ref.set(a);
   await saveLead(lead.email, { pending_approval: ref.id, ...(msg.offer ? { offer: a.offer } : {}) });

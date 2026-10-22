@@ -5,10 +5,9 @@
 // one question; times are one day with a morning and an afternoon time; the
 // day OR the date, never both; no booking link anywhere.
 //
-// `approved: true` = Vincent's approved copy (10/22). `approved: false` =
-// Claude's draft: the step stays blocked until Vincent approves or rewrites
-// it on the dashboard (saved to Firestore cadence_copy/{step id}, which also
-// overrides any copy here).
+// Every step's copy is Vincent's, approved 10/22. A step marked
+// `approved: false` would stay blocked until he approves it on the dashboard;
+// his saved edits (Firestore cadence_copy/{step id}) override the copy here.
 //
 // Template variables: {first} {frustration_line} {today} {day} {am} {pm}
 // {time} {meeting_day} {meeting_time} {times_question}. Steps whose copy uses
@@ -36,42 +35,45 @@ const TRACKS = {
     { id: 'text3', channel: 'sms', day: 6, label: 'Text 3', approved: true,
       template: "Hey {first}, I'm sure this got buried. Does {day} at {time} ET work for a quick call?" },
     { id: 'email3', channel: 'email', day: 9, label: 'Email 3', approved: true,
-      template: "Hey {first},\n\nI'm sure this got lost in your inbox. Let's try for this week: does {day} at {am} or {pm} ET work?\n\nVincent" },
+      template: "Hey {first},\n\nI'm sure this got lost in your inbox. Does {day} at {am} or {pm} ET work?\n\nVincent" },
     { id: 'text4', channel: 'sms', day: 14, label: 'Text 4 (breakup)', approved: true,
       template: 'Hey {first}, looks like now might not be the right time. Should I close this out, or is getting more visibility still on your list?' },
   ],
-  // Hit once: talked, no meeting yet. 3 touches, 7 days apart. [CLAUDE'S DRAFTS, not approved]
+  // Hit once: talked, no meeting yet. 3 touches, 7 days apart (approved 10/22).
   nurture: [
-    { id: 'nurture1', channel: 'email', day: 8, label: 'Nurture 1', approved: false,
-      template: 'Hey {first},\n\nGood talking last week. Is getting more visibility still on your list? If so, does {day} at {am} or {pm} ET work to pick it back up?\n\nVincent' },
-    { id: 'nurture2', channel: 'sms', day: 15, label: 'Nurture 2', approved: false,
-      template: "Hey {first}, it's Vincent from Story Group. Still thinking about getting more visibility? {day} at {time} ET is open. Does that work?" },
-    { id: 'nurture3', channel: 'email', day: 22, label: 'Nurture 3', approved: false,
-      template: 'Hey {first},\n\nCircling back one more time. Should I check back next quarter, or is now still a good time to talk about visibility?\n\nVincent' },
+    { id: 'nurture1', channel: 'email', day: 8, label: 'Nurture 1 (day 7 email)', approved: true,
+      template: 'Hey {first},\n\nGood talking last week. Is getting more visibility still on your list for this quarter?\n\nVincent' },
+    { id: 'nurture2', channel: 'sms', day: 15, label: 'Nurture 2 (day 14 text)', approved: true,
+      template: "Hey {first}, it's Vincent from Story Group. Any questions come up since we talked?" },
+    { id: 'nurture3', channel: 'email', day: 22, label: 'Nurture 3 (day 21 email)', approved: true,
+      template: "Hey {first},\n\nI'll keep this short. Should I check back in a couple of months, or is now a better time to pick this back up?\n\nVincent" },
   ],
-  // Talked yes: booking follow-up, switching channel after 24h with no reply (playbook). [CLAUDE'S DRAFTS, not approved]
+  // Talked yes: email right after the outcome, text if no reply in 24h (approved 10/22).
   booking: [
-    { id: 'booking1', channel: 'email', day: 2, label: 'Booking follow-up (email)', approved: false,
-      template: "Hey {first},\n\nGreat talking. Let's get it on the calendar: does {day} at {am} or {pm} ET work?\n\nVincent" },
-    { id: 'booking2', channel: 'sms', day: 3, label: 'Booking follow-up (text)', approved: false,
-      template: "Hey {first}, it's Vincent from Story Group. Want to lock in our call. Does {day} at {time} ET work?" },
+    { id: 'booking1', channel: 'email', immediate: true, label: 'Booking follow-up (email)', approved: true,
+      template: 'Hey {first},\n\nGood talking with you. Does {day} at {am} or {pm} ET work for a proper call?\n\nVincent' },
+    { id: 'booking2', channel: 'sms', afterMinutes: 24 * 60, label: 'Booking follow-up (text, 24h)', approved: true,
+      template: 'Hey {first}, just making sure you saw my email. Does {day} at {time} ET work?' },
   ],
   // Meeting yes: booked.
   meeting: [
     { id: 'meet_confirm', channel: 'sms', immediate: true, label: 'Booked: confirm text', approved: true,
       template: "Hey {first}, it's Vincent from Story Group. See you {meeting_day}." },
     // The follow-up question text 2 to 3 minutes later was dropped (Vincent, 10/22).
-    // Reminders: [CLAUDE'S DRAFTS, not approved]
-    { id: 'remind24_email', channel: 'email', beforeMeetingMinutes: 24 * 60, label: '24h reminder (email)', approved: false,
-      template: 'Hey {first},\n\nLooking forward to our call {meeting_day} at {meeting_time} ET. Still good for that time?\n\nVincent' },
-    { id: 'remind24_text', channel: 'sms', beforeMeetingMinutes: 24 * 60 - 5, label: '24h reminder (text)', approved: false,
-      template: "Hey {first}, it's Vincent from Story Group. Still good for {meeting_day} at {meeting_time} ET?" },
-    { id: 'remind1_email', channel: 'email', beforeMeetingMinutes: 60, label: '1h reminder (email)', approved: false,
-      template: 'Hey {first},\n\nTalk in an hour, at {meeting_time} ET. Still good?\n\nVincent' },
-    { id: 'remind1_text', channel: 'sms', beforeMeetingMinutes: 55, label: '1h reminder (text)', approved: false,
-      template: 'Hey {first}, talk in an hour at {meeting_time} ET. Still good?' },
+    // Reminders (approved 10/22).
+    { id: 'remind24_email', channel: 'email', beforeMeetingMinutes: 24 * 60, label: '24h reminder (email)', approved: true,
+      subject: 'Tomorrow at {meeting_time} ET',
+      template: 'Hey {first},\n\nLooking forward to our call tomorrow at {meeting_time} ET. Still good for you?\n\nVincent' },
+    { id: 'remind24_text', channel: 'sms', beforeMeetingMinutes: 24 * 60 - 5, label: '24h reminder (text)', approved: true,
+      template: "Hey {first}, it's Vincent from Story Group. Still good for tomorrow at {meeting_time} ET?" },
+    { id: 'remind1_email', channel: 'email', beforeMeetingMinutes: 60, label: '1h reminder (email)', approved: true,
+      template: 'Hey {first}, talking at {meeting_time} ET. Still good?' },
+    { id: 'remind1_text', channel: 'sms', beforeMeetingMinutes: 55, label: '1h reminder (text)', approved: true,
+      template: 'Hey {first}, talking at {meeting_time} ET. Still good?' },
+    // No call 15 minutes after the start (or Vincent marks a no-show). Always a
+    // Telegram card, even in live mode, until Vincent says how calls happen.
     // No call 15 minutes after the start (or Vincent marks a no-show).
-    { id: 'noshow', channel: 'sms', afterMeetingMinutes: 15, label: 'No-show text', approved: true,
+    { id: 'noshow', channel: 'sms', afterMeetingMinutes: 15, label: 'No-show text', approved: true, alwaysApprove: true,
       template: "Looks like we missed each other, happens. I've got {noshow_times}. Which works?" },
   ],
 };
