@@ -6,7 +6,8 @@
 //   wrsmedia.com calendar, 10/22; add it via CADENCE_CALENDARS). Declined
 //   events are free; all-day events only block when they say OOO, out of
 //   office, vacation, PTO, or holiday.
-// - Today: first open 30 min at least 1 hour after the send, ending by 5pm ET.
+// - Today (only for sends before 3pm CT): first open 30 min at least 1 hour
+//   after the send, ending by 5pm ET.
 // - Otherwise one business day (from tomorrow): first open 30 min 10am to
 //   12pm ET and first open 30 min 2pm to 5pm ET, both on that day.
 // - Every offered time is held in slot_holds so no other lead (or LinkedIn
@@ -20,6 +21,7 @@ const z = require('../lib/zoned');
 const ET = 'America/New_York';
 const SLOT_MIN = 30;
 const LOOKAHEAD_DAYS = 5;
+const TODAY_CUTOFF_CT_HOUR = 15;
 const CALENDARS = () => (process.env.CADENCE_CALENDARS || 'vincent@storygroup.io').split(',').map(s => s.trim()).filter(Boolean);
 const OOO = /\b(OOO|out of (the )?office|vacation|PTO|holiday)\b/i;
 
@@ -110,9 +112,10 @@ async function planOffer({ sendAt = new Date(), key = '' } = {}) {
   const unheld = t => open(t) && !overlaps(t, holds).length;
   const holdAge = t => Math.min(...overlaps(t, holds).map(h => h.created_at.getTime()));
 
-  // Today: from 1 hour after the send (on the half hour), ending by 5pm ET.
+  // Today: only when the send is before 3pm Central (Vincent's day, 10/22);
+  // then from 1 hour after the send (on the half hour), ending by 5pm ET.
   let todaySlot = null;
-  if (z.isWeekday(today)) {
+  if (z.isWeekday(today) && z.parts(sendAt, 'America/Chicago').h < TODAY_CUTOFF_CT_HOUR) {
     const earliest = new Date(Math.ceil((sendAt.getTime() + 60 * 6e4) / (SLOT_MIN * 6e4)) * SLOT_MIN * 6e4);
     todaySlot = candidates(today, 9, 17, earliest).find(unheld) || null;
   }

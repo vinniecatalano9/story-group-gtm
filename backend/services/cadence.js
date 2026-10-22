@@ -111,6 +111,8 @@ async function importLeads(rows) {
       role: r.role || '', frustration: r.frustration || '', company: r.company || '',
       source: r.source || '', sheet_row: r.sheet_row || null, rep: r.rep || '', notes: r.notes || '',
       tz: tzForPhone(phone),
+      // Sheet note says the email is someone else's (Ada / Harvey): greet "Hello," (Vincent, 10/22).
+      name_doubt: /belongs to|someone else|not (his|her|their) email/i.test(r.notes || ''),
     };
     if (existing) {
       await saveLead(email, base);
@@ -120,9 +122,7 @@ async function importLeads(rows) {
         ...base,
         state: 'imported', running: false, track: null,
         email_only: !phone,
-        // A sheet note saying the email is someone else's holds Email 1 until
-        // Vincent sets the greeting name (Ada Williams / Harvey, 10/22).
-        hold_reason: /belongs to|someone else|not (his|her|their) email/i.test(r.notes || '') ? r.notes : '',
+        hold_reason: '',
         steps_done: {}, timeline: [timelineEntry('note', { text: `Imported from the sheet${phone ? '' : ' (email only: no textable phone)'}` })],
         seen_email_ids: [], seen_sms_ids: [],
         sheet_dirty: true,

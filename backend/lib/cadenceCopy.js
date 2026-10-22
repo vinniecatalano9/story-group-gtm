@@ -60,8 +60,7 @@ const TRACKS = {
   meeting: [
     { id: 'meet_confirm', channel: 'sms', immediate: true, label: 'Booked: confirm text', approved: true,
       template: "Hey {first}, it's Vincent from Story Group. See you {meeting_day}." },
-    { id: 'meet_question', channel: 'sms', afterMinutes: 3, label: 'Booked: question text', approved: true,
-      template: 'Curious, what do you have in place now to get more visibility?' },
+    // The follow-up question text 2 to 3 minutes later was dropped (Vincent, 10/22).
     // Reminders: [CLAUDE'S DRAFTS, not approved]
     { id: 'remind24_email', channel: 'email', beforeMeetingMinutes: 24 * 60, label: '24h reminder (email)', approved: false,
       template: 'Hey {first},\n\nLooking forward to our call {meeting_day} at {meeting_time} ET. Still good for that time?\n\nVincent' },
@@ -122,10 +121,22 @@ function noshowTimes(t) {
  * { day, time } for the meeting track. Returns null when the copy needs a time
  * and there's none to offer (the step blocks rather than send a broken line).
  */
+// Name in doubt (Vincent, 10/22): the email is someone else's (sheet note),
+// or the name is blank, one letter, or not a name. Then "Hello," with no name.
+function nameInDoubt(lead) {
+  if (lead.greet_name) return false;
+  if (lead.name_doubt) return true;
+  const n = String(lead.first_name || '').trim();
+  return n.length < 2 || !/^[A-Za-z][A-Za-z'.-]*$/.test(n) || /^(test|asdf|na|n\/a|none|null|unknown)$/i.test(n);
+}
+
+const capFirst = n => (n && n === n.toLowerCase() ? n.charAt(0).toUpperCase() + n.slice(1) : n);
+
 function render(template, lead, times = {}, meeting = {}) {
   const t = times || {};
+  if (nameInDoubt(lead)) template = String(template).replace(/^(Hey|Hi) \{first\},/, 'Hello,');
   const vars = {
-    first: lead.greet_name || lead.first_name || 'there',
+    first: capFirst(String(lead.greet_name || lead.first_name || '').trim()),
     frustration_line: frustrationLine(lead.frustration),
     today: t.today, day: t.day, am: t.am, pm: t.pm, time: t.time,
     times_question: timesQuestion(t),
@@ -147,4 +158,4 @@ function render(template, lead, times = {}, meeting = {}) {
 const renderFor = (step, template, lead, times, meeting) =>
   render(template, step.channel === 'sms' ? { ...lead, greet_name: lead.sms_name || '' } : lead, times, meeting);
 
-module.exports = { SUBJECT, TRACKS, ALL_STEPS, stepById, usesTimes, render: renderFor, frustrationLine };
+module.exports = { SUBJECT, TRACKS, ALL_STEPS, stepById, usesTimes, render: renderFor, frustrationLine, nameInDoubt };
