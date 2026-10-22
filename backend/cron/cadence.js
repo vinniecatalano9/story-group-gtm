@@ -13,4 +13,12 @@ async function runCadence() {
   return r;
 }
 
-module.exports = { runCadence };
+/** Every minute: send approved cards whose window and Email 1 gap allow it. */
+async function runDispatcher() {
+  const r = await cadence.dispatchApproved();
+  const sent = Object.values((r && r.results) || {}).filter(x => x.status === 'sent');
+  if (sent.length) console.log('[cadence] dispatched', sent.map(x => `${x.email} ${x.step}`).join(', '));
+  return r;
+}
+
+module.exports = { runCadence, runDispatcher };

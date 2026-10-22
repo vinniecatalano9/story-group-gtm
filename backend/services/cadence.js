@@ -31,7 +31,9 @@ const MODE = () => String(process.env.CADENCE_MODE || 'approval').toLowerCase();
 const PUBLIC_URL = () => (process.env.CADENCE_PUBLIC_URL || new URL(process.env.REPLY_PANEL_URL || 'https://gtm-api.srv1364275.hstgr.cloud/api/approve/panel').origin).replace(/\/$/, '');
 const DASHBOARD_URL = () => process.env.CADENCE_DASHBOARD_URL || 'https://story-group-gtm.web.app/ad-leads';
 const WINDOW = { startH: 9, startMin: 30, endH: 18 };
-const EMAIL1_SPACING_MIN = 20; // [CLAUDE'S IDEA, agreed in the plan]
+// First emails go a random 8 to 13 minutes apart so they don't look batched (Vincent, 10/22).
+const EMAIL1_GAP_MIN = [8, 13];
+const randomGapMs = () => (EMAIL1_GAP_MIN[0] + Math.random() * (EMAIL1_GAP_MIN[1] - EMAIL1_GAP_MIN[0])) * 6e4;
 const RESTART_DAYS = 7;
 
 function db() { return require('./db').db; }
@@ -483,7 +485,11 @@ async function approve(id, { text, subject } = {}) {
   if (text && text.trim() && text.trim() !== a.text) { patch.text = text.trim(); patch.edited = true; }
   if (subject && subject.trim() && a.channel === 'email') patch.subject = subject.trim();
   await ref.update(patch);
-  return dispatch(id);
+  // Through the guarded dispatcher, so two quick approvals can't both pass the
+  // Email 1 gap check. If a run is going, the per-minute dispatcher sends it.
+  const r = await dispatchApproved();
+  if (r.skipped) return { status: 'waiting: goes out within a minute or two' };
+  return r.results[id] || { status: 'waiting' };
 }
 
 async function skip(id, { stopLead = false } = {}) {
@@ -530,8 +536,8 @@ async function dispatch(id) {
   }
   if (a.step === 'email1') {
     const meta = (await metaDoc('state').get()).data() || {};
-    const last = toDate(meta.last_email1_at);
-    if (last && now - last < EMAIL1_SPACING_MIN * 6e4) return { status: `waiting: first emails go ${EMAIL1_SPACING_MIN} min apart` };
+    const next = toDate(meta.next_email1_after) || (meta.last_email1_at ? new Date(toDate(meta.last_email1_at).getTime() + EMAIL1_GAP_MIN[0] * 6e4) : null);
+    if (next && now < next) return { status: `waiting: next first email goes after ${z.clock(next, 'America/Chicago')} CT (random 8 to 13 min gaps)` };
   }
   if (a.step === 'text1' && (lead.state === 'replied')) {
     await ref.update({ status: 'cancelled', cancel_reason: 'already replied' });
@@ -575,7 +581,7 @@ async function dispatch(id) {
     if (a.step === 'email1') {
       patch.email1_sent_at = now;
       patch.day1 = z.dayKey(z.parts(now, lead.tz));
-      await metaDoc('state').set({ last_email1_at: now }, { merge: true });
+      await metaDoc('state').set({ last_email1_at: now, next_email1_after: new Date(now.getTime() + randomGapMs()) }, { merge: true });
     }
     await saveLead(lead.email, patch);
     await addTimeline(lead.email, timelineEntry('sent', { step: a.step, channel: a.channel, text: a.text, subject: a.subject || null, edited: !!a.edited }));
@@ -817,6 +823,33 @@ async function syncSheet({ all = false } = {}) {
 // ── The 10-minute run ────────────────────────────────────────────────────────
 
 let _running = false;
+
+/** Send every approved card that can go now, oldest approval first. Caller holds _running. */
+async function sendApproved() {
+  const snap = await approvalsCol().where('status', '==', 'approved').get();
+  const docs = snap.docs.sort((a, b) => (toDate(a.data().approved_at) || 0) - (toDate(b.data().approved_at) || 0));
+  const results = {};
+  for (const d of docs) {
+    const r = await dispatch(d.id);
+    results[d.id] = { ...r, email: d.data().email, step: d.data().step };
+  }
+  return results;
+}
+
+/**
+ * The every-minute dispatcher: approved cards only, not the full tick, so the
+ * random Email 1 gaps land on time. Shares the tick's guard so they never overlap.
+ */
+async function dispatchApproved() {
+  if (MODE() === 'off') return { skipped: 'CADENCE_MODE=off' };
+  if (_running) return { skipped: 'a run is going' };
+  _running = true;
+  try {
+    return { results: await sendApproved() };
+  } finally {
+    _running = false;
+  }
+}
 async function tick() {
   if (MODE() === 'off') return { skipped: 'CADENCE_MODE=off' };
   if (_running) return { skipped: 'previous run still going' };
@@ -826,12 +859,9 @@ async function tick() {
     out.replies = await checkReplies();
     out.calls = await require('./cadenceCalls').checkCalls().catch(e => ({ error: e.message }));
 
-    // Approved cards waiting on a window or the 20-minute spacing.
-    const approved = await approvalsCol().where('status', '==', 'approved').get();
-    for (const d of approved.docs) {
-      const r = await dispatch(d.id);
-      (r.status === 'sent' ? out.sent : out.waiting).push(`${d.data().email} ${d.data().step}: ${r.status}`);
-    }
+    // Approved cards waiting on a window or the Email 1 gap.
+    const r = await sendApproved();
+    for (const [id, x] of Object.entries(r)) (x.status === 'sent' ? out.sent : out.waiting).push(`${x.email} ${x.step}: ${x.status}`);
 
     for (const lead of (await listLeads()).filter(l => l.running && !l.pending_approval)) {
       const fresh = await refreshNext(lead.email);
@@ -934,5 +964,5 @@ async function status() {
 module.exports = {
   MODE, importLeads, updateLead, startLead, setOutcome, markNoShow, listLeads, getLead, refreshNext, nextStep,
   listCopy, saveCopy, approve, skip, dispatch, tick, checkReplies, syncSheet, dryRun, status, inWindow, intoWindow,
-  approvalsCol, queueStep, drainNutshell, touchesSoFar, ping, fullName, esc, DASHBOARD_URL,
+  approvalsCol, queueStep, drainNutshell, touchesSoFar, dispatchApproved, ping, fullName, esc, DASHBOARD_URL,
 };

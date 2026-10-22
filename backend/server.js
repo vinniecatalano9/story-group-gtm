@@ -917,6 +917,17 @@ cron.schedule('*/10 * * * *', async () => {
   }
 }, { timezone: 'America/Chicago', recoverMissedExecutions: true });
 
+// Ad lead cadence dispatcher: every minute, approved cards only, so Email 1's
+// random 8 to 13 minute gaps land on time.
+cron.schedule('* * * * *', async () => {
+  try {
+    const { runDispatcher } = require('./cron/cadence');
+    await runDispatcher();
+  } catch (e) {
+    console.error('[cron] cadence dispatcher error:', e.message);
+  }
+}, { timezone: 'America/Chicago' });
+
 // LinkedIn queue sync: every 30 min — clear replies already answered in
 // HeyReach, refresh stale reply text, sync Interested auto-tags.
 cron.schedule('*/30 * * * *', async () => {
