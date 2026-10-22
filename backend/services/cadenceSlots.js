@@ -214,9 +214,14 @@ async function openTimes({ days = LOOKAHEAD_DAYS } = {}) {
 
   const { busy, unreadable } = await calendarBusy(z.instant(ET, today.y, today.m, today.d), z.instant(ET, last.y, last.m, last.d, 23, 59));
   const { db } = require('./db');
-  const holds = (await db.collection('slot_holds').where('end', '>', now).get()).docs.map(d => d.data()).map(h => ({
-    start: toDate(h.start), end: toDate(h.end), name: h.name || '', source: h.source || (h.reply_id ? 'linkedin' : ''),
-  }));
+  // Whose lead each hold is (sheet Assigned Rep). LinkedIn reply offers are Vincent's own.
+  const repOf = {};
+  for (const l of await require('./cadence').listLeads().catch(() => [])) repOf[`cadence:${l.email}`] = l.rep || '';
+  const holds = (await db.collection('slot_holds').where('end', '>', now).get()).docs.map(d => d.data()).map(h => {
+    const source = h.source || (h.reply_id ? 'linkedin' : '');
+    const rep = source === 'cadence' ? (repOf[h.reply_id] || '') : 'Vincent';
+    return { start: toDate(h.start), end: toDate(h.end), name: h.name || 'unnamed', source, rep, mine: /^vincent/i.test(rep) };
+  });
 
   const out = { days: [], promised: [], unreadable: unreadable.map(u => u.id), as_of: now };
   for (const day of list) {
@@ -226,8 +231,9 @@ async function openTimes({ days = LOOKAHEAD_DAYS } = {}) {
       const held = overlaps(t, holds);
       const onCalendar = overlaps(t, busy).length > 0;
       if (held.length) {
-        const names = [...new Set(held.map(h => h.name || 'unnamed'))];
-        out.promised.push({ start: t, names, source: [...new Set(held.map(h => h.source).filter(Boolean))], on_calendar: onCalendar });
+        const names = [...new Set(held.map(h => h.name))];
+        const who = names.map(n => { const h = held.find(x => x.name === n); return { name: n, rep: h.rep, mine: h.mine, source: h.source }; });
+        out.promised.push({ start: t, names, who, source: [...new Set(held.map(h => h.source).filter(Boolean))], on_calendar: onCalendar });
       } else if (!onCalendar) open.push(t);
     }
     out.days.push({ date: z.dayKey(day), label: `${z.DOW[day.dow]} ${MONTHS[day.m - 1]} ${day.d}`, open });

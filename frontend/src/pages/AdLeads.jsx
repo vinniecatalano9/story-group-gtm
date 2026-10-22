@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { OpenTimes } from '../components/OpenTimes';
 
 // Ad Leads = the "Become Impossible to Ignore" ad form leads and their
 // email + text cadence (backend services/cadence.js). Import from the shared
@@ -82,6 +83,7 @@ function funnelStats(all) {
   const tagged = leads.filter(l => l.tagged_at);
   const st = {
     tagged: tagged.length,
+    mine: tagged.filter(l => /^vincent/i.test(l.rep || '')).length,
     inCadence: tagged.filter(l => l.running).length,
     blocked: tagged.filter(l => l.running && l.blocked_reason).length,
     finished: tagged.filter(l => !l.running).length,
@@ -130,7 +132,7 @@ export function FunnelStats({ leads }) {
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-        <Stat label="Tagged" value={s.tagged} sub={`${s.inCadence} in cadence · ${s.finished} finished${s.blocked ? ` · ${s.blocked} blocked` : ''}`} />
+        <Stat label="Tagged" value={s.tagged} sub={`${s.mine} yours · ${s.tagged - s.mine} not yours · ${s.inCadence} in cadence · ${s.finished} finished${s.blocked ? ` · ${s.blocked} blocked` : ''}`} />
         <Stat label="Sent" value={s.sent.email + s.sent.sms} sub={`${s.sent.email} emails · ${s.sent.sms} texts`} />
         <Stat label="Replied" value={replies} sub={`email ${s.replied.email}/${s.got.email} (${pctOf(s.replied.email, s.got.email)}) · text ${s.replied.sms}/${s.got.sms} (${pctOf(s.replied.sms, s.got.sms)})`} />
         <Stat label="Booked" value={s.outcomes.meeting} sub={`${pctOf(s.outcomes.meeting, s.tagged)} of tagged`} />
@@ -187,7 +189,8 @@ function LeadRow({ lead, api, onChange, setErr }) {
     <div className="glass-card rounded-xl p-4">
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" onClick={() => setOpen(!open)} className="text-left flex-1 min-w-[220px]">
-          <p className="font-semibold text-body">{name} <span className="text-muted text-xs font-normal">{lead.company}</span></p>
+          <p className="font-semibold text-body">{name} <span className="text-muted text-xs font-normal">{lead.company}</span>{' '}
+            <span className={`text-[10px] font-semibold rounded-full px-2 py-0.5 ${/^vincent/i.test(lead.rep || '') ? 'bg-green-500/15 text-green-500' : 'bg-yellow-500/15 text-yellow-600'}`}>{/^vincent/i.test(lead.rep || '') ? 'Yours' : lead.rep ? `${lead.rep}'s` : 'No rep set'}</span></p>
           <p className="text-[11px] text-muted">{lead.text_only ? 'no email · texts only' : lead.email}{lead.email_bounced ? ' (bounced)' : lead.email_bad ? ' (invalid)' : ''}{lead.phone ? ` · ${lead.phone}${lead.sms_failed ? ' (texts failed)' : ''}` : ' · email only'} · {lead.tz?.split('/')[1]?.replace('_', ' ')} · {lead.role}</p>
         </button>
         <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${STATE_STYLE[lead.state] || STATE_STYLE.imported}`}>{STATE_LABEL[lead.state] || lead.state}</span>
@@ -385,6 +388,7 @@ export default function AdLeads({ api }) {
         <Btn onClick={() => setShowCopy(!showCopy)}>Step copy</Btn>
       </div>
       {data.leads.length > 0 && <FunnelStats leads={data.leads} />}
+      <OpenTimes api={api} />
       {err && <p className="text-sm text-red-400">{err}</p>}
       {msg && <p className="text-sm text-green-400">{msg}</p>}
       {showPaste && (
