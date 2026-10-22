@@ -39,7 +39,11 @@ const TRACKS = {
     { id: 'text4', channel: 'sms', day: 14, label: 'Text 4 (breakup)', approved: true,
       template: 'Hey {first}, looks like now might not be the right time. Should I close this out, or is getting more visibility still on your list?' },
   ],
-  // Hit once: talked, no meeting yet. 3 touches, 7 days apart (approved 10/22).
+  // OFF (Vincent, 10/22): the automation only reaches leads who haven't been
+  // in contact yet. The after-contact tracks below are stored but never run;
+  // setting Hit once or Talked yes sends nothing (Next Touch: Manual (Vincent)).
+  //
+  // Hit once: talked, no meeting yet. 3 touches, 7 days apart.
   nurture: [
     { id: 'nurture1', channel: 'email', day: 8, label: 'Nurture 1 (day 7 email)', approved: true,
       template: 'Hey {first},\n\nGood talking last week. Is getting more visibility still on your list for this quarter?\n\nVincent' },
@@ -48,7 +52,7 @@ const TRACKS = {
     { id: 'nurture3', channel: 'email', day: 22, label: 'Nurture 3 (day 21 email)', approved: true,
       template: "Hey {first},\n\nI'll keep this short. Should I check back in a couple of months, or is now a better time to pick this back up?\n\nVincent" },
   ],
-  // Talked yes: email right after the outcome, text if no reply in 24h (approved 10/22).
+  // Talked yes: email right after the outcome, text if no reply in 24h.
   booking: [
     { id: 'booking1', channel: 'email', immediate: true, label: 'Booking follow-up (email)', approved: true,
       template: 'Hey {first},\n\nGood talking with you. Does {day} at {am} or {pm} ET work for a proper call?\n\nVincent' },
@@ -77,6 +81,9 @@ const TRACKS = {
       template: "Looks like we missed each other, happens. I've got {noshow_times}. Which works?" },
   ],
 };
+
+const DISABLED_TRACKS = ['nurture', 'booking'];
+for (const t of DISABLED_TRACKS) for (const step of TRACKS[t]) step.disabled = true;
 
 const ALL_STEPS = Object.values(TRACKS).flat();
 const stepById = id => ALL_STEPS.find(s => s.id === id);
@@ -160,4 +167,4 @@ function render(template, lead, times = {}, meeting = {}) {
 const renderFor = (step, template, lead, times, meeting) =>
   render(template, step.channel === 'sms' ? { ...lead, greet_name: lead.sms_name || '' } : lead, times, meeting);
 
-module.exports = { SUBJECT, TRACKS, ALL_STEPS, stepById, usesTimes, render: renderFor, frustrationLine, nameInDoubt };
+module.exports = { SUBJECT, TRACKS, DISABLED_TRACKS, ALL_STEPS, stepById, usesTimes, render: renderFor, frustrationLine, nameInDoubt };

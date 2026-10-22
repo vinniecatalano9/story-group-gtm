@@ -188,8 +188,12 @@ const OUTCOMES = {
 };
 
 async function setOutcome(email, outcome, { meeting_at, source = '' } = {}) {
-  const o = OUTCOMES[outcome];
-  if (!o) throw new Error(`Unknown outcome ${outcome}`);
+  const base = OUTCOMES[outcome];
+  if (!base) throw new Error(`Unknown outcome ${outcome}`);
+  // After-contact tracks are off (Vincent, 10/22): the outcome's effects still
+  // run (sheet, Nutshell, Telegram) but nothing sends; Vincent takes it by hand.
+  const manual = base.track && copy.DISABLED_TRACKS.includes(base.track);
+  const o = manual ? { ...base, track: null } : base;
   const lead = await getLead(email);
   if (!lead) throw new Error('Lead not found');
   if (lead.state === 'opted_out' && o.track) throw new Error('This lead texted STOP: no more automated touches');
@@ -199,7 +203,8 @@ async function setOutcome(email, outcome, { meeting_at, source = '' } = {}) {
   const patch = {
     state: o.state, running: !!o.track, track: o.track, outcome, outcome_at: new Date(),
     track_started_at: new Date(), day1: o.track ? z.dayKey(z.parts(new Date(), lead.tz)) : null,
-    blocked_reason: null, pending_approval: null, sheet_dirty: true,
+    blocked_reason: null, pending_approval: null, sheet_dirty: true, manual: !!manual,
+    next_step: null, next_due_at: null, next_touch_label: manual ? 'Manual (Vincent)' : '',
     no_show_marked: false, meeting_at: meetingAt, meeting_label: meetingAt ? slots.slotLabel(meetingAt) + ' ET' : null,
   };
   // The intro steps stay in steps_done; a new track's steps are fresh.
@@ -312,7 +317,7 @@ async function listCopy() {
       id: s.id, label: s.label, channel: s.channel, day: s.day || null,
       default_template: s.template, default_approved: !!s.approved,
       body: sv ? sv.body : '', subject: sv ? sv.subject || '' : '',
-      status: sv ? 'saved by Vincent' : s.approved ? 'approved' : 'draft: blocked until approved',
+      status: s.disabled ? 'off (after-contact plays paused)' : sv ? 'saved by Vincent' : s.approved ? 'approved' : 'draft: blocked until approved',
     };
   });
 }
@@ -784,7 +789,7 @@ async function syncSheet({ all = false } = {}) {
   const n = await require('./adLeadsSheet').writeBack(leads.map(l => ({
     email: l.email, status: l.state, last_touch: l.last_touch_label || '',
     next_touch: l.running ? (l.pending_approval ? `${l.next_touch_label || ''} (waiting on Vincent)` : l.next_touch_label || '')
-      : l.state === 'done' ? 'Done: no reply' : l.state === 'opted_out' ? 'Texted STOP' : '',
+      : l.state === 'done' ? 'Done: no reply' : l.state === 'opted_out' ? 'Texted STOP' : l.manual ? 'Manual (Vincent)' : '',
   })));
   if (n !== null) await Promise.all(leads.map(l => leadsCol().doc(l.email).update({ sheet_dirty: false })));
   return n;

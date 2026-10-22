@@ -115,16 +115,16 @@ function LeadRow({ lead, api, onChange, setErr }) {
         <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${STATE_STYLE[lead.state] || STATE_STYLE.imported}`}>{STATE_LABEL[lead.state] || lead.state}</span>
         <div className="text-[11px] text-muted min-w-[160px]">
           <div>Last: {lead.last_touch_label || '–'}</div>
-          <div>Next: {lead.running ? (lead.pending_approval ? 'waiting on your tap' : lead.next_touch_label || '–') : '–'}</div>
+          <div>Next: {lead.running ? (lead.pending_approval ? 'waiting on your tap' : lead.next_touch_label || '–') : lead.manual ? 'Manual (you)' : '–'}</div>
         </div>
-        {!lead.running && !['opted_out'].includes(lead.state) && lead.state !== 'replied' && (
+        {!lead.running && !lead.manual && !['opted_out'].includes(lead.state) && lead.state !== 'replied' && (
           <Btn kind="primary" disabled={busy} onClick={async () => { if (await call('start', {})) onChange(); }}>Tag: start cadence</Btn>
         )}
       </div>
       {lead.blocked_reason && lead.running && <p className="text-xs text-yellow-400 mt-2">Blocked: {lead.blocked_reason}</p>}
       {lead.hold_reason && <p className="text-xs text-yellow-400 mt-2">On hold: {lead.hold_reason}</p>}
 
-      {(lead.state === 'replied' || lead.running || open) && lead.state !== 'opted_out' && (
+      {(lead.state === 'replied' || lead.running || lead.manual || open) && lead.state !== 'opted_out' && (
         <div className="flex flex-wrap items-center gap-2 mt-3">
           <span className="text-[10px] uppercase tracking-[0.14em] text-muted mr-1">Outcome</span>
           <Btn disabled={busy} onClick={() => outcome('hit_once')}>Hit once</Btn>
