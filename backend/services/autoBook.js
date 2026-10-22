@@ -187,7 +187,7 @@ async function handleReply(lead, text) {
     const token = crypto.randomBytes(18).toString('base64url');
     const ref = bookingsCol().doc();
     await ref.set({ email: lead.email, name: cadence.fullName(lead), at: m.at, why: m.why, status: 'pending', token, created_at: new Date() });
-    const invite = cadence.realEmail(lead) && cadence.canEmail(lead) ? 'Their calendar invite with a Meet link' : 'A phone call on your calendar (no working email)';
+    const invite = cadence.realEmail(lead) && cadence.canEmail(lead) ? 'their calendar invite with a Meet link' : 'a phone call on your calendar (no working email)';
     return {
       line: `📅 They picked <b>${label} ET</b>. One tap books it: ${invite}, then the confirm text and reminders.`,
       button: { text: `📅 Book ${z.DOW[z.parts(m.at, ET).dow]} ${z.clock(m.at, ET)}`, url: `${PUBLIC_URL()}/api/cadence/book/${ref.id}?t=${token}` },
