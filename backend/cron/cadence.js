@@ -21,10 +21,23 @@ async function runDispatcher() {
   return r;
 }
 
-/** Every minute: New Lead emails become tagged leads with their first card queued. */
+/**
+ * Every minute: New Lead emails become tagged leads with their first card queued.
+ * Quiet in the PM2 log (no logrotate on the VPS): a line only when it finds a New
+ * Lead, and an error once, then again only if it changes or an hour passes.
+ */
+let _lastErr = null;
 async function runIntake() {
-  const r = await cadence.runIntake();
+  let r, err = null;
+  try { r = await cadence.runIntake(); err = r && r.error; } catch (e) { err = e.message; }
   if (r && (r.added?.length || r.skipped?.length)) console.log('[intake]', JSON.stringify(r));
+  if (err && (!_lastErr || _lastErr.msg !== err || Date.now() - _lastErr.at > 36e5)) {
+    console.error('[intake] error:', err);
+    _lastErr = { msg: err, at: Date.now() };
+  } else if (!err && _lastErr) {
+    console.log('[intake] working again');
+    _lastErr = null;
+  }
   return r;
 }
 

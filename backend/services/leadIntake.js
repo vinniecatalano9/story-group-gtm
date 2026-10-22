@@ -164,8 +164,7 @@ async function run() {
       // Sheet down: release the claim and try again next run.
       await ref.delete().catch(() => {});
       handled.delete(m.message_id);
-      console.warn('[intake] sheet append failed, retrying next run:', e.message);
-      out.error = e.message;
+      out.error = `sheet append failed, retrying next run: ${e.message}`; // cron/cadence.js logs it
       break;
     }
     seen.push({ where: `sheet row ${row} (Vincent)`, email: p.email, phone: p.phone });
