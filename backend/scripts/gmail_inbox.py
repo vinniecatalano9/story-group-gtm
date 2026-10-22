@@ -11,10 +11,11 @@ Reads JSON on stdin, one of:
       Hard bounces (mailer-daemon / postmaster / delivery status notices) since
       that day that name one of those addresses or reply to one of our
       Message-IDs. Delay notices ("will retry") don't count.
-  {"op": "new_leads", "since": "2026-10-22"}
+  {"op": "new_leads", "since": "2026-10-22", "skip": ["<message-id>", ...]}
       -> {"ok": true, "messages": [{from, subject, date, message_id, body}]}
       "New Lead" emails since that day, not from this mailbox, in All Mail.
       body is the plain text (HTML turned into lines) for services/leadIntake.js.
+      Messages whose Message-ID is in skip are left out without fetching the body.
   {"op": "signature"}
       -> {"ok": true, "html": "..."}  the gmail_signature block from the newest
       sent email that has one ("" when none found).
@@ -180,8 +181,13 @@ def new_leads(req):
     m.select('"[Gmail]/All Mail"', readonly=True)
     since = datetime.strptime(req["since"][:10], "%Y-%m-%d").strftime("%d-%b-%Y")
     typ, data = m.search(None, "SUBJECT", '"New Lead"', "SINCE", since)
+    skip = set(req.get("skip") or [])
     out = []
     for i in (data[0].split() if typ == "OK" else [])[-100:]:
+        if skip:
+            typ, h = m.fetch(i, "(BODY.PEEK[HEADER.FIELDS (MESSAGE-ID)])")
+            if email.message_from_bytes(h[0][1]).get("Message-ID", "").strip() in skip:
+                continue
         typ, d = m.fetch(i, "(BODY.PEEK[])")
         msg = email.message_from_bytes(d[0][1])
         subj = hdr(msg.get("Subject"))

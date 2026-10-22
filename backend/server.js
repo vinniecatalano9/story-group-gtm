@@ -928,6 +928,17 @@ cron.schedule('* * * * *', async () => {
   }
 }, { timezone: 'America/Chicago' });
 
+// New Lead intake: every minute, "New Lead" emails become sheet rows and tagged
+// ad leads with their first card queued (services/leadIntake.js).
+cron.schedule('* * * * *', async () => {
+  try {
+    const { runIntake } = require('./cron/cadence');
+    await runIntake();
+  } catch (e) {
+    console.error('[cron] New Lead intake error:', e.message);
+  }
+}, { timezone: 'America/Chicago' });
+
 // LinkedIn queue sync: every 30 min — clear replies already answered in
 // HeyReach, refresh stale reply text, sync Interested auto-tags.
 cron.schedule('*/30 * * * *', async () => {

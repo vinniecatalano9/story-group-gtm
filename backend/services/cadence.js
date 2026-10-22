@@ -772,6 +772,7 @@ async function approve(id, { text, subject } = {}) {
   await ref.update(patch);
   // Through the guarded dispatcher, so two quick approvals can't both pass the
   // Email 1 gap check. If a run is going, the per-minute dispatcher sends it.
+  await lockFree(20000); // a short dispatcher or intake run: wait, so the tap sends now
   const r = await dispatchApproved();
   if (r.skipped) return { status: 'waiting: goes out within a minute or two' };
   return r.results[id] || { status: 'waiting' };
@@ -821,8 +822,12 @@ async function dispatch(id) {
   }
   if (a.step === 'email1') {
     const meta = (await metaDoc('state').get()).data() || {};
-    const next = toDate(meta.next_email1_after) || (meta.last_email1_at ? new Date(toDate(meta.last_email1_at).getTime() + EMAIL1_GAP_MIN[0] * 6e4) : null);
-    if (next && now < next) return { status: `waiting: next first email goes after ${z.clock(next, 'America/Chicago')} CT (random 8 to 13 min gaps)` };
+    const last = toDate(meta.last_email1_at);
+    const next = toDate(meta.next_email1_after) || (last ? new Date(last.getTime() + EMAIL1_GAP_MIN[0] * 6e4) : null);
+    // Spacing only when another Email 1 went out in the last 8 minutes (Vincent, 10/22):
+    // a card approved later sends at once; one approved inside that 8 still waits its full random gap.
+    const soon = last && Math.min(now, toDate(a.approved_at) || now) - last < EMAIL1_GAP_MIN[0] * 6e4;
+    if (soon && next && now < next) return { status: `waiting: next first email goes after ${z.clock(next, 'America/Chicago')} CT (random 8 to 13 min gaps)` };
   }
   if (a.step === 'text1' && (lead.state === 'replied')) {
     await ref.update({ status: 'cancelled', cancel_reason: 'already replied' });
@@ -1182,6 +1187,11 @@ async function syncSheet({ all = false } = {}) {
 
 let _running = false;
 
+/** Resolves once no run holds the guard, or after ms. */
+async function lockFree(ms) {
+  for (const end = Date.now() + ms; _running && Date.now() < end;) await new Promise(r => setTimeout(r, 500));
+}
+
 /** Send every approved card that can go now, oldest approval first. Caller holds _running. */
 async function sendApproved() {
   const snap = await approvalsCol().where('status', '==', 'approved').get();
@@ -1212,14 +1222,79 @@ async function dispatchApproved() {
     refreshBatchCard().catch(e => console.warn('[cadence] batch card:', e.message));
   }
 }
+
+/**
+ * Queue (or in live mode send) this lead's next step if it's due and in its
+ * window. Used by the tick for every running lead, and by the New Lead
+ * intake right after tagging, so a new lead's first card doesn't wait for the tick.
+ * Caller holds _running.
+ */
+async function queueDue(email, out = { queued: [], sent: [], blocked: [] }) {
+  const lead = await getLead(email);
+  if (!lead || !lead.running || lead.pending_approval) return out;
+  const fresh = await refreshNext(lead.email);
+  const n = nextStep(fresh);
+  if (!n || n.skip || n.due > new Date()) return out;
+  if (!n.ignoreWindow && !inWindow(new Date(), fresh.tz)) return out;
+  if (n.step.channel === 'sms') {
+    const meta = (await metaDoc('state').get()).data() || {};
+    if (meta.sms_read_ok !== true) { await block(fresh, "Texts are off until RingCentral can read inbound texts (add the SMS and Read Messages scopes)"); out.blocked.push(fresh.email); return out; }
+  }
+  let note = null;
+  if (n.step.id === 'noshow' && !fresh.no_show_marked) {
+    const since = new Date(toDate(fresh.meeting_at).getTime() - 15 * 6e4).toISOString();
+    const called = await require('./ringcentral').hadCallWith(fresh.phone, since).catch(e => { console.warn('[cadence] no-show call check:', e.message); return null; });
+    if (called) {
+      await saveLead(fresh.email, { 'steps_done.noshow': { status: 'skipped', reason: 'the call happened', at: new Date() } });
+      await refreshNext(fresh.email);
+      return out;
+    }
+    note = called === null
+      ? "Couldn't check RingCentral for the call. Send only if it really was a no-show."
+      : 'No RingCentral call with this number since the start. Send only if it really was a no-show (a Meet or cell call would not show).';
+  }
+  if (n.step.channel === 'email') {
+    const g = await emailGate(fresh.email);
+    if (g.block) { await block(fresh, g.block); out.blocked.push(fresh.email); return out; }
+    if (g.stop) { await refreshNext(fresh.email); return out; }
+  }
+  const msg = await buildMessage(await getLead(fresh.email), n.step);
+  if (note) msg.note = note;
+  if (msg.blocked) { await block(fresh, msg.blocked); out.blocked.push(fresh.email); return out; }
+  const a = await queueStep(fresh, n.step, msg);
+  out.queued.push(`${fresh.email} ${n.step.id}`);
+  if (a.status === 'approved') {
+    const r = await dispatch(a.id);
+    if (r.status === 'sent') out.sent.push(`${fresh.email} ${n.step.id}`);
+  }
+  return out;
+}
+
+/**
+ * The every-minute New Lead intake (services/leadIntake.js): new rows, tags and
+ * their first card within a minute of the email. Shares the tick's guard.
+ */
+async function runIntake() {
+  if (MODE() === 'off') return { skipped: 'CADENCE_MODE=off' };
+  // The dispatcher fires on the same minute: wait out a short run instead of skipping.
+  await lockFree(40000);
+  if (_running) return { skipped: 'a run is going' };
+  _running = true;
+  try {
+    const r = await require('./leadIntake').run();
+    if (r.added.length) await syncSheet().catch(e => console.warn('[cadence] sheet sync:', e.message));
+    return r;
+  } finally {
+    _running = false;
+  }
+}
+
 async function tick() {
   if (MODE() === 'off') return { skipped: 'CADENCE_MODE=off' };
   if (_running) return { skipped: 'previous run still going' };
   _running = true;
   const out = { queued: [], sent: [], waiting: [], blocked: [] };
   try {
-    // New Lead emails first, so a new lead's first card goes out on this same run.
-    out.intake = await require('./leadIntake').run().catch(e => ({ error: e.message }));
     out.replies = await checkReplies();
     out.calls = await require('./cadenceCalls').checkCalls().catch(e => ({ error: e.message }));
 
@@ -1228,41 +1303,7 @@ async function tick() {
     for (const [id, x] of Object.entries(r)) (x.status === 'sent' ? out.sent : out.waiting).push(`${x.email} ${x.step}: ${x.status}`);
 
     for (const lead of (await listLeads()).filter(l => l.running && !l.pending_approval)) {
-      const fresh = await refreshNext(lead.email);
-      const n = nextStep(fresh);
-      if (!n || n.skip || n.due > new Date()) continue;
-      if (!n.ignoreWindow && !inWindow(new Date(), fresh.tz)) continue;
-      if (n.step.channel === 'sms') {
-        const meta = (await metaDoc('state').get()).data() || {};
-        if (meta.sms_read_ok !== true) { await block(fresh, "Texts are off until RingCentral can read inbound texts (add the SMS and Read Messages scopes)"); out.blocked.push(fresh.email); continue; }
-      }
-      let note = null;
-      if (n.step.id === 'noshow' && !fresh.no_show_marked) {
-        const since = new Date(toDate(fresh.meeting_at).getTime() - 15 * 6e4).toISOString();
-        const called = await require('./ringcentral').hadCallWith(fresh.phone, since).catch(e => { console.warn('[cadence] no-show call check:', e.message); return null; });
-        if (called) {
-          await saveLead(fresh.email, { 'steps_done.noshow': { status: 'skipped', reason: 'the call happened', at: new Date() } });
-          await refreshNext(fresh.email);
-          continue;
-        }
-        note = called === null
-          ? "Couldn't check RingCentral for the call. Send only if it really was a no-show."
-          : 'No RingCentral call with this number since the start. Send only if it really was a no-show (a Meet or cell call would not show).';
-      }
-      if (n.step.channel === 'email') {
-        const g = await emailGate(fresh.email);
-        if (g.block) { await block(fresh, g.block); out.blocked.push(fresh.email); continue; }
-        if (g.stop) { await refreshNext(fresh.email); continue; }
-      }
-      const msg = await buildMessage(await getLead(fresh.email), n.step);
-      if (note) msg.note = note;
-      if (msg.blocked) { await block(fresh, msg.blocked); out.blocked.push(fresh.email); continue; }
-      const a = await queueStep(fresh, n.step, msg);
-      out.queued.push(`${fresh.email} ${n.step.id}`);
-      if (a.status === 'approved') {
-        const r = await dispatch(a.id);
-        if (r.status === 'sent') out.sent.push(`${fresh.email} ${n.step.id}`);
-      }
+      await queueDue(lead.email, out);
     }
     out.sheet_rows = await syncSheet();
     await require('./clearout').checkUsageAlert().catch(e => console.warn('[cadence] Clearout usage alert:', e.message));
@@ -1334,5 +1375,5 @@ async function status() {
 module.exports = {
   MODE, importLeads, updateLead, startLead, setOutcome, markNoShow, listLeads, getLead, refreshNext, nextStep,
   listCopy, saveCopy, approve, skip, dispatch, tick, checkReplies, syncSheet, dryRun, status, inWindow, intoWindow,
-  approvalsCol, queueStep, drainNutshell, touchesSoFar, dispatchApproved, rebuildPending, markChannelDead, realEmail, verifyLeadEmail, setEmailDecision, emailGate, emailHeld, pendingCards, approveMany, checkBatchToken, refreshBatchCard, cardTimes, ping, fullName, esc, DASHBOARD_URL, gmailInbox,
+  approvalsCol, queueStep, drainNutshell, touchesSoFar, dispatchApproved, rebuildPending, markChannelDead, realEmail, verifyLeadEmail, setEmailDecision, emailGate, emailHeld, pendingCards, approveMany, checkBatchToken, refreshBatchCard, cardTimes, ping, fullName, esc, DASHBOARD_URL, gmailInbox, queueDue, runIntake,
 };

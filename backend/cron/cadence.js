@@ -1,5 +1,4 @@
-// cron/cadence.js — every 10 minutes: turn new "New Lead" emails into tagged
-// leads (services/leadIntake.js), check ad lead replies (email over IMAP,
+// cron/cadence.js — every 10 minutes: check ad lead replies (email over IMAP,
 // texts from RingCentral), send or queue whatever step is due, and keep the
 // shared sheet's Outreach Status / Last Touch / Next Touch current.
 // All the logic is in services/cadence.js.
@@ -8,7 +7,7 @@ const cadence = require('../services/cadence');
 
 async function runCadence() {
   const r = await cadence.tick();
-  if (r && (r.intake?.added?.length || r.intake?.skipped?.length || r.intake?.error || r.queued?.length || r.sent?.length || r.replies?.email || r.replies?.sms || r.blocked?.length)) {
+  if (r && (r.queued?.length || r.sent?.length || r.replies?.email || r.replies?.sms || r.blocked?.length)) {
     console.log('[cadence]', JSON.stringify(r));
   }
   return r;
@@ -22,4 +21,11 @@ async function runDispatcher() {
   return r;
 }
 
-module.exports = { runCadence, runDispatcher };
+/** Every minute: New Lead emails become tagged leads with their first card queued. */
+async function runIntake() {
+  const r = await cadence.runIntake();
+  if (r && (r.added?.length || r.skipped?.length)) console.log('[intake]', JSON.stringify(r));
+  return r;
+}
+
+module.exports = { runCadence, runDispatcher, runIntake };

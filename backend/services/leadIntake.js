@@ -1,10 +1,11 @@
 // services/leadIntake.js — "New Lead" emails start the ad lead cadence on their own (Vincent, 10/22).
 //
-// Runs first thing in the cadence's 10-minute tick. Every "New Lead" email in
+// Runs every minute on its own cron (cadence.runIntake, under the cadence's
+// lock). Every "New Lead" email in
 // vincent@storygroup.io (not from Vincent) becomes a row in the ad leads sheet
 // (Channel ad/form, Lead Status complete, Assigned Rep Vincent; Notes never
-// written), then is imported, Clearout-checked and tagged, so the same tick
-// queues the Email 1 card (or the intro text for a texts-only lead).
+// written), then is imported, Clearout-checked and tagged, and its Email 1
+// card (or the intro text for a texts-only lead) is queued right then.
 //
 // Each email is handled once: lead_intake/{sha1 of Message-ID} is claimed
 // before anything is written. A lead already in the sheet (any rep's row) or
@@ -19,6 +20,8 @@ const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const TEST_EMAIL = /@(storygroup\.io|example\.(com|net|org))$|\.(test|invalid|example)$/i;
 
 function db() { return require('./db').db; }
+// Message-IDs this process already handled: IMAP skips their bodies, Firestore isn't asked again.
+const handled = new Set();
 const intakeCol = () => db().collection('lead_intake');
 const metaDoc = () => db().collection('cadence_meta').doc('lead_intake');
 const idFor = mid => crypto.createHash('sha1').update(String(mid)).digest('hex');
@@ -113,7 +116,7 @@ function decide(p, seen) {
 
 async function fetchEmails(since) {
   const day = new Date(since.getTime() - 864e5).toISOString().slice(0, 10); // IMAP SINCE is a date
-  const r = await require('./cadence').gmailInbox({ op: 'new_leads', since: day });
+  const r = await require('./cadence').gmailInbox({ op: 'new_leads', since: day, skip: [...handled] });
   if (!r.ok) throw new Error(`IMAP: ${r.error}`);
   return r.messages.filter(m => m.message_id).sort((a, b) => new Date(a.date) - new Date(b.date));
 }
@@ -129,13 +132,16 @@ async function run() {
     since = new Date(Date.now() - INTAKE_LOOKBACK_MS);
     await metaDoc().set({ since, started_at: new Date() });
   }
-  const msgs = (await fetchEmails(since)).filter(m => !m.date || new Date(m.date) >= since);
+  // IMAP looks back one day past the newer of the cutoff and yesterday: cheap every minute.
+  const msgs = (await fetchEmails(new Date(Math.max(since, Date.now() - 864e5)))).filter(m => !m.date || new Date(m.date) >= since);
   const out = { checked: msgs.length, added: [], skipped: [] };
   let seen = null;
   for (const m of msgs) {
+    if (handled.has(m.message_id)) continue;
     const ref = intakeCol().doc(idFor(m.message_id));
     // Claim it first so a crash after the sheet write can never add the row twice.
-    try { await ref.create({ message_id: m.message_id, date: m.date, status: 'claimed', at: new Date() }); } catch { continue; }
+    try { await ref.create({ message_id: m.message_id, date: m.date, status: 'claimed', at: new Date() }); } catch { handled.add(m.message_id); continue; }
+    handled.add(m.message_id);
     const p = parseLeadEmail(m);
     seen = seen || (await known());
     const d = decide(p, seen);
@@ -157,6 +163,7 @@ async function run() {
     } catch (e) {
       // Sheet down: release the claim and try again next run.
       await ref.delete().catch(() => {});
+      handled.delete(m.message_id);
       console.warn('[intake] sheet append failed, retrying next run:', e.message);
       out.error = e.message;
       break;
@@ -169,9 +176,13 @@ async function run() {
       await cadence.startLead(key);
       const lead = await cadence.getLead(key);
       const c = lead.email_check;
-      await ref.update({ status: 'started', lead: key });
       out.added.push(key);
       await ping(`🆕 New ad lead <b>${who}</b> is in sheet row ${row} and the cadence started.\n${[p.email, p.phone, p.role, p.frustration].filter(Boolean).map(esc).join(' · ')}${c ? `\nClearout: ${esc(c.status)}` : ''}\nNext: ${esc(lead.next_touch_label || 'see the Ad Leads page')}`);
+      // First card now, not on the next tick (speed to lead).
+      const q = await cadence.queueDue(key);
+      const lag = m.date ? Math.round((Date.now() - new Date(m.date)) / 1000) : null;
+      await ref.update({ status: 'started', lead: key, queued: q.queued, blocked: q.blocked, card_at: new Date(), seconds_from_email: lag });
+      if (q.queued.length) console.log(`[intake] ${key}: ${q.queued.join(', ')} queued ${lag}s after the email`);
     } catch (e) {
       await ref.update({ status: 'start_failed', error: e.message });
       out.skipped.push(`${p.email || p.phone}: start failed (${e.message})`);
