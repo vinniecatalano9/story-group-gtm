@@ -198,6 +198,21 @@ async function releaseHolds(key) {
 }
 
 /**
+ * A follow-up with new times went out: free this lead's older held times and
+ * keep only the ones it just offered (Vincent, 10/22). A late yes to an old
+ * time still books if the calendar is free (autoBook rechecks it).
+ */
+async function releaseHoldsExcept(key, keep = []) {
+  if (!key) return 0;
+  const { db } = require('./db');
+  const keepMs = new Set(keep.filter(Boolean).map(t => toDate(t).getTime()));
+  const snap = await db.collection('slot_holds').where('reply_id', '==', key).get();
+  const stale = snap.docs.filter(d => !keepMs.has(toDate(d.data().start).getTime()));
+  await Promise.all(stale.map(d => d.ref.delete()));
+  return stale.length;
+}
+
+/**
  * Vincent's own view (10/22): every 30 min in the cadence's windows (10 to 12
  * and 2 to 5 ET) from today through the next `days` business days, split into
  * open (free on the calendar, offered to no one) and promised (held for a
@@ -241,4 +256,4 @@ async function openTimes({ days = LOOKAHEAD_DAYS } = {}) {
   return out;
 }
 
-module.exports = { planOffer, holdOffer, releaseHolds, labels, slotLabel, dayLabel, calendarBusy, openTimes, CALENDARS };
+module.exports = { planOffer, holdOffer, releaseHolds, releaseHoldsExcept, labels, slotLabel, dayLabel, calendarBusy, openTimes, CALENDARS };

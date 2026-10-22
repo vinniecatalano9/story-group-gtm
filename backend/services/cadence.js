@@ -881,6 +881,11 @@ async function dispatch(id) {
       sentId = String(r.id);
     }
     await ref.update({ status: 'sent', sent_at: now, sent_id: sentId });
+    // New times went out: the lead's older held times go back in the pool.
+    if (a.offer && [a.offer.today, a.offer.am, a.offer.pm].some(Boolean)) {
+      await slots.releaseHoldsExcept(holdKey(lead.email), [a.offer.today, a.offer.am, a.offer.pm])
+        .catch(e => console.warn('[cadence] releasing older holds failed:', e.message));
+    }
     const patch = {
       pending_approval: null, blocked_reason: null, state: lead.state === 'blocked' ? 'active' : lead.state,
       [`steps_done.${a.step}`]: { status: 'sent', at: now, approval: id, channel: a.channel, sent_id: sentId },
