@@ -7,8 +7,8 @@
 //   events are free; all-day events only block when they say OOO, out of
 //   office, vacation, PTO, or holiday.
 // - Today: first open 30 min at least 1 hour after the send, ending by 5pm ET.
-// - Backup 1: first open 30 min, 10am to 12pm ET, next business day.
-// - Backup 2: first open 30 min, 2pm to 5pm ET, the business day after backup 1.
+// - Otherwise one business day (from tomorrow): first open 30 min 10am to
+//   12pm ET and first open 30 min 2pm to 5pm ET, both on that day.
 // - Every offered time is held in slot_holds so no other lead (or LinkedIn
 //   reply offer) gets it. A window that's full or held rolls to the next
 //   business day. A held time is offered again only once every open slot in
@@ -89,15 +89,17 @@ function candidates(day, fromHour, toHour, notBefore) {
 
 /**
  * Plan the times one lead is offered. Read-only: call holdOffer() to keep them.
+ * Vincent's format (10/22): a call today if there's room, else ONE business
+ * day with a morning time (10 to 12 ET) and an afternoon time (2 to 5 ET).
  * @param sendAt  when the message goes out
- * @param key     this lead's hold key; its own old holds don't block it
- * @returns { today, slot1, slot2 } as Dates (any can be null), and calendar notes
+ * @param key     this lead's hold key; its own holds don't block it
+ * @returns { today, day, am, pm } (Dates or null), and calendar notes
  */
 async function planOffer({ sendAt = new Date(), key = '' } = {}) {
   const sendEt = z.parts(sendAt, ET);
   const today = { y: sendEt.y, m: sendEt.m, d: sendEt.d, dow: sendEt.dow };
   const bizDays = [];
-  for (let x = z.addDays(today, 1); bizDays.length < LOOKAHEAD_DAYS + 2; x = z.addDays(x, 1)) if (z.isWeekday(x)) bizDays.push(x);
+  for (let x = z.addDays(today, 1); bizDays.length < LOOKAHEAD_DAYS; x = z.addDays(x, 1)) if (z.isWeekday(x)) bizDays.push(x);
   const last = bizDays[bizDays.length - 1];
 
   const { busy, unreadable } = await calendarBusy(z.instant(ET, today.y, today.m, today.d), z.instant(ET, last.y, last.m, last.d, 23, 59));
@@ -106,10 +108,7 @@ async function planOffer({ sendAt = new Date(), key = '' } = {}) {
   const now = new Date();
   const open = t => t > now && !overlaps(t, busy).length;
   const unheld = t => open(t) && !overlaps(t, holds).length;
-  // All open-but-held slots: the one whose hold is oldest is the one to share.
-  const oldestHeld = list => list.filter(open)
-    .map(t => ({ t, age: Math.min(...overlaps(t, holds).map(h => h.created_at.getTime())) }))
-    .sort((a, b) => a.age - b.age)[0];
+  const holdAge = t => Math.min(...overlaps(t, holds).map(h => h.created_at.getTime()));
 
   // Today: from 1 hour after the send (on the half hour), ending by 5pm ET.
   let todaySlot = null;
@@ -118,54 +117,68 @@ async function planOffer({ sendAt = new Date(), key = '' } = {}) {
     todaySlot = candidates(today, 9, 17, earliest).find(unheld) || null;
   }
 
-  const taken = [];
-  const pick = (days, fromH, toH) => {
-    for (const day of days) {
-      const t = candidates(day, fromH, toH).find(c => unheld(c) && !overlaps(c, taken).length);
-      if (t) return { t, day };
-    }
-    const all = days.flatMap(day => candidates(day, fromH, toH).map(t => ({ t, day }))).filter(x => !overlaps(x.t, taken).length);
-    const best = oldestHeld(all.map(x => x.t));
-    return best ? all.find(x => x.t === best.t) : null;
+  // First business day with an unheld morning and afternoon time. Only when
+  // every one of the next 5 business days is fully held does a held time get
+  // offered again, the oldest hold first.
+  let pick = null;
+  for (const day of bizDays) {
+    const am = candidates(day, 10, 12).find(unheld);
+    const pm = candidates(day, 14, 17).find(unheld);
+    if (am && pm) { pick = { day, am, pm }; break; }
+  }
+  if (!pick) {
+    const oldest = list => list.filter(open).sort((x, y) => holdAge(x) - holdAge(y))[0] || null;
+    const options = bizDays.map(day => ({ day, am: oldest(candidates(day, 10, 12)), pm: oldest(candidates(day, 14, 17)) }));
+    pick = options.find(o => o.am && o.pm) || options.find(o => o.am || o.pm) || null;
+  }
+  return {
+    today: todaySlot,
+    day: pick ? z.instant(ET, pick.day.y, pick.day.m, pick.day.d, 12) : null,
+    am: pick ? pick.am : null, pm: pick ? pick.pm : null,
+    unreadable, planned_at: now,
   };
-  const window5 = bizDays.slice(0, LOOKAHEAD_DAYS);
-  const b1 = pick(window5, 10, 12);
-  if (b1) taken.push({ start: b1.t, end: new Date(b1.t.getTime() + SLOT_MIN * 6e4) });
-  const after = b1 ? bizDays.filter(d => z.dayKey(d) > z.dayKey(b1.day)) : window5.slice(1);
-  const b2 = pick(after.slice(0, LOOKAHEAD_DAYS), 14, 17);
-
-  return { today: todaySlot, slot1: b1 ? b1.t : null, slot2: b2 ? b2.t : null, unreadable, planned_at: now };
 }
 
-/** Same calendar week (Mon to Sun) as `ref`, in ET. */
-function sameWeek(t, ref) {
-  const monday = d => { const p = z.parts(d, ET); return z.dayKey(z.addDays(p, -((p.dow + 6) % 7))); };
-  return monday(t) === monday(ref);
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+/**
+ * The day OR the date, never both (Vincent, 10/22): "Friday" within the next
+ * 7 days, "October 30" beyond that, "today" for today.
+ */
+function dayLabel(t, ref = new Date(), tz = ET) {
+  if (!t) return null;
+  const p = z.parts(t, tz);
+  const r = z.parts(ref, tz);
+  const diff = Math.round((Date.UTC(p.y, p.m - 1, p.d) - Date.UTC(r.y, r.m - 1, r.d)) / 864e5);
+  if (diff === 0) return 'today';
+  return diff > 0 && diff < 7 ? z.DOW[p.dow] : `${MONTHS[p.m - 1]} ${p.d}`;
 }
 
-/** "Friday at 10:00am" this week, "Monday 10/26 at 10:00am" after. */
+/** "Friday at 10:00am" / "October 30 at 2:00pm" (meeting labels and such). */
 function slotLabel(t, ref = new Date()) {
   if (!t) return null;
-  const p = z.parts(t, ET);
-  return sameWeek(t, ref) ? `${z.DOW[p.dow]} at ${z.clock(t, ET)}` : `${z.DOW[p.dow]} ${p.m}/${p.d} at ${z.clock(t, ET)}`;
+  return `${dayLabel(t, ref)} at ${z.clock(t, ET)}`;
 }
 
-/** Labels for the copy: { today_slot, slot_1, slot_2 } (strings or null). */
+/** Labels for the copy: { today, day, am, pm, time } (strings or null). */
 function labels(offer, ref = new Date()) {
   const asDate = v => (v ? toDate(v) : null);
   const t = asDate(offer && offer.today);
+  const am = asDate(offer && offer.am);
+  const pm = asDate(offer && offer.pm);
   return {
-    today_slot: t ? z.clock(t, ET) : null,
-    slot_1: slotLabel(asDate(offer && offer.slot1), ref),
-    slot_2: slotLabel(asDate(offer && offer.slot2), ref),
+    today: t ? z.clock(t, ET) : null,
+    day: dayLabel(asDate(offer && offer.day) || am || pm, ref),
+    am: am ? z.clock(am, ET) : null,
+    pm: pm ? z.clock(pm, ET) : null,
+    time: am ? z.clock(am, ET) : pm ? z.clock(pm, ET) : null,
   };
 }
 
-/** Keep these times for this lead (replaces its older holds). */
-async function holdOffer(offer, { key, name = '' }) {
-  await releaseHolds(key);
+/** Hold these offered times for this lead. Adds to its holds; each lapses once passed. */
+async function holdOffer(offer, { key, name = '', only = null } = {}) {
   const { db } = require('./db');
-  const times = [offer.today, offer.slot1, offer.slot2].filter(Boolean).map(toDate);
+  const times = (only || [offer.today, offer.am, offer.pm]).filter(Boolean).map(toDate);
   await Promise.all(times.map(t => db.collection('slot_holds').add({
     reply_id: key, source: 'cadence', name, label: slotLabel(t),
     start: t, end: new Date(t.getTime() + SLOT_MIN * 6e4), created_at: new Date(),
@@ -181,4 +194,4 @@ async function releaseHolds(key) {
   return snap.size;
 }
 
-module.exports = { planOffer, holdOffer, releaseHolds, labels, slotLabel, calendarBusy, CALENDARS };
+module.exports = { planOffer, holdOffer, releaseHolds, labels, slotLabel, dayLabel, calendarBusy, CALENDARS };

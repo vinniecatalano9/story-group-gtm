@@ -25,8 +25,9 @@ router.post('/import', wrap(async req => {
 
 router.post('/leads/:email/start', wrap(req => cadence.startLead(req.params.email)));
 router.post('/leads/:email/outcome', wrap(req => cadence.setOutcome(req.params.email, req.body.outcome, { meeting_at: req.body.meeting_at })));
+router.post('/leads/:email/noshow', wrap(req => cadence.markNoShow(req.params.email.toLowerCase())));
 router.post('/leads/:email/update', wrap(req => cadence.updateLead(req.params.email.toLowerCase(), req.body || {})));
-router.get('/leads/:email/preview', wrap(req => cadence.dryRun(req.params.email, { at: req.query.at })));
+router.get('/leads/:email/preview', wrap(req => cadence.dryRun(req.params.email, { at: req.query.at, track: req.query.track })));
 
 router.get('/copy', wrap(() => cadence.listCopy()));
 router.post('/copy/:step', wrap(async req => { await cadence.saveCopy(req.params.step, req.body || {}); return cadence.listCopy(); }));

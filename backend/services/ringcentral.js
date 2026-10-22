@@ -166,7 +166,20 @@ async function smsStatus() {
   return out;
 }
 
+/**
+ * Any call with this number since `since` (ISO): finished calls in the call
+ * log, or one in progress right now. For the meeting no-show check.
+ */
+async function hadCallWith(phone, since) {
+  const num = toE164(phone);
+  if (!num || !isConfigured()) return null;
+  const log = await api('/restapi/v1.0/account/~/extension/~/call-log', { phoneNumber: num.replace('+', ''), dateFrom: since, perPage: '20' });
+  if ((log.records || []).some(r => (r.duration || 0) > 0)) return true;
+  const live = await api('/restapi/v1.0/account/~/extension/~/active-calls', { perPage: '20' }).catch(() => ({ records: [] }));
+  return (live.records || []).some(r => [r.from && r.from.phoneNumber, r.to && r.to.phoneNumber].includes(num));
+}
+
 const STOP_WORDS = /^\s*(stop|stopall|unsubscribe|cancel|end|quit|stop all|remove me|opt out|optout)\s*[.!]?\s*$/i;
 const isStop = text => STOP_WORDS.test(String(text || ''));
 
-module.exports = { isConfigured, getToken, api, whoAmI, getRecordedCalls, sendSms, getInboundSms, smsStatus, toE164, isStop };
+module.exports = { isConfigured, getToken, api, whoAmI, getRecordedCalls, sendSms, getInboundSms, smsStatus, toE164, isStop, hadCallWith };

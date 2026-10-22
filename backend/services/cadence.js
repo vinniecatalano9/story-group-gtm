@@ -152,6 +152,15 @@ async function updateLead(email, patch) {
   return getLead(email);
 }
 
+/** Vincent marks a no-show: the no-show text is due now. */
+async function markNoShow(email) {
+  const lead = await getLead(email);
+  if (!lead || lead.track !== 'meeting') throw new Error('Only for a booked meeting');
+  await saveLead(lead.email, { no_show_marked: true });
+  await addTimeline(lead.email, timelineEntry('outcome', { text: 'Marked no-show' }));
+  return refreshNext(lead.email);
+}
+
 /** Tag: start the intro track. */
 async function startLead(email) {
   const lead = await getLead(email);
@@ -191,7 +200,7 @@ async function setOutcome(email, outcome, { meeting_at, source = '' } = {}) {
     state: o.state, running: !!o.track, track: o.track, outcome, outcome_at: new Date(),
     track_started_at: new Date(), day1: o.track ? z.dayKey(z.parts(new Date(), lead.tz)) : null,
     blocked_reason: null, pending_approval: null, sheet_dirty: true,
-    meeting_at: meetingAt, meeting_label: meetingAt ? slots.slotLabel(meetingAt) + ' ET' : null,
+    no_show_marked: false, meeting_at: meetingAt, meeting_label: meetingAt ? slots.slotLabel(meetingAt) + ' ET' : null,
   };
   // The intro steps stay in steps_done; a new track's steps are fresh.
   if (o.track) {
@@ -224,7 +233,14 @@ function nextStep(lead) {
       if (due.getTime() < Date.now() - 30 * 6e4) return { step, skip: 'meeting reminder time passed' };
       return { step, due, ignoreWindow: true };
     }
-    if (step.id === 'email1') return { step, due: intoWindow(new Date(), tz) };
+    if (step.afterMeetingMinutes) {
+      if (!lead.meeting_at) return { step, skip: 'no meeting time' };
+      if (lead.no_show_marked) return { step, due: new Date(), ignoreWindow: true };
+      due = new Date(toDate(lead.meeting_at).getTime() + step.afterMeetingMinutes * 6e4);
+      if (due.getTime() < Date.now() - 2 * 36e5) return { step, skip: 'no-show window passed' };
+      return { step, due, ignoreWindow: true };
+    }
+    if (step.id === 'email1' || step.immediate) return { step, due: intoWindow(new Date(), tz) };
     if (step.afterMinutes) {
       const prev = steps[steps.indexOf(step) - 1];
       const prevAt = toDate(done[prev.id] && done[prev.id].at) || new Date();
@@ -276,26 +292,37 @@ async function refreshNext(email) {
 
 // ── Copy ─────────────────────────────────────────────────────────────────────
 
-async function stepCopy(stepId) {
-  const doc = await db().collection('cadence_copy').doc(stepId).get();
+/**
+ * The copy a step sends: Vincent's saved version (Firestore) first, else the
+ * approved copy in lib/cadenceCopy.js. A draft he hasn't approved returns null.
+ */
+async function stepCopy(step) {
+  const doc = await db().collection('cadence_copy').doc(step.id).get();
   const c = doc.exists ? doc.data() : null;
-  return c && String(c.body || '').trim() ? c : null;
+  if (c && String(c.body || '').trim()) return { template: c.body, subject: c.subject || '', source: 'saved' };
+  return step.approved ? { template: step.template, subject: step.subject || '', source: 'approved' } : null;
 }
 
 async function listCopy() {
   const snap = await db().collection('cadence_copy').get();
   const saved = Object.fromEntries(snap.docs.map(d => [d.id, d.data()]));
-  return copy.ALL_STEPS.map(s => ({
-    ...s,
-    approved_in_code: ['email1', 'text1'].includes(s.id),
-    body: saved[s.id] ? saved[s.id].body || '' : '',
-    subject: saved[s.id] ? saved[s.id].subject || '' : '',
-  }));
+  return copy.ALL_STEPS.map(s => {
+    const sv = saved[s.id] && String(saved[s.id].body || '').trim() ? saved[s.id] : null;
+    return {
+      id: s.id, label: s.label, channel: s.channel, day: s.day || null,
+      default_template: s.template, default_approved: !!s.approved,
+      body: sv ? sv.body : '', subject: sv ? sv.subject || '' : '',
+      status: sv ? 'saved by Vincent' : s.approved ? 'approved' : 'draft: blocked until approved',
+    };
+  });
 }
 
+/** Save (and so approve) a step's copy. Blank body = back to the copy in code. */
 async function saveCopy(stepId, { body, subject }) {
-  if (!copy.stepById(stepId) || ['email1', 'text1'].includes(stepId)) throw new Error('Not an editable step');
-  await db().collection('cadence_copy').doc(stepId).set({ body: String(body || ''), subject: String(subject || ''), updated_at: new Date() });
+  if (!copy.stepById(stepId)) throw new Error('Not a step');
+  const ref = db().collection('cadence_copy').doc(stepId);
+  if (!String(body || '').trim()) { await ref.delete(); return; }
+  await ref.set({ body: String(body), subject: String(subject || ''), approved_at: new Date(), updated_at: new Date() });
 }
 
 let _sig = null;
@@ -329,34 +356,46 @@ async function emailHtml(text) {
   return esc(text).replace(/\n/g, '<br>') + (sig ? `<br><br>${sig}` : '');
 }
 
-/** Usable times from a stored offer: drops a today slot under 30 min away and anything passed. */
+/** Times from a stored offer still worth offering: today's only if over an hour away. */
 function liveTimes(offer, now = new Date()) {
-  if (!offer) return { today_slot: null, slot_1: null, slot_2: null };
+  if (!offer) return {};
   const keep = (v, lead) => { const t = toDate(v); return t && t.getTime() > now.getTime() + lead * 6e4 ? t : null; };
-  const kept = { today: keep(offer.today, 30), slot1: keep(offer.slot1, 0), slot2: keep(offer.slot2, 0) };
-  return slots.labels(kept, now);
+  return slots.labels({ today: keep(offer.today, 60), day: offer.day, am: keep(offer.am, 0), pm: keep(offer.pm, 0) }, now);
+}
+
+/** Which planned times a template actually offers (only those get held). */
+function offeredTimes(template, offer) {
+  const out = [];
+  if (/\{(times_question|times_question_text|today|noshow_times)\}/.test(template) && offer.today) out.push(offer.today);
+  if (/\{(times_question|times_question_text|am|pm|noshow_times)\}/.test(template)) out.push(offer.am, offer.pm);
+  else if (/\{(day|time)\}/.test(template)) out.push(offer.am || offer.pm);
+  return out.filter(Boolean);
 }
 
 /**
- * Build what this step would send. Returns { subject, text, offer, blocked }.
- * For Email 1 this plans fresh times (holding them unless dryRun).
+ * Build what this step would send. Returns { subject, text, offer, times } or
+ * { blocked }. A step whose copy offers times plans fresh ones and holds them
+ * (unless dryRun); Text 1 reuses Email 1's.
  */
 async function buildMessage(lead, step, { sendAt = new Date(), dryRun = false } = {}) {
-  if (step.id === 'email1') {
-    if (lead.hold_reason) return { blocked: `On hold: ${lead.hold_reason}` };
-    const offer = await slots.planOffer({ sendAt, key: holdKey(lead.email) });
-    const times = slots.labels(offer, sendAt);
-    if (!dryRun) await slots.holdOffer(offer, { key: holdKey(lead.email), name: fullName(lead) });
-    return { ...copy.email1(lead, times), offer, times };
+  if (step.id === 'email1' && lead.hold_reason) return { blocked: `On hold: ${lead.hold_reason}` };
+  const c = await stepCopy(step);
+  if (!c) return { blocked: `${step.label} is a draft waiting for your OK (Ad Leads page > Step copy)` };
+  let offer = null;
+  let times = {};
+  if (step.reuseOffer) {
+    times = liveTimes(lead.offer, sendAt);
+  } else if (copy.usesTimes(c.template)) {
+    offer = await slots.planOffer({ sendAt, key: holdKey(lead.email) });
+    times = slots.labels(offer, sendAt);
   }
-  if (step.id === 'text1') {
-    const times = dryRun && lead.offer_preview ? slots.labels(lead.offer_preview, sendAt) : liveTimes(lead.offer, sendAt);
-    return { text: copy.text1(lead, times), times };
-  }
-  const c = await stepCopy(step.id);
-  if (!c) return { blocked: `${step.label} has no copy yet. Write it on the Ad Leads page.` };
-  const text = copy.fill(c.body, lead, liveTimes(lead.offer, sendAt));
-  return step.channel === 'email' ? { subject: c.subject || `Re: ${copy.SUBJECT}`, text } : { text };
+  const m = toDate(lead.meeting_at);
+  const meeting = m ? { day: slots.dayLabel(m, sendAt), time: z.clock(m, 'America/New_York') } : {};
+  const text = copy.render(step, c.template, lead, times, meeting);
+  if (text == null) return { blocked: `${step.label}: no open time to offer in the next 5 business days` };
+  if (offer && !dryRun) await slots.holdOffer(offer, { key: holdKey(lead.email), name: fullName(lead), only: offeredTimes(c.template, offer) });
+  const subject = step.channel === 'email' ? (c.subject || (step.id === 'email1' ? copy.SUBJECT : `Re: ${copy.SUBJECT}`)) : null;
+  return { subject, text, offer, times };
 }
 
 // ── Sending ──────────────────────────────────────────────────────────────────
@@ -384,7 +423,7 @@ async function queueStep(lead, step, msg) {
     email: lead.email, name: fullName(lead), step: step.id, step_label: step.label, channel: step.channel,
     to: step.channel === 'email' ? lead.email : lead.phone,
     subject: msg.subject || null, text: msg.text,
-    offer: msg.offer ? { today: msg.offer.today, slot1: msg.offer.slot1, slot2: msg.offer.slot2 } : null,
+    offer: msg.offer ? { today: msg.offer.today, day: msg.offer.day, am: msg.offer.am, pm: msg.offer.pm } : null,
     status: MODE() === 'live' ? 'approved' : 'pending', token, created_at: new Date(),
   };
   await ref.set(a);
@@ -392,14 +431,15 @@ async function queueStep(lead, step, msg) {
   await addTimeline(lead.email, timelineEntry('queued', { step: step.id, channel: step.channel, text: msg.text, subject: msg.subject || null, approval: ref.id }));
   if (a.status === 'pending') {
     const url = `${PUBLIC_URL()}/api/cadence/approval/${ref.id}?t=${token}`;
-    const times = msg.times ? [msg.times.today_slot && `today ${msg.times.today_slot}`, msg.times.slot_1, msg.times.slot_2].filter(Boolean).join(', ') : '';
+    const t = msg.times || {};
+    const times = [t.today && `today ${t.today}`, t.day && `${t.day} ${[t.am, t.pm].filter(Boolean).join(' or ')}`].filter(Boolean).join(', ');
     const card = [
       `<b>Ad lead cadence: ${esc(step.label)}</b> to ${esc(fullName(lead))}`,
       `${step.channel === 'email' ? 'Email' : 'Text'} to ${esc(a.to)}${lead.company ? ` (${esc(lead.company)})` : ''}`,
-      lead.hold_note ? `⚠️ ${esc(lead.hold_note)}` : '',
+      msg.note ? `⚠️ ${esc(msg.note)}` : '',
       a.subject ? `\nSubject: ${esc(a.subject)}` : '',
       `\n${esc(a.text)}`,
-      times ? `\nHeld times: ${esc(times)} ET` : '',
+      times && msg.offer ? `\nHeld times: ${esc(times)} ET` : '',
       '\nNothing goes out until you tap Send.',
     ].filter(Boolean).join('\n');
     const m = await ping(card, { reply_markup: { inline_keyboard: [[{ text: 'Review and send', url }]] } });
@@ -469,16 +509,19 @@ async function dispatch(id) {
   }
   const step = copy.stepById(a.step);
   const now = new Date();
-  if (!step.beforeMeetingMinutes && !inWindow(now, lead.tz)) return { status: `waiting: outside ${lead.first_name}'s send window, goes out ${shortDate(intoWindow(now, lead.tz), lead.tz)} after 9:30am their time` };
+  if (!step.beforeMeetingMinutes && !step.afterMeetingMinutes && !inWindow(now, lead.tz)) return { status: `waiting: outside ${lead.first_name}'s send window, goes out ${shortDate(intoWindow(now, lead.tz), lead.tz)} after 9:30am their time` };
 
+  // Times that went stale while the card waited: re-plan on a fresh card.
+  const off = a.offer || {};
+  const stale = (off.today && toDate(off.today).getTime() < now.getTime() + 45 * 6e4)
+    || [off.am, off.pm].some(t => t && toDate(t).getTime() < now.getTime() + 30 * 6e4);
+  if (stale) {
+    await ref.update({ status: 'stale' });
+    await markCard(a, 'Times went stale: a fresh card with new times is coming');
+    await saveLead(lead.email, { pending_approval: null });
+    return { status: 'stale' };
+  }
   if (a.step === 'email1') {
-    // Times that went stale while the card waited: re-plan on a fresh card.
-    if (a.offer && a.offer.today && toDate(a.offer.today).getTime() < now.getTime() + 45 * 6e4) {
-      await ref.update({ status: 'stale' });
-      await markCard(a, 'Times went stale: a fresh card with new times is coming');
-      await saveLead(lead.email, { pending_approval: null });
-      return { status: 'stale' };
-    }
     const meta = (await metaDoc('state').get()).data() || {};
     const last = toDate(meta.last_email1_at);
     if (last && now - last < EMAIL1_SPACING_MIN * 6e4) return { status: `waiting: first emails go ${EMAIL1_SPACING_MIN} min apart` };
@@ -773,7 +816,21 @@ async function tick() {
         const meta = (await metaDoc('state').get()).data() || {};
         if (meta.sms_read_ok !== true) { await block(fresh, "Texts are off until RingCentral can read inbound texts (add the SMS and Read Messages scopes)"); out.blocked.push(fresh.email); continue; }
       }
+      let note = null;
+      if (n.step.id === 'noshow' && !fresh.no_show_marked) {
+        const since = new Date(toDate(fresh.meeting_at).getTime() - 15 * 6e4).toISOString();
+        const called = await require('./ringcentral').hadCallWith(fresh.phone, since).catch(e => { console.warn('[cadence] no-show call check:', e.message); return null; });
+        if (called) {
+          await saveLead(fresh.email, { 'steps_done.noshow': { status: 'skipped', reason: 'the call happened', at: new Date() } });
+          await refreshNext(fresh.email);
+          continue;
+        }
+        note = called === null
+          ? "Couldn't check RingCentral for the call. Send only if it really was a no-show."
+          : 'No RingCentral call with this number since the start. Send only if it really was a no-show (a Meet or cell call would not show).';
+      }
       const msg = await buildMessage(fresh, n.step);
+      if (note) msg.note = note;
       if (msg.blocked) { await block(fresh, msg.blocked); out.blocked.push(fresh.email); continue; }
       const a = await queueStep(fresh, n.step, msg);
       out.queued.push(`${fresh.email} ${n.step.id}`);
@@ -797,24 +854,37 @@ async function tick() {
  * Exactly what Email 1 and Text 1 would say for this lead if it went out at
  * `at` (default: the next time their window is open). Holds nothing, sends nothing.
  */
-async function dryRun(email, { at } = {}) {
+async function dryRun(email, { at, track = 'intro' } = {}) {
   const lead = await getLead(email);
   if (!lead) throw new Error('Lead not found');
+  // Walk the track as if every step went out on time. Holds nothing, sends nothing.
+  // Later steps plan times against today's calendar and holds, so they're a preview.
   const sendAt = at ? new Date(at) : intoWindow(new Date(), lead.tz);
-  const step1 = copy.stepById('email1');
-  const e1 = await buildMessage({ ...lead, hold_reason: null }, step1, { sendAt, dryRun: true });
-  const textAt = intoWindow(new Date(sendAt.getTime() + 60 * 6e4), lead.tz);
-  const kept = { today: e1.offer.today, slot1: e1.offer.slot1, slot2: e1.offer.slot2 };
-  const t1 = lead.phone && !lead.email_only
-    ? copy.text1(lead, liveTimes(kept, textAt))
-    : null;
+  const sim = { ...lead, hold_reason: null, running: true, track, steps_done: {}, day1: null, email1_sent_at: null, offer: null };
+  const steps = [];
+  let first = null;
+  for (let guard = 0; guard < 12; guard++) {
+    const n = nextStep(sim);
+    if (!n) break;
+    if (n.skip) { steps.push({ step: n.step.id, label: n.step.label, skipped: n.skip }); sim.steps_done[n.step.id] = { status: 'skipped', at: null }; continue; }
+    const due = n.step.id === 'email1' ? sendAt : n.due;
+    const msg = await buildMessage(sim, n.step, { sendAt: due, dryRun: true });
+    if (n.step.id === 'email1') {
+      sim.email1_sent_at = due; sim.day1 = z.dayKey(z.parts(due, sim.tz));
+      sim.offer = msg.offer; first = msg;
+    }
+    steps.push({ step: n.step.id, label: n.step.label, channel: n.step.channel, send_at: due, subject: msg.subject || undefined, text: msg.text, blocked: msg.blocked, times: msg.times });
+    sim.steps_done[n.step.id] = { status: 'sent', at: due };
+  }
+  const e1 = steps.find(x => x.step === 'email1');
+  const t1 = steps.find(x => x.step === 'text1');
   return {
     lead: { name: fullName(lead), email: lead.email, phone: lead.phone, tz: lead.tz, role: lead.role, frustration: lead.frustration, hold_reason: lead.hold_reason || null },
-    email1: { send_at: sendAt, subject: e1.subject, text: e1.text, html: await emailHtml(e1.text) },
-    text1: t1 ? { send_at: textAt, text: t1 } : { skipped: 'email only' },
-    offered_times_et: e1.times,
-    offered_times_iso: { today: e1.offer.today, slot1: e1.offer.slot1, slot2: e1.offer.slot2 },
-    calendars_unreadable: e1.offer.unreadable,
+    email1: e1 ? { send_at: e1.send_at, subject: e1.subject, text: e1.text } : null,
+    text1: t1 && !t1.skipped ? { send_at: t1.send_at, text: t1.text } : { skipped: 'email only' },
+    offered_times_et: first ? first.times : null,
+    offered_times_iso: first && first.offer ? { today: first.offer.today, day: first.offer.day, am: first.offer.am, pm: first.offer.pm } : null,
+    steps,
     mode: MODE(),
   };
 }
@@ -836,7 +906,7 @@ async function status() {
 }
 
 module.exports = {
-  MODE, importLeads, updateLead, startLead, setOutcome, listLeads, getLead, refreshNext, nextStep,
+  MODE, importLeads, updateLead, startLead, setOutcome, markNoShow, listLeads, getLead, refreshNext, nextStep,
   listCopy, saveCopy, approve, skip, dispatch, tick, checkReplies, syncSheet, dryRun, status, inWindow, intoWindow,
   approvalsCol, queueStep, drainNutshell, ping, fullName, esc, DASHBOARD_URL,
 };

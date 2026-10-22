@@ -133,6 +133,7 @@ function LeadRow({ lead, api, onChange, setErr }) {
             className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-body" title="Meeting time (your local time)" />
           <Btn disabled={busy} onClick={() => outcome('meeting')}>Meeting yes</Btn>
           <Btn kind="danger" disabled={busy} onClick={() => outcome('not_interested')}>Not interested</Btn>
+          {lead.track === 'meeting' && lead.running && <Btn disabled={busy} onClick={async () => { if (await call('noshow', {})) onChange(); }}>No-show</Btn>}
           {lead.running && <Btn kind="danger" disabled={busy} onClick={() => outcome('stop')}>Stop</Btn>}
         </div>
       )}
@@ -168,16 +169,16 @@ function LeadRow({ lead, api, onChange, setErr }) {
               <Btn disabled={busy} onClick={async () => { if (await call('update', { greet_name: greet, hold_reason: hold })) onChange(); }}>Save</Btn>
             </div>
             <div>
-              <Btn disabled={busy} onClick={async () => setPreview(await call('preview'))}>Dry run Email 1 + Text 1</Btn>
+              <Btn disabled={busy} onClick={async () => setPreview(await call('preview'))}>Dry run the sequence</Btn>
               {preview && (
                 <div className="mt-2 text-xs space-y-2">
-                  <p className="text-muted">Email 1, if sent {fmt(preview.email1.send_at)}</p>
-                  <pre className="whitespace-pre-wrap text-body/80 bg-white/5 rounded-lg p-3">{`Subject: ${preview.email1.subject}\n\n${preview.email1.text}`}</pre>
-                  {preview.text1.text ? (<>
-                    <p className="text-muted">Text 1, {fmt(preview.text1.send_at)}</p>
-                    <pre className="whitespace-pre-wrap text-body/80 bg-white/5 rounded-lg p-3">{preview.text1.text}</pre>
-                  </>) : <p className="text-muted">Text 1: {preview.text1.skipped}</p>}
-                  {preview.calendars_unreadable?.length > 0 && <p className="text-yellow-400">Calendar not read: {preview.calendars_unreadable.map(c => c.id).join(', ')}</p>}
+                  {(preview.steps || []).map(st => (
+                    <div key={st.step}>
+                      <p className="text-muted">{st.label}{st.send_at ? `, ${fmt(st.send_at)}` : ''}{st.skipped ? `: skipped (${st.skipped})` : ''}</p>
+                      {st.blocked && <p className="text-yellow-400">Blocked: {st.blocked}</p>}
+                      {st.text && <pre className="whitespace-pre-wrap text-body/80 bg-white/5 rounded-lg p-3">{st.subject ? `Subject: ${st.subject}\n\n` : ''}{st.text}</pre>}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -192,30 +193,38 @@ function CopyEditor({ api, setErr }) {
   const [steps, setSteps] = useState([]);
   const [draft, setDraft] = useState({});
   useEffect(() => { fetch(`${api}/api/cadence/copy`).then(r => r.json()).then(d => Array.isArray(d) && setSteps(d)).catch(() => {}); }, [api]);
-  const save = async (s) => {
-    const d = draft[s.id] || {};
-    const r = await fetch(`${api}/api/cadence/copy/${s.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body: d.body ?? s.body, subject: d.subject ?? s.subject }) });
+  const save = async (s, body, subject) => {
+    const r = await fetch(`${api}/api/cadence/copy/${s.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body, subject }) });
     const out = await r.json();
     if (!r.ok) setErr(out.error); else { setSteps(out); setDraft({ ...draft, [s.id]: undefined }); }
   };
   return (
     <div className="glass-card rounded-xl p-4 space-y-4">
-      <p className="text-xs text-muted">Steps with no copy block the lead and never send. Variables: {'{first}'} {'{slot_1}'} {'{slot_2}'} {'{times_line}'} {'{meeting_time}'}. No booking links.</p>
-      {steps.map(s => (
-        <div key={s.id} className="border-t border-white/5 pt-3">
-          <p className="text-sm font-semibold text-body">{s.label} <span className="text-muted text-xs font-normal">{s.channel === 'sms' ? 'text' : 'email'}{s.day ? ` · day ${s.day}` : ''}</span>
-            {s.approved_in_code ? <span className="text-green-400 text-xs ml-2">approved copy</span> : !s.body && <span className="text-yellow-400 text-xs ml-2">[placeholder] blocks sending</span>}</p>
-          {!s.approved_in_code && (<>
-            {s.channel === 'email' && <input placeholder="Subject (blank = Re: Story Group: quick call?, same thread)" value={draft[s.id]?.subject ?? s.subject}
-              onChange={e => setDraft({ ...draft, [s.id]: { ...draft[s.id], subject: e.target.value } })}
+      <p className="text-xs text-muted">Drafts block their step until you approve or rewrite them. Saving a step's text approves it; clearing it goes back to the default.
+        Variables: {'{first} {day} {am} {pm} {time} {today} {meeting_day} {meeting_time}'}. Every message ends in one question. No booking links.</p>
+      {steps.map(s => {
+        const cur = draft[s.id] || {};
+        const body = cur.body ?? (s.body || s.default_template);
+        const subject = cur.subject ?? s.subject;
+        const tone = s.status.startsWith('draft') ? 'text-yellow-400' : 'text-green-400';
+        return (
+          <div key={s.id} className="border-t border-white/5 pt-3">
+            <p className="text-sm font-semibold text-body">{s.label} <span className="text-muted text-xs font-normal">{s.channel === 'sms' ? 'text' : 'email'}{s.day ? ` · day ${s.day}` : ''}</span>
+              <span className={`${tone} text-xs ml-2`}>{s.status}</span></p>
+            {s.channel === 'email' && <input placeholder="Subject (blank = same thread)" value={subject}
+              onChange={e => setDraft({ ...draft, [s.id]: { ...cur, subject: e.target.value } })}
               className="mt-2 w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-body" />}
-            <textarea rows={3} value={draft[s.id]?.body ?? s.body}
-              onChange={e => setDraft({ ...draft, [s.id]: { ...draft[s.id], body: e.target.value } })}
-              className="mt-2 w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-body" />
-            <Btn onClick={() => save(s)}>Save {s.label}</Btn>
-          </>)}
-        </div>
-      ))}
+            <textarea rows={Math.min(8, body.split('\n').length + 1)} value={body}
+              onChange={e => setDraft({ ...draft, [s.id]: { ...cur, body: e.target.value } })}
+              className="mt-2 w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-body font-mono" />
+            <div className="flex gap-2 mt-1">
+              {(cur.body !== undefined || cur.subject !== undefined) && <Btn kind="primary" onClick={() => save(s, body, subject)}>Save</Btn>}
+              {s.status.startsWith('draft') && cur.body === undefined && <Btn kind="primary" onClick={() => save(s, s.default_template, s.subject)}>Approve as written</Btn>}
+              {s.body && <Btn onClick={() => save(s, '', '')}>Back to default</Btn>}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
