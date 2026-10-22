@@ -784,47 +784,51 @@ if (process.env.ULINC_NEW_MESSAGE_URL) {
 }
 
 // Cron Jobs
+// Every schedule sets recoverMissedExecutions. node-cron 3 checks the clock with a
+// 1s timer, and when other work delays that check past the due second the run is
+// dropped with no log and no error (the 7am pre-call brief on 8/17 and 10/21, when
+// the 6am CT brains check fired in the same second). With the flag it runs late instead.
 // Weekly cleanup: Sunday 11pm EST
 cron.schedule('0 23 * * 0', async () => {
   console.log('[cron] Running weekly cleanup...');
   const { runCleanup } = require('./cron/cleanup');
   await runCleanup();
-}, { timezone: 'America/New_York' });
+}, { timezone: 'America/New_York', recoverMissedExecutions: true });
 
 // Weekly dashboard: Monday 8am EST
 cron.schedule('0 8 * * 1', async () => {
   console.log('[cron] Running weekly dashboard...');
   const { runDashboard } = require('./cron/dashboard');
   await runDashboard();
-}, { timezone: 'America/New_York' });
+}, { timezone: 'America/New_York', recoverMissedExecutions: true });
 
 // Daily metrics snapshot: Every day 11:59pm EST
 cron.schedule('59 23 * * *', async () => {
   console.log('[cron] Running daily metrics snapshot...');
   const { runDailyMetrics } = require('./cron/daily-metrics');
   await runDailyMetrics();
-}, { timezone: 'America/New_York' });
+}, { timezone: 'America/New_York', recoverMissedExecutions: true });
 
 // Morning GTM Brief: every day 7am CT
 cron.schedule('0 7 * * *', async () => {
   console.log('[cron] Running morning brief...');
   const { runBrief } = require('./cron/brief');
   await runBrief({ send: true });
-}, { timezone: 'America/Chicago' });
+}, { timezone: 'America/Chicago', recoverMissedExecutions: true });
 
 // Weekly GTM Insights: Monday 7:30am CT
 cron.schedule('30 7 * * 1', async () => {
   console.log('[cron] Running weekly insights...');
   const { runInsights } = require('./cron/insights');
   await runInsights({ send: true });
-}, { timezone: 'America/Chicago' });
+}, { timezone: 'America/Chicago', recoverMissedExecutions: true });
 
 // Brains health check: every 6 hours
 cron.schedule('0 */6 * * *', async () => {
   console.log('[cron] Brains health check...');
   const { checkBrains } = require('./cron/healthcheck');
   await checkBrains();
-}, { timezone: 'America/Chicago' });
+}, { timezone: 'America/Chicago', recoverMissedExecutions: true });
 
 // Pre-call briefs: every morning 7am ET — research today's booked prospects
 // (site scrape + news + ICP fit + objections + case study) and email the
@@ -837,7 +841,7 @@ cron.schedule('0 7 * * *', async () => {
   } catch (e) {
     console.error('[cron] Pre-call brief error:', e.message);
   }
-}, { timezone: 'America/New_York' });
+}, { timezone: 'America/New_York', recoverMissedExecutions: true });
 
 // Pre-call brief catch-up: every 30 min, 7:20am–5pm ET. Two jobs in one —
 // (1) on 2026-08-17 the 7am tick above never fired (no log line, no error) and
@@ -853,7 +857,7 @@ cron.schedule('20,50 7-16 * * *', async () => {
   } catch (e) {
     console.error('[cron] Pre-call catch-up error:', e.message);
   }
-}, { timezone: 'America/New_York' });
+}, { timezone: 'America/New_York', recoverMissedExecutions: true });
 
 // GTM reminders: every morning 8am ET — follow-ups gone quiet (with
 // suggested nudge text) + interested repliers who never booked.
@@ -867,7 +871,7 @@ cron.schedule('0 8 * * *', async () => {
   } catch (e) {
     console.error('[cron] Reminders error:', e.message);
   }
-}, { timezone: 'America/New_York' });
+}, { timezone: 'America/New_York', recoverMissedExecutions: true });
 
 // Snoozed LinkedIn replies: 8am ET daily, any that are due come back to Reply
 // Bot as fresh cards with a new draft (services/replyApprovals.js).
@@ -877,7 +881,7 @@ cron.schedule('0 8 * * *', async () => {
   } catch (e) {
     console.error('[cron] Reply snooze error:', e.message);
   }
-}, { timezone: 'America/New_York' });
+}, { timezone: 'America/New_York', recoverMissedExecutions: true });
 
 // Fireflies poll: every 15 min — webhook safety net. Stores new call
 // transcripts, matches contacts, auto-drafts follow-up emails.
@@ -888,7 +892,7 @@ cron.schedule('*/15 * * * *', async () => {
   } catch (e) {
     console.error('[cron] Fireflies poll error:', e.message);
   }
-}, { timezone: 'America/Chicago' });
+}, { timezone: 'America/Chicago', recoverMissedExecutions: true });
 
 // RingCentral poll: every 10 min — new recorded phone calls go to Fireflies
 // for transcription, then flow through the Fireflies poll above.
@@ -899,7 +903,7 @@ cron.schedule('*/10 * * * *', async () => {
   } catch (e) {
     console.error('[cron] RingCentral poll error:', e.message);
   }
-}, { timezone: 'America/Chicago' });
+}, { timezone: 'America/Chicago', recoverMissedExecutions: true });
 
 // LinkedIn queue sync: every 30 min — clear replies already answered in
 // HeyReach, refresh stale reply text, sync Interested auto-tags.
@@ -907,7 +911,7 @@ cron.schedule('*/30 * * * *', async () => {
   console.log('[cron] LinkedIn queue sync...');
   const { syncQueue } = require('./cron/queueSync');
   await syncQueue();
-}, { timezone: 'America/Chicago' });
+}, { timezone: 'America/Chicago', recoverMissedExecutions: true });
 
 // Draft backlog: every 10 min, work through replies that have no draft yet.
 // Previously reclassify only ran as a tail step inside queueSync, and only when
@@ -923,7 +927,7 @@ cron.schedule('*/10 * * * *', async () => {
   } catch (e) {
     console.error('[cron] draft backlog error:', e.message);
   }
-}, { timezone: 'America/Chicago' });
+}, { timezone: 'America/Chicago', recoverMissedExecutions: true });
 
 /**
  * POST /api/heyreach/queue-sync
