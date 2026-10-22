@@ -93,6 +93,7 @@ async function readLeads() {
       company: pick(values, 'company', 'business', 'organization'),
       source: pick(values, 'source'),
       rep: pick(values, 'assigned', 'rep', 'owner'),
+      notes: pick(values, 'notes'),
       sheet_values: values,
     };
   }).filter(l => /@/.test(l.email) && (!l.rep || l.rep.toLowerCase().includes(REP().toLowerCase())));

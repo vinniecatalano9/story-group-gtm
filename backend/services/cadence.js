@@ -119,6 +119,9 @@ async function importLeads(rows) {
         ...base,
         state: 'imported', running: false, track: null,
         email_only: !phone,
+        // A sheet note saying the email is someone else's holds Email 1 until
+        // Vincent sets the greeting name (Ada Williams / Harvey, 10/22).
+        hold_reason: /belongs to|someone else|not (his|her|their) email/i.test(r.notes || '') ? r.notes : '',
         steps_done: {}, timeline: [timelineEntry('note', { text: `Imported from the sheet${phone ? '' : ' (email only: no textable phone)'}` })],
         seen_email_ids: [], seen_sms_ids: [],
         sheet_dirty: true,
