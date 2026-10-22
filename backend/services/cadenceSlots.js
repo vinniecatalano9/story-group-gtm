@@ -2,7 +2,8 @@
 //
 // Rules (outreach/AD_LEADS_CADENCE_PLAN.md sections 6 and 7, same calendar
 // rules as the New Lead Auto-Draft Apps Script):
-// - Busy = events on vincent@storygroup.io and vincent@wrsmedia.com. Declined
+// - Busy = events on vincent@storygroup.io (Vincent doesn't use the
+//   wrsmedia.com calendar, 10/22; add it via CADENCE_CALENDARS). Declined
 //   events are free; all-day events only block when they say OOO, out of
 //   office, vacation, PTO, or holiday.
 // - Today: first open 30 min at least 1 hour after the send, ending by 5pm ET.
@@ -19,7 +20,7 @@ const z = require('../lib/zoned');
 const ET = 'America/New_York';
 const SLOT_MIN = 30;
 const LOOKAHEAD_DAYS = 5;
-const CALENDARS = () => (process.env.CADENCE_CALENDARS || 'vincent@storygroup.io,vincent@wrsmedia.com').split(',').map(s => s.trim()).filter(Boolean);
+const CALENDARS = () => (process.env.CADENCE_CALENDARS || 'vincent@storygroup.io').split(',').map(s => s.trim()).filter(Boolean);
 const OOO = /\b(OOO|out of (the )?office|vacation|PTO|holiday)\b/i;
 
 let _cal = null;
