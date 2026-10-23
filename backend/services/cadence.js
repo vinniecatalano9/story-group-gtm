@@ -139,6 +139,8 @@ async function importLeads(rows) {
       tz: tzForPhone(phone),
       // Sheet note says the email is someone else's (Ada / Harvey): greet "Hello," (Vincent, 10/22).
       name_doubt: /belongs to|someone else|not (his|her|their) email/i.test(r.notes || ''),
+      // Intake found the lead's Nutshell lead: notes and stages go straight to it.
+      ...(r.nutshell_lead_id ? { nutshell_lead_id: r.nutshell_lead_id } : {}),
     };
     if (existing) {
       await saveLead(email, base);
