@@ -3,10 +3,11 @@
 // Runs every minute on its own cron (cadence.runIntake, under the cadence's
 // lock). Every "New Lead" email from the form (lc.becomeimpossibletoignore.com)
 // in vincent@storygroup.io whose Nutshell lead is Vincent's (round robin,
-// 10/23; see "Nutshell owner") becomes a row in the ad leads sheet
-// (Channel ad/form, Lead Status complete, Assigned Rep Vincent; Notes never
-// written), then is imported, Clearout-checked and tagged, and its Email 1
-// card (or the intro text for a texts-only lead) is queued right then.
+// 10/23; see "Nutshell owner") or no one's becomes a row in the ad leads sheet
+// (Channel ad/form, Lead Status complete, Assigned Rep blank; Notes never
+// written), then is imported and Clearout-checked but not started: a
+// Telegram card asks who takes it (services/leadClaim.js, 10/23). "I'll take
+// it" tags it and queues its Email 1 card (or the intro text) within a minute.
 //
 // Each email is handled once: lead_intake/{sha1 of Message-ID} is claimed
 // before anything is written. A lead already in the sheet (any rep's row) or
@@ -84,7 +85,7 @@ function rowCells(p) {
     p.phone ? p.phone.replace(/^\+/, '') : cell(p.phone_raw), // digits, like the rows already there
     p.email,
     cell(p.role), cell(p.frustration),
-    'ad/form', 'complete', process.env.AD_LEADS_REP || 'Vincent',
+    'ad/form', 'complete', '', // Assigned Rep: blank until someone takes it (leadClaim.js)
   ];
 }
 
@@ -127,9 +128,10 @@ async function fetchEmails(since) {
 // the Nutshell lead seconds before its New Lead email lands, so the intake
 // looks that lead up and only works Vincent's: someone else's gets a Telegram
 // line and nothing else. With no owner yet it checks again every minute; after
-// OWNER_WAIT_MS it falls back to the old rule (Vincent's), and says so.
+// CARD_WAIT_MS it goes in unassigned and the card says Nutshell had no owner.
 
-const OWNER_WAIT_MS = 15 * 6e4;
+const OWNER_WAIT_MS = 15 * 6e4; // how far apart the Nutshell lead and the email can be
+const CARD_WAIT_MS = 3 * 6e4; // speed to lead: don't hold the card longer for an owner
 const FORM_WAIT_MS = 4 * 6e4; // Annette's form note, seconds after the lead
 const ME = () => Number(process.env.NUTSHELL_USER_ID || 3); // Vincent
 const KICKSTART_STAGESET = 5; // Kickstart / Diagnostic Pipeline
@@ -196,7 +198,7 @@ async function run() {
     if (d.action === 'add') {
       owner = await nutshellOwner(p, m.date).catch(e => ({ status: 'unknown', why: `Nutshell: ${e.message}` }));
       // No owner yet: leave it unclaimed and look again next minute.
-      if ((owner.status === 'unknown' || owner.status === 'unassigned') && Date.now() - new Date(m.date || 0) < OWNER_WAIT_MS) continue;
+      if ((owner.status === 'unknown' || owner.status === 'unassigned') && Date.now() - new Date(m.date || 0) < CARD_WAIT_MS) continue;
       // The form note (budget, consent, ad) lands seconds after the lead: wait for it a few minutes.
       if (owner.status !== 'theirs' && owner.lead_id) {
         form = await require('./leadForm').fromNutshell(owner.lead_id).catch(e => ({ found: false, error: e.message }));
@@ -218,11 +220,14 @@ async function run() {
     if (r === 'retry') { handled.delete(m.message_id); break; }
   }
   await nutshellAssigned(out).catch(e => { out.nutshell_error = e.message; });
+  // Taps on the cards and names typed into Assigned Rep.
+  await require('./leadClaim').sweep(out).catch(e => { out.claim_error = e.message; });
   return out;
 }
 
 /**
- * Sheet row, import, tag and first card for one lead that's Vincent's.
+ * Sheet row (blank rep), import and the claim card for one lead that's
+ * Vincent's or no one's in Nutshell.
  * `d` is decide()'s answer; skips and duplicates get their ping here too.
  * Returns 'retry' when the sheet was down (the claim is released).
  */
@@ -257,29 +262,31 @@ async function addLead(p, d, ref, { out, seen, who, owner, form, source, at }) {
     out.error = `sheet append failed, retrying next run: ${e.message}`; // cron/cadence.js logs it
     return 'retry';
   }
-  seen.push({ where: `sheet row ${row} (Vincent)`, email: p.email, phone: p.phone });
+  seen.push({ where: `sheet row ${row} (unassigned)`, email: p.email, phone: p.phone });
   await ref.update({ status: 'appended', sheet_row: row, parsed: p, nutshell_lead_id: (owner && owner.lead_id) || null });
   try {
-    await cadence.importLeads([{ sheet_row: row, email: p.email, first_name: cap(p.first_name), last_name: p.last_name, phone: p.phone || p.phone_raw, role: p.role, frustration: p.frustration, company: p.company, source, rep: process.env.AD_LEADS_REP || 'Vincent', notes: '', nutshell_lead_id: owner && owner.lead_id }]);
+    // Imported with a blank rep and not started: the claim card decides (leadClaim.js).
+    await cadence.importLeads([{ sheet_row: row, email: p.email, first_name: cap(p.first_name), last_name: p.last_name, phone: p.phone || p.phone_raw, role: p.role, frustration: p.frustration, company: p.company, source, rep: '', notes: '', nutshell_lead_id: owner && owner.lead_id }]);
     const key = p.email || `phone:${p.phone}`;
     if (patch.form) await cadence.saveLead(key, patch);
-    await cadence.startLead(key);
     const lead = await cadence.getLead(key);
     const c = lead.email_check;
-    out.added.push(key);
-    const whose = !owner ? '' : owner.status === 'mine' ? '\nNutshell: assigned to you.' : `\nNutshell: ${esc(owner.why || 'no owner')} after 15 min, so I treated it as yours. Skip the card if it isn't.`;
     const v = leadForm.view(lead);
-    const details = patch.form ? `\n${[v.timeline && `Timeline: ${v.timeline}`, `Budget: ${v.budget || 'not given'}`, lead.phone && `SMS consent: ${v.consent}`].filter(Boolean).map(esc).join(' · ')}` : '\nNo form details in Nutshell.';
-    await ping(`🆕 New ad lead <b>${who}</b> (${esc(source)}) is in sheet row ${row} and the cadence started.\n${[p.email, p.phone, p.company, p.frustration].filter(Boolean).map(esc).join(' · ')}${details}${c ? `\nClearout: ${esc(c.status)}` : ''}${whose}\nNext: ${esc(lead.next_touch_label || 'see the Ad Leads page')}`);
-    // First card now, not on the next tick (speed to lead).
-    const q = await cadence.queueDue(key);
+    const lines = [
+      [p.email, p.phone, p.role, p.company, p.frustration].filter(Boolean).map(esc).join(' · '),
+      patch.form ? [v.timeline && `Timeline: ${v.timeline}`, `Budget: ${v.budget || 'not given'}`, lead.phone && `SMS consent: ${v.consent}`].filter(Boolean).map(esc).join(' · ') : 'No form details in Nutshell.',
+      c ? `Clearout: ${esc(c.status)}` : '',
+      !owner ? '' : owner.status === 'mine' ? 'Nutshell: assigned to you.' : `Nutshell: ${esc(owner.why || 'no owner')}.`,
+    ];
+    await require('./leadClaim').offer(key, { who, row, source, lines });
+    out.added.push(key);
     const lag = at ? Math.round((Date.now() - new Date(at)) / 1000) : null;
-    await ref.update({ status: 'started', lead: key, queued: q.queued, blocked: q.blocked, card_at: new Date(), seconds_from_email: lag });
-    if (q.queued.length) console.log(`[intake] ${key}: ${q.queued.join(', ')} queued ${lag}s after the ${source}`);
+    await ref.update({ status: 'offered', lead: key, card_at: new Date(), seconds_from_email: lag });
+    console.log(`[intake] ${key}: unassigned card sent ${lag}s after the ${source}`);
   } catch (e) {
-    await ref.update({ status: 'start_failed', error: e.message });
-    out.skipped.push(`${p.email || p.phone}: start failed (${e.message})`);
-    await ping(`⚠️ New ad lead <b>${who}</b> is in sheet row ${row}, but the cadence didn't start: ${esc(e.message)}`);
+    await ref.update({ status: 'import_failed', error: e.message });
+    out.skipped.push(`${p.email || p.phone}: import failed (${e.message})`);
+    await ping(`⚠️ New ad lead <b>${who}</b> is in sheet row ${row}, but it didn't import: ${esc(e.message)}`);
   }
   return 'added';
 }
@@ -290,7 +297,7 @@ async function addLead(p, d, ref, { out, seen, who, owner, form, source, at }) {
 // assigned to Vincent, made after the first check, that no cadence lead is
 // linked to. Each one gets NUTSHELL_WAIT_MS for its form email to arrive and
 // claim it; after that its Nutshell contact's email and phone go through the
-// same steps (dedupe, sheet row, cadence, first card). Once per Nutshell lead.
+// same steps (dedupe, sheet row, claim card). Once per Nutshell lead.
 
 const NUTSHELL_WAIT_MS = 20 * 6e4;
 const NUTSHELL_EVERY_MS = 3 * 6e4;
