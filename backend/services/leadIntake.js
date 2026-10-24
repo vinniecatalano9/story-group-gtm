@@ -245,7 +245,10 @@ async function addOtherRow(p, d, ref, { out, seen, owner, form }) {
   if (p.email) {
     const day = new Date().toLocaleDateString('en-US', { timeZone: 'America/Chicago', month: 'numeric', day: 'numeric' });
     const c = await require('./clearout').verifyEmail(p.email).catch(e => ({ error: e.message }));
-    notes = cell(c.error ? `Clearout ${day}: not checked (${c.error})` : `Clearout ${day}: ${c.status}${c.desc && c.status !== 'valid' ? ` (${c.desc.toLowerCase()})` : ''}`);
+    // Plain words for the rep: they don't know what Clearout is (Vincent, 10/24).
+    const word = { valid: 'valid', invalid: 'invalid', catch_all: 'may not be real (catch-all)', unknown: 'could not be confirmed' };
+    notes = cell(c.error ? `Email not checked (${day})` : `Email ${word[c.status] || c.status.replace(/_/g, ' ')}${c.desc && c.status !== 'valid' ? `: ${c.desc.toLowerCase()}` : ''} (checked ${day})`);
+    if (c.error) console.warn(`[intake] Clearout for ${p.email}: ${c.error}`);
   }
   let row;
   try {
