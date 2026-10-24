@@ -245,34 +245,6 @@ async function appendLead(cells) {
   return row;
 }
 
-/**
- * Put a rep's name in Assigned Rep (H) on this lead's row (email in C, else
- * phone in B), only when H is blank: a name anyone typed there stays. Used by
- * the claim card (leadClaim.js) on rows the intake added unassigned.
- * Returns the name now in H, or null (no row, no column, sheet down).
- */
-async function setRep({ email, phone, rep }) {
-  try {
-    const { rows, header, tab } = await readRows();
-    const repCol = header.findIndex(h => /assigned|rep\b/i.test(String(h)));
-    if (repCol < 0 || repCol > 25) return null;
-    const { toE164 } = require('./ringcentral');
-    const e = String(email || '').toLowerCase();
-    const r = (e && rows.find(x => String(x.raw[2] || '').trim().toLowerCase() === e)) || (phone ? rows.find(x => toE164(x.raw[1]) === phone) : null);
-    if (!r) return null;
-    const cur = String(r.raw[repCol] || '').trim();
-    if (cur) return cur;
-    await sheets().spreadsheets.values.update({
-      spreadsheetId: SHEET_ID(), range: `${q(tab)}!${String.fromCharCode(65 + repCol)}${r.row}`, valueInputOption: 'RAW',
-      requestBody: { values: [[rep]] },
-    });
-    return rep;
-  } catch (e) {
-    console.warn('[adLeadsSheet] Assigned Rep write failed:', e.message);
-    return null;
-  }
-}
-
 /** Can the backend read the sheet? For the status endpoint. */
 async function status() {
   try {
@@ -309,4 +281,4 @@ async function ensureStatusOptions() {
   return { changed: true, added: want, rows: mine };
 }
 
-module.exports = { appendNote, fillBlank, setRep, readLeads, readRows, appendLead, writeBack, status, STATUS, ensureStatusOptions };
+module.exports = { appendNote, fillBlank, readLeads, readRows, appendLead, writeBack, status, STATUS, ensureStatusOptions };

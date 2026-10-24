@@ -231,17 +231,4 @@ router.post('/book/:id', express.urlencoded({ extended: false }), async (req, re
   }
 });
 
-// ── Who takes a new lead (buttons on the unassigned card; one tap, no confirm) ─
-
-router.get('/claim/:email', async (req, res) => {
-  res.set('Cache-Control', 'no-store');
-  try {
-    const r = await require('../services/leadClaim').tap(req.params.email.toLowerCase(), req.query.t, req.query.who === 'me' ? 'me' : 'other');
-    if (!r.ok) return res.status(404).send(page(`<h1>${esc(r.msg)}</h1>`));
-    res.send(page(`<h1>${esc(r.msg)}</h1><p class="muted">${esc(r.sub)}</p>`));
-  } catch (e) {
-    res.status(400).send(page(`<h1>${esc(e.message)}</h1>`));
-  }
-});
-
 module.exports = router;
