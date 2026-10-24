@@ -119,9 +119,10 @@ function decide(p, seen) {
   return { action: 'add', cells: rowCells(p) };
 }
 
-async function fetchEmails(since) {
+async function fetchEmails(since, { skipHandled = true } = {}) {
   const day = new Date(since.getTime() - 864e5).toISOString().slice(0, 10); // IMAP SINCE is a date
-  const r = await require('./cadence').gmailInbox({ op: 'new_leads', since: day, skip: [...handled] });
+  // The dry run reads every email: with the skip it would miss the ones this process already handled.
+  const r = await require('./cadence').gmailInbox({ op: 'new_leads', since: day, skip: skipHandled ? [...handled] : [] });
   if (!r.ok) throw new Error(`IMAP: ${r.error}`);
   return r.messages.filter(m => m.message_id).sort((a, b) => new Date(a.date) - new Date(b.date));
 }
@@ -385,7 +386,7 @@ const cap = n => (n && n === n.toLowerCase() ? n.charAt(0).toUpperCase() + n.sli
  * go-live cutoff and the processed marks. Writes nothing, sends nothing.
  */
 async function dryRun({ last = 8, days = 14, details = true } = {}) {
-  const msgs = (await fetchEmails(new Date(Date.now() - days * 864e5))).slice(-last);
+  const msgs = (await fetchEmails(new Date(Date.now() - days * 864e5), { skipHandled: false })).slice(-last);
   const seen = await known();
   const meta = await metaDoc().get();
   const out = [];
