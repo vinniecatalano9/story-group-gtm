@@ -13,8 +13,18 @@ const wrap = fn => async (req, res) => {
 
 router.get('/status', wrap(() => cadence.status()));
 router.get('/leads', wrap(async () => {
-  const leads = await cadence.listLeads();
-  return { mode: cadence.MODE(), leads: leads.sort((a, b) => (a.sheet_row || 999) - (b.sheet_row || 999)) };
+  const leadForm = require('../services/leadForm');
+  const leads = (await cadence.listLeads()).map(l => ({ ...l, form_view: leadForm.view(l) }));
+  return { mode: cadence.MODE(), sms_consent_rule: leadForm.consentRuleOn() ? 'on' : 'off', leads: leads.sort((a, b) => (a.sheet_row || 999) - (b.sheet_row || 999)) };
+}));
+// Nutshell form details (budget, consent, ad) onto Vincent's leads. GET says what it would do; POST writes.
+router.get('/form/backfill', wrap(req => require('../services/leadForm').backfill({ apply: false, only: req.query.lead || null })));
+router.post('/form/backfill', wrap(req => require('../services/leadForm').backfill({ apply: true, only: (req.body && req.body.lead) || null })));
+// The extra lines a lead's Email 1 card would carry.
+router.get('/form/card/:email', wrap(async req => {
+  const lead = await cadence.getLead(req.params.email.toLowerCase());
+  if (!lead) throw new Error('Lead not found');
+  return { lines: require('../services/leadForm').cardLines(lead, { id: 'email1' }), view: require('../services/leadForm').view(lead) };
 }));
 
 // Import from the sheet, or from rows the page sends (pasted CSV fallback).

@@ -145,6 +145,70 @@ export function FunnelStats({ leads }) {
   );
 }
 
+// ── Results by ad (utm_content) and campaign, from the Nutshell form note ────
+
+const isBooked = l => l.outcome === 'meeting' || l.state === 'meeting' || !!l.meeting_at;
+const hasReply = l => (l.timeline || []).some(t => t.kind === 'reply');
+
+function groupBy(leads, key) {
+  const m = new Map();
+  for (const l of leads) {
+    const k = key(l) || 'No ad data';
+    const g = m.get(k) || { name: k, leads: 0, replied: 0, booked: 0 };
+    g.leads++; if (hasReply(l)) g.replied++; if (isBooked(l)) g.booked++;
+    m.set(k, g);
+  }
+  return [...m.values()].sort((a, b) => (a.name === 'No ad data') - (b.name === 'No ad data') || b.leads - a.leads);
+}
+
+function ResultsTable({ title, rows }) {
+  return (
+    <div className="glass-card rounded-xl p-3 min-w-0 overflow-x-auto">
+      <p className="text-[10px] font-semibold text-muted uppercase tracking-[0.12em] mb-2">{title}</p>
+      <table className="w-full text-xs">
+        <thead><tr className="text-muted text-left"><th className="font-normal pb-1">Name</th><th className="font-normal pb-1 text-right">Leads</th><th className="font-normal pb-1 text-right">Replied</th><th className="font-normal pb-1 text-right">Booked</th></tr></thead>
+        <tbody>{rows.map(r => (
+          <tr key={r.name} className="border-t border-white/5">
+            <td className={`py-1 pr-2 break-words ${r.name === 'No ad data' ? 'text-muted' : 'text-body/90'}`}>{r.name}</td>
+            <td className="py-1 text-right">{r.leads}</td>
+            <td className="py-1 text-right">{r.replied} <span className="text-muted">{pctOf(r.replied, r.leads)}</span></td>
+            <td className="py-1 text-right">{r.booked} <span className="text-muted">{pctOf(r.booked, r.leads)}</span></td>
+          </tr>
+        ))}</tbody>
+      </table>
+    </div>
+  );
+}
+
+export function AdResults({ leads }) {
+  const tagged = leads.filter(l => l.tagged_at && !/@storygroup\.io$/i.test(l.email || ''));
+  if (!tagged.length) return null;
+  return (
+    <div className="grid md:grid-cols-2 gap-2">
+      <ResultsTable title="By ad (utm_content)" rows={groupBy(tagged, l => l.ad?.content)} />
+      <ResultsTable title="By campaign" rows={groupBy(tagged, l => l.ad?.campaign)} />
+    </div>
+  );
+}
+
+// What the storygroup.io form told Nutshell (backend services/leadForm.js view()).
+function LeadDetails({ lead }) {
+  const v = lead.form_view;
+  if (!v) return null;
+  if (!v.has_form) return <p className="text-[11px] mt-1 text-muted">No form details from Nutshell{lead.nutshell_lead_id ? ` (lead ${lead.nutshell_lead_id})` : ''}.</p>;
+  const items = [
+    ['Company', v.company], ['Situation', v.situation], ['Timeline', v.timeline], ['Team', v.team],
+    ['Budget', `${v.budget || 'not given'}${v.fits ? ` · fits ${v.fits}` : ''}`],
+    lead.phone && ['SMS consent', v.consent],
+    ['Ad', v.ad && `${v.ad}${v.ad_term ? ` (${v.ad_term})` : ''}`],
+  ].filter(x => x && x[1]);
+  return (
+    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px]">
+      {items.map(([k, val]) => <span key={k} className="min-w-0 break-words"><span className="text-muted">{k}:</span> <span className="text-body/80">{val}</span></span>)}
+    </div>
+  );
+}
+
 function Btn({ children, onClick, kind = 'ghost', disabled }) {
   const cls = kind === 'primary'
     ? 'bg-brand-500 text-white hover:bg-brand-500/90'
@@ -204,6 +268,8 @@ function LeadRow({ lead, api, onChange, setErr }) {
       </div>
       {lead.email_check && <p className={`text-[11px] mt-1 ${lead.email_check.status === 'valid' ? 'text-green-400' : lead.email_check.status === 'invalid' ? 'text-red-400' : 'text-yellow-400'}`}>
         Clearout: {lead.email_check.status}{lead.email_check.desc ? ` (${lead.email_check.desc})` : ''} · {fmt(lead.email_check.at)}{lead.email_override === 'send' ? ' · sending anyway' : ''}</p>}
+      <LeadDetails lead={lead} />
+      {lead.phone && lead.form_view?.texts_off && <p className="text-[11px] mt-1 text-yellow-400">Texts off: {lead.form_view.texts_off}. Email only.</p>}
       {!lead.email_check && !lead.text_only && <p className="text-[11px] mt-1 text-yellow-400">Email not verified yet{lead.email_check_error ? `: ${lead.email_check_error}` : ''}</p>}
       {lead.email_hold && lead.email_override !== 'send' && !lead.email_bad && (
         <div className="flex items-center gap-2 mt-2 text-xs text-yellow-400">Emails on hold (Clearout not sure). Texts keep going.
@@ -247,6 +313,7 @@ function LeadRow({ lead, api, onChange, setErr }) {
             <div>
               <p className="text-[10px] uppercase tracking-[0.14em] text-muted mb-1">Form answers</p>
               <p className="text-xs text-body/80">Frustration: {lead.frustration || '–'}</p>
+              {lead.form_view?.message && <p className="text-xs text-body/80 whitespace-pre-wrap mt-1">Message: {lead.form_view.message}</p>}
             </div>
             <div className="flex flex-wrap gap-2 items-end">
               <label className="text-xs text-muted">Email greeting name
@@ -388,6 +455,7 @@ export default function AdLeads({ api }) {
         <Btn onClick={() => setShowCopy(!showCopy)}>Step copy</Btn>
       </div>
       {data.leads.length > 0 && <FunnelStats leads={data.leads} />}
+      {data.leads.length > 0 && <AdResults leads={data.leads} />}
       <OpenTimes api={api} />
       {err && <p className="text-sm text-red-400">{err}</p>}
       {msg && <p className="text-sm text-green-400">{msg}</p>}

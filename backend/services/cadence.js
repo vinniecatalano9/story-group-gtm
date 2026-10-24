@@ -47,7 +47,8 @@ const emailDead = l => !realEmail(l) || !!l.email_bounced || !!l.email_bad;
 // Clearout said catch-all / unknown: emails wait for Vincent's OK; texts go on.
 const emailHeld = l => !emailDead(l) && !!l.email_hold && l.email_override !== 'send';
 const canEmail = l => !emailDead(l) && !emailHeld(l);
-const canText = l => !!l.phone && !l.email_only && !l.sms_failed && l.state !== 'opted_out';
+// SMS consent from the Nutshell form note (services/leadForm.js; on with SMS_CONSENT_RULE=on).
+const canText = l => !!l.phone && !l.email_only && !l.sms_failed && l.state !== 'opted_out' && require('./leadForm').canTextConsent(l);
 const leadsCol = () => db().collection('ad_leads');
 const approvalsCol = () => db().collection('cadence_approvals');
 const metaDoc = id => db().collection('cadence_meta').doc(id);
@@ -274,7 +275,7 @@ function nextStep(lead) {
   const tz = lead.tz || 'America/New_York';
   for (const step of steps) {
     if (done[step.id]) continue;
-    if (step.channel === 'sms' && !canText(lead)) return { step, skip: lead.sms_failed ? 'texts failed' : 'email only' };
+    if (step.channel === 'sms' && !canText(lead)) return { step, skip: lead.sms_failed ? 'texts failed' : require('./leadForm').textBlock(lead) || 'email only' };
     if (step.channel === 'email' && emailHeld(lead)) continue; // held, not skipped: goes once Vincent says send
     if (step.channel === 'email' && !canEmail(lead)) return { step, skip: lead.email_bounced ? 'email bounced' : lead.email_bad ? 'email invalid' : 'no email' };
     // Text intro replaces Text 1 when there's no email to refer back to.
@@ -509,6 +510,7 @@ async function queueStep(lead, step, msg) {
       `${step.channel === 'email' ? 'Email' : 'Text'} to ${esc(a.to)}${lead.company ? ` (${esc(lead.company)})` : ''}`,
       step.channel === 'email' && lead.email_check ? `Clearout: ${esc(lead.email_check.status)}${lead.email_check.desc ? ` (${esc(lead.email_check.desc)})` : ''}, ${shortDate(toDate(lead.email_check.at), lead.tz)}${lead.email_override === 'send' ? ', sending anyway per you' : ''}` : '',
       msg.note ? `⚠️ ${esc(msg.note)}` : '',
+      ...require('./leadForm').cardLines(lead, step),
       a.subject ? `\nSubject: ${esc(a.subject)}` : '',
       `\n${esc(a.text)}`,
       times && msg.offer ? `\nHeld times: ${esc(times)} ET` : '',

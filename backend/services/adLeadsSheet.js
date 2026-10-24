@@ -148,6 +148,42 @@ async function writeBack(updates) {
 }
 
 /**
+ * Fill D (role) and E (frustration) on Vincent's row for this lead with the
+ * Nutshell form's answers (10/23), only where the cell is blank: a cell anyone
+ * typed in is never overwritten. Matched like writeBack (email in C, else
+ * phone in B). `apply: false` reports and writes nothing.
+ * Returns { row, wrote: {D, E} } / { row: null, why }; never throws.
+ */
+async function fillBlank({ email, phone, role, frustration, apply = true }) {
+  try {
+    const tab = await tabName();
+    const r = await sheets().spreadsheets.values.get({ spreadsheetId: SHEET_ID(), range: `${q(tab)}!A1:Z` });
+    const [header = [], ...rows] = r.data.values || [];
+    const repCol = header.findIndex(h => /assigned|rep\b/i.test(String(h)));
+    if (repCol < 0) return { row: null, why: 'no Assigned Rep column' };
+    const { toE164 } = require('./ringcentral');
+    const mine = row => String(row[repCol] || '').toLowerCase().includes(REP().toLowerCase());
+    const realEmail = /@/.test(String(email || '')) && !/^phone:/.test(email) ? String(email).toLowerCase() : '';
+    let i = realEmail ? rows.findIndex(row => String(row[2] || '').trim().toLowerCase() === realEmail) : -1;
+    if (i < 0 && phone) i = rows.findIndex(row => toE164(row[1]) === phone);
+    if (i < 0) return { row: null, why: 'not in the sheet' };
+    if (!mine(rows[i])) return { row: i + 2, why: `row is ${rows[i][repCol] || 'unassigned'}'s, left alone` };
+    const wrote = {};
+    if (role && !String(rows[i][3] || '').trim()) wrote.D = role;
+    if (frustration && !String(rows[i][4] || '').trim()) wrote.E = frustration;
+    const cell = v => (/^[=+\-@]/.test(v) ? `'${v}` : v);
+    if (apply && Object.keys(wrote).length) {
+      const data = Object.entries(wrote).map(([col, v]) => ({ range: `${q(tab)}!${col}${i + 2}`, values: [[cell(v)]] }));
+      await sheets().spreadsheets.values.batchUpdate({ spreadsheetId: SHEET_ID(), requestBody: { valueInputOption: 'RAW', data } });
+    }
+    return { row: i + 2, wrote, kept: { D: rows[i][3] || '', E: rows[i][4] || '' } };
+  } catch (e) {
+    console.warn('[adLeadsSheet] fillBlank failed:', e.message);
+    return { row: null, why: `sheet error: ${e.message}` };
+  }
+}
+
+/**
  * Append one line to Notes (I) on Vincent's row for this lead, matched like
  * writeBack (email in C, else phone in B). Reads the cell first and keeps what
  * the team wrote there; nothing in Notes is ever replaced. Returns true when
@@ -245,4 +281,4 @@ async function ensureStatusOptions() {
   return { changed: true, added: want, rows: mine };
 }
 
-module.exports = { appendNote, readLeads, readRows, appendLead, writeBack, status, STATUS, ensureStatusOptions };
+module.exports = { appendNote, fillBlank, readLeads, readRows, appendLead, writeBack, status, STATUS, ensureStatusOptions };

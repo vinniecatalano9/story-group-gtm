@@ -124,6 +124,19 @@ function frustrationLine(answer) {
   return '';
 }
 
+// Email 1 lines from the storygroup.io form's "Situation" answer (Nutshell
+// form note, 10/23). Used when the old form's frustration answer is blank.
+// [CLAUDE'S IDEA, not yet approved by Vincent; he sees each Email 1 before it sends]
+function situationLine(answer) {
+  const a = String(answer || '').toLowerCase();
+  if (/grow visibility|authority/.test(a)) return 'You mentioned you want to grow your visibility and authority, which is exactly what we do.';
+  if (/launch|raise|reposition/.test(a)) return "You mentioned a launch, raise or repositioning. Timing matters a lot there, so I'd like to hear where things stand.";
+  if (/media and pr|pr strategy/.test(a)) return "You mentioned you're looking at media and PR strategy, which is exactly what we do.";
+  if (/video|creative/.test(a)) return "You mentioned a video or creative campaign, so I'm curious what you have in mind.";
+  if (/reputation|crisis/.test(a)) return "You mentioned a reputation issue. I know those can't wait.";
+  return '';
+}
+
 const amPm = t => [t.am, t.pm].filter(Boolean).join(' or ');
 
 // Email 1's question. Approved: with and without a today slot. [CLAUDE'S IDEA] calendar-full fallback.
@@ -173,7 +186,7 @@ function render(template, lead, times = {}, meeting = {}) {
   if (nameInDoubt(lead)) template = String(template).replace(/^(Hey|Hi) \{first\},/, 'Hello,');
   const vars = {
     first: capFirst(String(lead.greet_name || lead.first_name || '').trim()),
-    frustration_line: frustrationLine(lead.frustration),
+    frustration_line: frustrationLine(lead.frustration) || situationLine(lead.form && lead.form.situation),
     opener: OPENERS[0].email,
     email_ref: openerFor(lead).text,
     // Role wording (plan section 4): marketing leaders get team / company.
@@ -200,4 +213,4 @@ function render(template, lead, times = {}, meeting = {}) {
 const renderFor = (step, template, lead, times, meeting) =>
   render(template, step.channel === 'sms' ? { ...lead, greet_name: lead.sms_name || '' } : lead, times, meeting);
 
-module.exports = { SUBJECT, TRACKS, DISABLED_TRACKS, ALL_STEPS, stepById, usesTimes, render: renderFor, frustrationLine, nameInDoubt };
+module.exports = { SUBJECT, TRACKS, DISABLED_TRACKS, ALL_STEPS, stepById, usesTimes, render: renderFor, frustrationLine, situationLine, nameInDoubt };
