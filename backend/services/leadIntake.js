@@ -77,16 +77,20 @@ function parseLeadEmail(msg) {
 // A public form: never let a value become a sheet formula.
 const cell = v => (/^[=+\-@]/.test(String(v || '')) ? `'${v}` : String(v || ''));
 
-/** The A:H cells for the new row. */
-function rowCells(p) {
+/** The A:H cells for the new row. `rep` goes in Assigned Rep (H). */
+function rowCells(p, rep = process.env.AD_LEADS_REP || 'Vincent') {
   return [
     cell(p.full_name),
     p.phone ? p.phone.replace(/^\+/, '') : cell(p.phone_raw), // digits, like the rows already there
     p.email,
     cell(p.role), cell(p.frustration),
-    'ad/form', 'complete', process.env.AD_LEADS_REP || 'Vincent',
+    'ad/form', 'complete', rep,
   ];
 }
+
+// "Dr. Michelle  Brown" -> "Michelle": the sheet's Assigned Rep holds first names (Vincent, McKenna).
+const repName = owner => String(owner || '').replace(/^\s*(dr|mr|mrs|ms|miss)\.?\s+/i, '').trim().split(/\s+/)[0] || 'Other rep';
+const isMine = rep => String(rep || '').toLowerCase().includes(String(process.env.AD_LEADS_REP || 'Vincent').toLowerCase());
 
 // ── Deciding ─────────────────────────────────────────────────────────────────
 
@@ -95,8 +99,8 @@ async function known() {
   const { toE164 } = require('./ringcentral');
   const { rows, header } = await require('./adLeadsSheet').readRows();
   const repCol = header.findIndex(h => /assigned|rep\b/i.test(String(h)));
-  const sheet = rows.map(r => ({ where: `sheet row ${r.row}${repCol >= 0 && r.raw[repCol] ? ` (${r.raw[repCol]})` : ''}`, email: String(r.raw[2] || '').trim().toLowerCase(), phone: toE164(r.raw[1]) }));
-  const leads = (await require('./cadence').listLeads()).map(l => ({ where: `the cadence (${l.state})`, email: EMAIL_RE.test(l.email) ? l.email : '', phone: l.phone || null }));
+  const sheet = rows.map(r => ({ where: `sheet row ${r.row}${repCol >= 0 && r.raw[repCol] ? ` (${r.raw[repCol]})` : ''}`, rep: repCol >= 0 ? String(r.raw[repCol] || '').trim() : '', email: String(r.raw[2] || '').trim().toLowerCase(), phone: toE164(r.raw[1]) }));
+  const leads = (await require('./cadence').listLeads()).map(l => ({ where: `the cadence (${l.state})`, rep: l.rep || '', email: EMAIL_RE.test(l.email) ? l.email : '', phone: l.phone || null }));
   return [...sheet, ...leads];
 }
 
@@ -111,7 +115,7 @@ function decide(p, seen) {
   if (/^test\b/i.test(p.full_name)) return { action: 'skip', why: 'test submission (name starts with TEST)' };
   if (!p.email && !p.phone) return { action: 'no_channel', why: 'no email and no textable phone' };
   const hit = seen.find(k => (p.email && k.email === p.email) || (p.phone && k.phone === p.phone));
-  if (hit) return { action: 'duplicate', why: `already in ${hit.where}${p.email && hit.email === p.email ? '' : ' (same phone)'}` };
+  if (hit) return { action: 'duplicate', why: `already in ${hit.where}${p.email && hit.email === p.email ? '' : ' (same phone)'}`, other_rep: !!hit.rep && !isMine(hit.rep) };
   return { action: 'add', cells: rowCells(p) };
 }
 
@@ -125,8 +129,8 @@ async function fetchEmails(since) {
 // ── Nutshell owner ───────────────────────────────────────────────────────────
 // Nutshell round-robins new leads to the Sales Team (10/23). The form makes
 // the Nutshell lead seconds before its New Lead email lands, so the intake
-// looks that lead up and only works Vincent's: someone else's gets a Telegram
-// line and nothing else. With no owner yet it checks again every minute; after
+// looks that lead up and only works Vincent's: someone else's gets a sheet
+// row with their name in Assigned Rep and nothing else (no Telegram, 10/23). With no owner yet it checks again every minute; after
 // OWNER_WAIT_MS it falls back to the old rule (Vincent's), and says so.
 
 const OWNER_WAIT_MS = 15 * 6e4;
@@ -198,7 +202,7 @@ async function run() {
       // No owner yet: leave it unclaimed and look again next minute.
       if ((owner.status === 'unknown' || owner.status === 'unassigned') && Date.now() - new Date(m.date || 0) < OWNER_WAIT_MS) continue;
       // The form note (budget, consent, ad) lands seconds after the lead: wait for it a few minutes.
-      if (owner.status !== 'theirs' && owner.lead_id) {
+      if (owner.lead_id) {
         form = await require('./leadForm').fromNutshell(owner.lead_id).catch(e => ({ found: false, error: e.message }));
         if (!form.has_note && Date.now() - new Date(m.date || 0) < FORM_WAIT_MS) continue;
       }
@@ -209,9 +213,8 @@ async function run() {
     handled.add(m.message_id);
     const who = esc(p.full_name || p.email || p.phone_raw || '(no name)');
     if (owner && owner.status === 'theirs') {
-      await ref.update({ status: 'other_rep', owner: owner.owner, nutshell_lead_id: owner.lead_id, parsed: p });
-      out.skipped.push(`${p.email || p.phone}: ${owner.owner}'s lead`);
-      await ping(`👥 New ad lead <b>${who}</b> went to ${esc(owner.owner)} in Nutshell. Not added, no cadence.`);
+      const r = await addOtherRow(p, d, ref, { out, seen, owner, form });
+      if (r === 'retry') { handled.delete(m.message_id); break; }
       continue;
     }
     const r = await addLead(p, d, ref, { out, seen, who, owner, form, source: 'New Lead email', at: m.date });
@@ -219,6 +222,35 @@ async function run() {
   }
   await nutshellAssigned(out).catch(e => { out.nutshell_error = e.message; });
   return out;
+}
+
+/**
+ * Another rep's lead (Nutshell owner isn't Vincent; 10/23): a sheet row with
+ * their first name in Assigned Rep and the form answers, and nothing else.
+ * No Telegram, no cadence, no Nutshell notes, and the row is never written
+ * again (writeBack, fillBlank and appendNote only touch Vincent's rows).
+ * decide() already dropped anyone on the sheet or in the cadence.
+ */
+async function addOtherRow(p, d, ref, { out, seen, owner, form }) {
+  const leadForm = require('./leadForm');
+  const patch = leadForm.leadPatch(form);
+  if (patch.form) {
+    const cells = leadForm.sheetCells(patch);
+    p = { ...p, company: p.company || patch.form.company, role: p.role || cells.role, frustration: p.frustration || cells.frustration };
+  }
+  const rep = repName(owner.owner);
+  let row;
+  try {
+    row = await require('./adLeadsSheet').appendLead(rowCells(p, rep));
+  } catch (e) {
+    await ref.delete().catch(() => {});
+    out.error = `sheet append failed, retrying next run: ${e.message}`;
+    return 'retry';
+  }
+  seen.push({ where: `sheet row ${row} (${rep})`, rep, email: p.email, phone: p.phone });
+  await ref.update({ status: 'other_rep_row', owner: owner.owner, nutshell_lead_id: owner.lead_id, sheet_row: row, parsed: p });
+  out.skipped.push(`${p.email || p.phone}: ${rep}'s lead, sheet row ${row} only`);
+  return 'added';
 }
 
 /**
@@ -243,7 +275,7 @@ async function addLead(p, d, ref, { out, seen, who, owner, form, source, at }) {
     if (d.action === 'no_channel') {
       const found = Object.entries({ name: p.full_name, email: p.email, phone: p.phone_raw, role: p.role, frustration: p.frustration }).filter(([, v]) => v).map(([k, v]) => `${k}: ${esc(v)}`).join('\n') || '(nothing)';
       await ping(`⚠️ ${esc(source)} (${esc(at ? new Date(at).toLocaleString('en-US', { timeZone: 'America/Chicago' }) : '')} CT) has no email and no textable phone, so nothing was added.\n\n${found}`);
-    } else if (d.action === 'duplicate') {
+    } else if (d.action === 'duplicate' && !d.other_rep) { // another rep's lead resubmitted: no Telegram (10/23)
       await ping(`🔁 ${esc(source)} for <b>${who}</b>: ${esc(d.why)}. Nothing added, no new cadence.`);
     }
     return 'skipped';
@@ -366,7 +398,8 @@ async function dryRun({ last = 8, days = 14, details = true } = {}) {
       const view = leadForm.view(lead);
       nutshell = { owner, form: form ? (form.has_note ? 'form note' : form.found ? 'custom fields only' : 'nothing') : 'no Nutshell lead', view,
         texts_with_rule_on: !p.phone ? 'no phone' : leadForm.textBlock(lead, true) ? `off: ${leadForm.textBlock(lead, true)}` : 'on',
-        sheet_cells: patch.form ? rowCells({ ...p, company: p.company || patch.form.company, ...Object.fromEntries(Object.entries(leadForm.sheetCells(patch)).map(([k, v]) => [k, p[k] || v])) }) : null };
+        would: owner.status === 'theirs' ? `sheet row only, Assigned Rep ${repName(owner.owner)}; no Telegram, no cadence` : 'sheet row (Vincent), cadence, Email 1 card',
+        sheet_cells: rowCells(patch.form ? { ...p, company: p.company || patch.form.company, ...Object.fromEntries(Object.entries(leadForm.sheetCells(patch)).map(([k, v]) => [k, p[k] || v])) } : p, owner.status === 'theirs' ? repName(owner.owner) : undefined) };
     }
     out.push({ date: m.date, from: m.from, ...d, parsed: p, nutshell, already_processed: done.exists ? done.data().status : null });
   }
