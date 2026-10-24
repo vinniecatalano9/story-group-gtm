@@ -219,13 +219,15 @@ async function appendNote({ email, phone, line }) {
 /**
  * Add one lead row (A:H only: Notes in I and the cadence's J:M are left alone)
  * below the last row, with the same dropdowns as Vincent's rows. Returns the row number.
+ * `notes` (optional) fills Notes (I) on the new row only, written once at creation
+ * (another rep's row gets its Clearout result this way, 10/23).
  * @param cells [Full Name, Phone, Email, role, frustration, Channel, Lead Status, Assigned Rep]
  */
-async function appendLead(cells) {
+async function appendLead(cells, { notes } = {}) {
   const tab = await tabName();
   const r = await sheets().spreadsheets.values.append({
-    spreadsheetId: SHEET_ID(), range: `${q(tab)}!A1:H1`, valueInputOption: 'USER_ENTERED', insertDataOption: 'OVERWRITE',
-    requestBody: { values: [cells.slice(0, 8)] },
+    spreadsheetId: SHEET_ID(), range: `${q(tab)}!A1:${notes ? 'I' : 'H'}1`, valueInputOption: 'USER_ENTERED', insertDataOption: 'OVERWRITE',
+    requestBody: { values: [notes ? [...cells.slice(0, 8), notes] : cells.slice(0, 8)] },
   });
   const row = Number(((r.data.updates && r.data.updates.updatedRange) || '').match(/!A(\d+)/)?.[1]);
   if (!row) throw new Error(`append gave no row (${r.data.updates && r.data.updates.updatedRange})`);

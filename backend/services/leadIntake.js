@@ -226,7 +226,8 @@ async function run() {
 
 /**
  * Another rep's lead (Nutshell owner isn't Vincent; 10/23): a sheet row with
- * their first name in Assigned Rep and the form answers, and nothing else.
+ * their first name in Assigned Rep, the form answers, and the email's Clearout
+ * result in Notes (every lead email gets verified, theirs too), and nothing else.
  * No Telegram, no cadence, no Nutshell notes, and the row is never written
  * again (writeBack, fillBlank and appendNote only touch Vincent's rows).
  * decide() already dropped anyone on the sheet or in the cadence.
@@ -239,16 +240,22 @@ async function addOtherRow(p, d, ref, { out, seen, owner, form }) {
     p = { ...p, company: p.company || patch.form.company, role: p.role || cells.role, frustration: p.frustration || cells.frustration };
   }
   const rep = repName(owner.owner);
+  let notes = '';
+  if (p.email) {
+    const day = new Date().toLocaleDateString('en-US', { timeZone: 'America/Chicago', month: 'numeric', day: 'numeric' });
+    const c = await require('./clearout').verifyEmail(p.email).catch(e => ({ error: e.message }));
+    notes = cell(c.error ? `Clearout ${day}: not checked (${c.error})` : `Clearout ${day}: ${c.status}${c.desc && c.status !== 'valid' ? ` (${c.desc.toLowerCase()})` : ''}`);
+  }
   let row;
   try {
-    row = await require('./adLeadsSheet').appendLead(rowCells(p, rep));
+    row = await require('./adLeadsSheet').appendLead(rowCells(p, rep), { notes });
   } catch (e) {
     await ref.delete().catch(() => {});
     out.error = `sheet append failed, retrying next run: ${e.message}`;
     return 'retry';
   }
   seen.push({ where: `sheet row ${row} (${rep})`, rep, email: p.email, phone: p.phone });
-  await ref.update({ status: 'other_rep_row', owner: owner.owner, nutshell_lead_id: owner.lead_id, sheet_row: row, parsed: p });
+  await ref.update({ status: 'other_rep_row', owner: owner.owner, nutshell_lead_id: owner.lead_id, sheet_row: row, parsed: p, notes });
   out.skipped.push(`${p.email || p.phone}: ${rep}'s lead, sheet row ${row} only`);
   return 'added';
 }
@@ -398,7 +405,7 @@ async function dryRun({ last = 8, days = 14, details = true } = {}) {
       const view = leadForm.view(lead);
       nutshell = { owner, form: form ? (form.has_note ? 'form note' : form.found ? 'custom fields only' : 'nothing') : 'no Nutshell lead', view,
         texts_with_rule_on: !p.phone ? 'no phone' : leadForm.textBlock(lead, true) ? `off: ${leadForm.textBlock(lead, true)}` : 'on',
-        would: owner.status === 'theirs' ? `sheet row only, Assigned Rep ${repName(owner.owner)}; no Telegram, no cadence` : 'sheet row (Vincent), cadence, Email 1 card',
+        would: owner.status === 'theirs' ? `sheet row only, Assigned Rep ${repName(owner.owner)}, Clearout result in Notes; no Telegram, no cadence` : 'sheet row (Vincent), cadence, Email 1 card',
         sheet_cells: rowCells(patch.form ? { ...p, company: p.company || patch.form.company, ...Object.fromEntries(Object.entries(leadForm.sheetCells(patch)).map(([k, v]) => [k, p[k] || v])) } : p, owner.status === 'theirs' ? repName(owner.owner) : undefined) };
     }
     out.push({ date: m.date, from: m.from, ...d, parsed: p, nutshell, already_processed: done.exists ? done.data().status : null });
