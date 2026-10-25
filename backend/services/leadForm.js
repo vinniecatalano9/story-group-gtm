@@ -59,6 +59,47 @@ async function fromNutshell(leadId) {
   return { found: true, has_note: !!note, lead_id: leadId, note: note ? parseNote(note.note) : null, cf };
 }
 
+// ── The assessment note (10/25) ──────────────────────────────────────────────
+// Assessment form leads ("<name> - Impossible to Ignore Assessment") come in
+// with no Nutshell contact. Annette's entry puts it all in one unlabeled note:
+// name, email, phone, ad source, ad id, then each question with its answer run
+// straight on ("...on their own? Pretty oftenWhat is your biggest...").
+
+const QUESTIONS = {
+  found_on_own: /How often do new customers find you on their own\??/i,
+  frustration: /What is your biggest frustration right now\??/i,
+  role: /What best describes your role\??/i,
+};
+
+/** The assessment note's text -> { full_name, email, phone_raw, role, frustration, found_on_own }. */
+function parseAssessment(text) {
+  const t = String(text || '').replace(/\r/g, '');
+  const lines = t.split('\n').map(s => s.trim()).filter(Boolean);
+  const isPhone = s => /^\+?[\d\s().-]+$/.test(s) && /^1?\d{10}$/.test(s.replace(/\D/g, '')); // not the 18-digit ad id
+  const first = lines[0] || '';
+  const out = {
+    full_name: first && !first.includes('@') && !isPhone(first) && !Object.values(QUESTIONS).some(re => re.test(first)) ? first : '',
+    email: ((t.match(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/) || [])[0] || '').toLowerCase(),
+    phone_raw: lines.find(isPhone) || '',
+    role: '', frustration: '', found_on_own: '',
+  };
+  // Each answer runs from its question to the next question or the end of its line.
+  const qs = Object.entries(QUESTIONS).map(([k, re]) => { const m = t.match(re); return m && { k, start: m.index, end: m.index + m[0].length }; })
+    .filter(Boolean).sort((a, b) => a.start - b.start);
+  qs.forEach((q, i) => { out[q.k] = t.slice(q.end, i + 1 < qs.length ? qs[i + 1].start : t.length).trim().split('\n')[0].trim(); });
+  return out;
+}
+
+/** The first note that isn't the strategy-call form note and has an email or phone, parsed; else null. */
+function assessmentFrom(notes) {
+  for (const n of notes || []) {
+    if (NOTE_RE.test(n.note || '')) continue;
+    const a = parseAssessment(n.note);
+    if (a.email || a.phone_raw) return a;
+  }
+  return null;
+}
+
 const blankish = v => !v || /^(unknown|n\/a|none)$/i.test(String(v).trim());
 
 /** The ad_leads fields for what fromNutshell() found. Never blanks a value already there. */
@@ -282,4 +323,4 @@ async function backfill({ apply = false, only = null } = {}) {
   return { apply, rule: consentRuleOn() ? 'on' : 'off', leads: out };
 }
 
-module.exports = { parseNote, fromNutshell, leadPatch, textBlock, canTextConsent, view, cardLines, sheetCells, packageFit, tiers, timelineLabel, undash, backfill, consentRuleOn };
+module.exports = { parseNote, fromNutshell, parseAssessment, assessmentFrom, leadPatch, textBlock, canTextConsent, view, cardLines, sheetCells, packageFit, tiers, timelineLabel, undash, backfill, consentRuleOn };

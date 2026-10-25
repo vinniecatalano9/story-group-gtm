@@ -334,6 +334,8 @@ async function addLead(p, d, ref, { out, seen, who, owner, form, source, at }) {
 // linked to. Each one gets NUTSHELL_WAIT_MS for its form email to arrive and
 // claim it; after that its Nutshell contact's email and phone go through the
 // same steps (dedupe, sheet row, cadence, first card). Once per Nutshell lead.
+// An assessment lead has no contact: its email, phone and answers come from
+// its note (leadForm.assessmentFrom, 10/25).
 
 const NUTSHELL_WAIT_MS = 20 * 6e4;
 const NUTSHELL_EVERY_MS = 3 * 6e4;
@@ -345,6 +347,8 @@ async function nutshellAssigned(out) {
   if (!nutshell.isConfigured() || Date.now() - _lastNutshell < NUTSHELL_EVERY_MS) return;
   _lastNutshell = Date.now();
   const cadence = require('./cadence');
+  const leadForm = require('./leadForm');
+  const { toE164 } = require('./ringcentral');
   const meta = await nutshellMeta().get();
   let since = meta.exists ? toDate(meta.data().since) : null;
   if (!since) {
@@ -362,15 +366,18 @@ async function nutshellAssigned(out) {
     try { await ref.create({ nutshell_lead_id: l.id, status: 'claimed', at: new Date() }); } catch { continue; }
     const c = (l.contacts || [])[0];
     const k = c ? await contactKeys(c.id) : {};
-    const full = (c && c.name) || '';
+    // No email or phone on a contact: assessment leads have no contact, just a note (10/25).
+    const a = !k.email && !k.phone ? leadForm.assessmentFrom((await nutshell.call('getLead', { leadId: l.id })).notes) : null;
+    const full = (c && c.name) || (a && a.full_name) || '';
     const p = {
       full_name: full, first_name: firstName(full), last_name: full.split(/\s+/).slice(1).join(' '),
-      email: k.email || '', phone_raw: k.phone_raw || '', phone: k.phone || null, role: '', frustration: '', company: '',
+      email: k.email || (a && EMAIL_RE.test(a.email) ? a.email : ''), phone_raw: k.phone_raw || (a && a.phone_raw) || '',
+      phone: k.phone || (a ? toE164(a.phone_raw) : null), role: (a && a.role) || '', frustration: (a && a.frustration) || '', company: '',
     };
     seen = seen || (await known());
     const d = decide(p, seen);
     const who = cadence.esc(full || l.description || `Nutshell lead ${l.id}`);
-    const source = `Nutshell lead assigned to you (${(l.sources || []).map(s => s.name).join(', ') || 'no source'})`;
+    const source = `Nutshell lead assigned to you (${(l.sources || []).map(s => s.name).join(', ') || 'no source'}${a ? '; details from its note' : ''})`;
     // Already in the cadence by email or phone: link it so stages land on this lead.
     if (d.action === 'duplicate') {
       const hit = (await cadence.listLeads()).find(x => (p.email && x.email === p.email) || (p.phone && x.phone === p.phone));
