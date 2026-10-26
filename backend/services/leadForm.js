@@ -12,7 +12,8 @@
 //
 // SMS consent rule (SMS_CONSENT_RULE=on in .env): the cadence texts a lead
 // only when sms_consent is 'yes' (or 'grandfathered', set by hand for leads
-// from before the form asked). Off: consent is shown, nothing changes.
+// from before the form asked, or 'allowed', set by hand when Vincent says to
+// text a lead whose form never asked, 10/25). Off: consent is shown, nothing changes.
 //
 // Package fit reads the "Packages at a glance" table in tier_reference.md
 // every time (TIER_REFERENCE_PATH, else the pitch-call-prep skill's copy):
@@ -23,7 +24,7 @@ const os = require('os');
 const path = require('path');
 
 const TZ = 'America/Chicago';
-const CONSENT_OK = ['yes', 'grandfathered'];
+const CONSENT_OK = ['yes', 'grandfathered', 'allowed'];
 const consentRuleOn = () => /^(on|true|1)$/i.test(process.env.SMS_CONSENT_RULE || '');
 
 // ── The Nutshell note ────────────────────────────────────────────────────────
@@ -167,6 +168,7 @@ const fmtAt = v => {
 function consentLabel(lead) {
   if (lead.sms_consent === 'yes') return `yes${lead.sms_consent_at ? `, ${fmtAt(lead.sms_consent_at)}` : ''}`;
   if (lead.sms_consent === 'grandfathered') return 'no record, texting allowed (from before the form asked)';
+  if (lead.sms_consent === 'allowed') return 'no record, Vincent said to text';
   if (lead.sms_consent === 'no') return 'no';
   return 'no record';
 }

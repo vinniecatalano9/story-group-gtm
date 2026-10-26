@@ -225,6 +225,29 @@ async function run() {
   return out;
 }
 
+// ── Odd names (Vincent, 10/25) ───────────────────────────────────────────────
+// A form name like "Eyes Right" isn't a first name to greet. One quick model
+// call per new lead (haiku: a yes/no, no need for a bigger model) sets
+// name_odd, and every greeting becomes "Hello," (cadenceCopy.nameInDoubt).
+// The dashboard's greeting name still wins. If the check fails, the name stays.
+
+async function oddName(p) {
+  const clean = s => String(s || '').replace(/[^\p{L}\p{N} .,'&@+-]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
+  const first = clean(p.first_name);
+  if (!first) return null;
+  const prompt = `A sales lead typed this into a web form's name field: "${clean(p.full_name) || first}" (email: "${clean(p.email)}").
+We would greet them "Hey ${first},". Is "${first}" plausibly a real person's first name? Any language or culture counts, and so do nicknames.
+Answer false for a business or brand name, an ordinary word, a placeholder, or junk.
+Reply with JSON only: {"first_name_ok": true or false, "why": "under 10 words"}`;
+  try {
+    const r = await require('./claude').claudeJSON(prompt, { model: 'haiku', maxTokens: 100, timeout: 60000 });
+    return r && r.first_name_ok === false ? String(r.why || 'not a first name').slice(0, 120) : null;
+  } catch (e) {
+    console.warn(`[intake] name check failed, keeping "${first}": ${e.message}`);
+    return null;
+  }
+}
+
 /**
  * Another rep's lead (Nutshell owner isn't Vincent; 10/23): a sheet row with
  * their first name in Assigned Rep, the form answers, and the email's Clearout
@@ -306,6 +329,8 @@ async function addLead(p, d, ref, { out, seen, who, owner, form, source, at }) {
     await cadence.importLeads([{ sheet_row: row, email: p.email, first_name: cap(p.first_name), last_name: p.last_name, phone: p.phone || p.phone_raw, role: p.role, frustration: p.frustration, company: p.company, source, rep: process.env.AD_LEADS_REP || 'Vincent', notes: '', nutshell_lead_id: owner && owner.lead_id }]);
     const key = p.email || `phone:${p.phone}`;
     if (patch.form) await cadence.saveLead(key, patch);
+    const odd = await oddName(p);
+    if (odd) await cadence.saveLead(key, { name_odd: true, name_odd_why: odd });
     await cadence.startLead(key);
     const lead = await cadence.getLead(key);
     const c = lead.email_check;
@@ -313,7 +338,7 @@ async function addLead(p, d, ref, { out, seen, who, owner, form, source, at }) {
     const whose = !owner ? '' : owner.status === 'mine' ? '\nNutshell: assigned to you.' : `\nNutshell: ${esc(owner.why || 'no owner')} after 15 min, so I treated it as yours. Skip the card if it isn't.`;
     const v = leadForm.view(lead);
     const details = patch.form ? `\n${[v.timeline && `Timeline: ${v.timeline}`, `Budget: ${v.budget || 'not given'}`, lead.phone && `SMS consent: ${v.consent}`].filter(Boolean).map(esc).join(' · ')}` : '\nNo form details in Nutshell.';
-    await ping(`🆕 New ad lead <b>${who}</b> (${esc(source)}) is in sheet row ${row} and the cadence started.\n${[p.email, p.phone, p.company, p.frustration].filter(Boolean).map(esc).join(' · ')}${details}${c ? `\nClearout: ${esc(c.status)}` : ''}${whose}\nNext: ${esc(lead.next_touch_label || 'see the Ad Leads page')}`);
+    await ping(`🆕 New ad lead <b>${who}</b> (${esc(source)}) is in sheet row ${row} and the cadence started.\n${[p.email, p.phone, p.company, p.frustration].filter(Boolean).map(esc).join(' · ')}${details}${c ? `\nClearout: ${esc(c.status)}` : ''}${whose}${odd ? `\nGreeting: "Hello," (name check: ${esc(odd)})` : ''}\nNext: ${esc(lead.next_touch_label || 'see the Ad Leads page')}`);
     // First card now, not on the next tick (speed to lead).
     const q = await cadence.queueDue(key);
     const lag = at ? Math.round((Date.now() - new Date(at)) / 1000) : null;
@@ -424,4 +449,4 @@ async function dryRun({ last = 8, days = 14, details = true } = {}) {
   return { since: meta.exists ? toDate(meta.data().since) : 'not started (first run takes the last 30 minutes)', emails: out };
 }
 
-module.exports = { run, dryRun, parseLeadEmail, decide, rowCells, formFields };
+module.exports = { run, dryRun, parseLeadEmail, decide, rowCells, formFields, oddName };

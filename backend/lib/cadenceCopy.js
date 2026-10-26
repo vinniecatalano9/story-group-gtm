@@ -172,9 +172,10 @@ function noshowTimes(t) {
  */
 // Name in doubt (Vincent, 10/22): the email is someone else's (sheet note),
 // or the name is blank, one letter, or not a name. Then "Hello," with no name.
+// name_odd: the intake's name check said it isn't a first name ("Eyes Right", 10/25).
 function nameInDoubt(lead) {
   if (lead.greet_name) return false;
-  if (lead.name_doubt) return true;
+  if (lead.name_doubt || lead.name_odd) return true;
   const n = String(lead.first_name || '').trim();
   return n.length < 2 || !/^[A-Za-z][A-Za-z'.-]*$/.test(n) || /^(test|asdf|na|n\/a|none|null|unknown)$/i.test(n);
 }
