@@ -14,6 +14,11 @@
 //   live               sends go out on their own.
 //   off                nothing runs.
 //
+// One lead, one step, set by hand when Vincent says so (10/25):
+//   send_at.{step id}  that step goes out at this exact time, send window or not.
+//   send_ok.{step id}  Vincent already OK'd it in chat: no card, it just sends,
+//                      then a Telegram note shows what went.
+//
 // Firestore: ad_leads/{email} holds each lead's state and timeline;
 // cadence_approvals holds the cards; slot_holds keeps offered times unique
 // (services/cadenceSlots.js); cadence_copy/{step id} holds Vincent's copy
@@ -281,6 +286,8 @@ function nextStep(lead) {
     // Text intro replaces Text 1 when there's no email to refer back to.
     if (step.onlyWithoutEmail && canEmail(lead)) return { step, skip: 'has email' };
     if (step.skipWithoutEmail && !canEmail(lead)) return { step, skip: lead.email_bounced ? 'email bounced' : lead.email_bad ? 'email invalid' : emailHeld(lead) ? 'email held' : 'no email' };
+    const setAt = lead.send_at && toDate(lead.send_at[step.id]);
+    if (setAt) return { step, due: setAt, ignoreWindow: true };
     let due;
     if (step.beforeMeetingMinutes) {
       due = new Date(toDate(lead.meeting_at).getTime() - step.beforeMeetingMinutes * 6e4);
@@ -487,7 +494,9 @@ async function ping(text, extra = {}) {
   }
 }
 
-/** Queue one step: a Telegram card in approval mode, straight out in live mode. */
+const okInChat = (lead, stepId) => !!(lead.send_ok && lead.send_ok[stepId]);
+
+/** Queue one step: a Telegram card in approval mode, straight out in live mode (or when send_ok). */
 async function queueStep(lead, step, msg) {
   const token = crypto.randomBytes(18).toString('base64url');
   const ref = approvalsCol().doc();
@@ -496,7 +505,7 @@ async function queueStep(lead, step, msg) {
     to: step.channel === 'email' ? lead.email : lead.phone,
     subject: msg.subject || null, text: msg.text,
     offer: msg.offer ? { today: msg.offer.today, day: msg.offer.day, am: msg.offer.am, pm: msg.offer.pm } : null,
-    status: MODE() === 'live' && !step.alwaysApprove ? 'approved' : 'pending', token, created_at: new Date(),
+    status: (MODE() === 'live' && !step.alwaysApprove) || okInChat(lead, step.id) ? 'approved' : 'pending', token, created_at: new Date(),
   };
   await ref.set(a);
   await saveLead(lead.email, { pending_approval: ref.id, pending_approved: a.status === 'approved', sheet_dirty: true, ...(msg.offer ? { offer: a.offer } : {}) });
@@ -813,7 +822,8 @@ async function dispatch(id) {
   }
   const step = copy.stepById(a.step);
   const now = new Date();
-  if (!step.beforeMeetingMinutes && !step.afterMeetingMinutes && !inWindow(now, lead.tz)) return { status: `waiting: outside ${lead.first_name}'s send window, goes out ${shortDate(intoWindow(now, lead.tz), lead.tz)} after 9:30am their time` };
+  const setAt = lead.send_at && toDate(lead.send_at[a.step]);
+  if (!setAt && !step.beforeMeetingMinutes && !step.afterMeetingMinutes && !inWindow(now, lead.tz)) return { status: `waiting: outside ${lead.first_name}'s send window, goes out ${shortDate(intoWindow(now, lead.tz), lead.tz)} after 9:30am their time` };
 
   // Times that went stale while the card waited: re-plan on a fresh card.
   const off = a.offer || {};
@@ -907,6 +917,7 @@ async function dispatch(id) {
     await addTimeline(lead.email, timelineEntry('sent', { step: a.step, channel: a.channel, text: a.text, subject: a.subject || null, edited: !!a.edited }));
     await logToNutshell(lead, `${shortDate(now, lead.tz)} ${step.label} sent (${a.channel === 'email' ? 'email' : 'text'})\n\n${a.subject ? `Subject: ${a.subject}\n\n` : ''}${a.text}`);
     await markCard(a, `Sent ${z.clock(now, 'America/Chicago')} CT`);
+    if (okInChat(lead, a.step)) await ping(`✅ ${esc(step.label)} sent to <b>${esc(fullName(lead))}</b> at ${z.clock(now, 'America/New_York')} ET, as you OK'd in chat.\n\n${a.subject ? `Subject: ${esc(a.subject)}\n\n` : ''}${esc(a.text)}`);
     await refreshNext(lead.email);
     return { status: 'sent' };
   } catch (e) {
