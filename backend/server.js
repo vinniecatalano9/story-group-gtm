@@ -939,6 +939,18 @@ cron.schedule('* * * * *', async () => {
   }
 }, { timezone: 'America/Chicago' });
 
+// Stripe payment leads: every 10 min (offset from the :00 jobs), known texting
+// codes get assigned to Vincent, renamed and closed Won; unknown codes get one
+// Telegram ping (services/stripeLeads.js).
+cron.schedule('5-59/10 * * * *', async () => {
+  try {
+    const r = await require('./services/stripeLeads').run();
+    if (r.cleaned?.length || r.pinged?.length || r.errors?.length) console.log('[stripe-leads]', JSON.stringify(r));
+  } catch (e) {
+    console.error('[cron] Stripe leads error:', e.message);
+  }
+}, { timezone: 'America/Chicago', recoverMissedExecutions: true });
+
 // LinkedIn queue sync: every 30 min — clear replies already answered in
 // HeyReach, refresh stale reply text, sync Interested auto-tags.
 cron.schedule('*/30 * * * *', async () => {
