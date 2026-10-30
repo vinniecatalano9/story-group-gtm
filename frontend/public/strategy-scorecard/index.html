@@ -96,6 +96,8 @@
   .opt .k { flex: none; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-size: 12px; font-weight: 700; color: var(--muted); }
   .opt.on { border-color: var(--pink); background: var(--pink-soft); }
   .opt.on .k { border-color: var(--pink); background: var(--pink); color: #fff; }
+  .opt .ot small { display: block; margin-top: 3px; font-size: 10.5px; font-weight: 700; letter-spacing: 1.3px; text-transform: uppercase; color: var(--muted); }
+  .opt.on .ot small { color: var(--pink); }
   .nav { display: flex; justify-content: space-between; align-items: center; margin-top: 22px; min-height: 40px; gap: 12px; }
   .link { background: none; border: 0; padding: 8px 0; color: var(--muted); font-size: 14px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
   .link:hover { color: var(--text); }
@@ -135,7 +137,11 @@
   .bar .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
   .bar .nm { font-weight: 700; font-size: 15px; }
   .bar .nm span { font-weight: 400; color: var(--muted); }
-  .bar .pct { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .bar .pct { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .bar .pct em { font-style: normal; font-weight: 500; color: var(--muted); font-size: 12.5px; margin-left: 6px; }
+  .scalekey { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 16px; font-size: 12px; color: var(--muted); }
+  .scalekey b { color: var(--text); margin-right: 2px; }
+  .rp .scalekey { margin-top: 10px; font-size: 10px; }
   .flag { font-size: 10.5px; font-weight: 700; letter-spacing: 1.5px; padding: 4px 8px; border-radius: 999px; background: var(--pink-soft); color: var(--pink); white-space: nowrap; }
   .track { margin-top: 8px; height: 10px; border-radius: 6px; background: var(--line); overflow: hidden; }
   .track i { display: block; height: 100%; width: 0; border-radius: 6px; background: rgba(138,153,176,.6); transition: width 1s cubic-bezier(.22,1,.36,1); }
@@ -387,19 +393,21 @@
     { id: 'frustration', area: 'open', text: "What's your biggest frustration right now?",
       options: [['Strong work, but not enough visibility', 'found'], ['Getting attention but not authority', 'convert'], ['Growth has hit a ceiling', 'scale'], ['Not sure where the gap is', null]] },
     { id: 'search', pillar: 'found', area: 'vis', text: 'When someone searches your company or your name, what do they find?',
-      options: ['Not much, or old stuff', 'Our website and a few social profiles', 'Some press, interviews, or podcasts', 'Current coverage that makes us look like the leader'] },
+      options: ['Not much, or old stuff', 'Our website and a few social profiles', 'Some press, interviews, or podcasts', 'Regular coverage, but not everywhere buyers look', 'Current coverage that makes us look like the leader'] },
     { id: 'media', pillar: 'found', area: 'media', text: 'How do you land press, podcasts, or speaking spots today?',
-      options: ["We don't", 'Once in a while, by luck', 'Sometimes, but with no real plan', 'On purpose, with a steady plan'] },
+      options: ["We don't", 'Once in a while, by luck', 'Sometimes, but with no real plan', "Often, with a plan we're still building", 'On purpose, with a steady plan'] },
     { id: 'rep', pillar: 'convert', area: 'rep', text: 'When a buyer checks you out, does your reputation match how good you really are?',
-      options: ['No, we look smaller than we are', 'Somewhat, but there are gaps', 'Mostly', 'Yes, the proof is everywhere'] },
+      options: ['No, we look smaller than we are', 'Somewhat, but there are big gaps', 'Mostly, with a few gaps', 'Yes, the proof is easy to find', 'Yes, the proof is everywhere'] },
     { id: 'exec', pillar: 'convert', area: 'exec', text: 'Is your CEO or leadership known as an expert outside the company?',
-      options: ['Not at all', 'A little, mostly on LinkedIn', 'Some interviews, podcasts, or talks', 'Yes, they get quoted and booked'] },
+      options: ['Not at all', 'A little, mostly on LinkedIn', 'Some interviews, podcasts, or talks', 'Yes, known in our industry', 'Yes, they get quoted and booked'] },
     { id: 'inbound', pillar: 'scale', area: 'web', text: 'How often do new customers find you on their own?',
-      options: ["Rarely. It's mostly referrals and hustle", 'Sometimes', 'Pretty often', "It's most of our new business"] },
+      options: ["Rarely. It's mostly referrals and hustle", 'Sometimes', 'Pretty often', 'About half of our new business', "It's most of our new business"] },
     { id: 'leads', pillar: 'scale', area: 'digital', text: 'Do new leads come in steadily from channels you can measure?',
-      options: ["No, it's feast or famine", "Some, but it's hard to track", "Yes, but it's uneven", 'Yes, steady and measured'] },
+      options: ["No, it's feast or famine", "Some, but it's hard to track", "Yes, but it's uneven", 'Mostly steady, and we track most of it', 'Yes, steady and measured'] },
   ];
   const TOTAL = QUESTIONS.length;
+  // Michelle's Story Group audit scale (same as the Call Scorecard). Scored answers are stored 0 to 4 and mean 1 to 5.
+  const SCALE = ['Not Established', 'In Progress', 'Established', 'Scalable', 'Optimized'];
   const label = (q, i) => (i == null ? '' : Array.isArray(q.options[i]) ? q.options[i][0] : q.options[i]);
 
   // Package names and Start here prices from tier_reference.md (the final 9/18/2026 package doc), read 10/30/2026.
@@ -558,14 +566,17 @@
   const pad = n => String(n).padStart(2, '0');
   const clip = (s, n) => (String(s).length > n ? String(s).slice(0, n - 1) + '…' : String(s));
   const firstName = s => String(s || '').trim().split(/\s+/)[0] || '';
+  const fmt = v => (v == null ? '0' : String(Math.round(v * 10) / 10));  // 2.5, 3, 2.8
+  const scaleWord = v => (v == null ? 'Not scored' : SCALE[Math.min(4, Math.max(0, Math.floor(v + 1e-9) - 1))]);
 
   /* ---------- State (saved in this browser so a reload mid-call loses nothing) ---------- */
-  const blank = () => ({ v: 1, fields: { name: '', email: '', company: '', title: '', website: '', lead: '' }, answers: new Array(TOTAL).fill(null),
+  const blank = () => ({ v: 2, fields: { name: '', email: '', company: '', title: '', website: '', lead: '' }, answers: new Array(TOTAL).fill(null),
     notes: Object.fromEntries(QUESTIONS.map(q => [q.id, ''])), step: 0, pick: '', budget: '', nextStep: '', booking: [], nutshell: null });
   function load() {
     try {
       const s = JSON.parse(localStorage.getItem(STORE));
-      if (s && s.v === 1 && Array.isArray(s.answers) && s.answers.length === TOTAL) {
+      if (s && (s.v === 1 || s.v === 2) && Array.isArray(s.answers) && s.answers.length === TOTAL) {
+        if (s.v === 1) { s.answers = s.answers.map((a, i) => (QUESTIONS[i].pillar && a != null ? [0, 1, 2, 4][a] : a)); s.v = 2; }
         const b = blank();
         if (s.noRetainer && !s.budget) s.budget = 'none';
         delete s.noRetainer;
@@ -624,28 +635,28 @@
   }
 
   /* ---------- Scoring (same math as the website quiz) ---------- */
+  // Each pillar is the average of its answered questions on the 1 to 5 scale; unanswered ones are left out.
+  // 3 (Established) or better is solid; below 3 is a gap, as in Michelle's audit where a 1 or 2 is a gap.
   function result() {
-    const pct = {};
-    for (const p of ORDER) {
-      const qs = QUESTIONS.map((q, i) => [q, i]).filter(([q]) => q.pillar === p);
-      pct[p] = Math.round(qs.reduce((s, [, i]) => s + (S.answers[i] || 0), 0) / (qs.length * 3) * 100);
-    }
-    const scored = QUESTIONS.map((q, i) => (q.pillar ? S.answers[i] || 0 : 0));
-    const score = Math.round(scored.reduce((a, b) => a + b, 0) / ((TOTAL - 1) * 3) * 100);
-    const weakest = ORDER.reduce((w, p) => (pct[p] < pct[w] ? p : w), ORDER[0]);
-    const hiF = pct.found >= 67, hiC = pct.convert >= 67;
+    const avg = xs => (xs.length ? xs.reduce((x, y) => x + y, 0) / xs.length : null);
+    const val = i => (S.answers[i] == null ? null : S.answers[i] + 1);
+    const sc = {};
+    for (const p of ORDER) sc[p] = avg(QUESTIONS.map((q, i) => (q.pillar === p ? val(i) : null)).filter(v => v != null));
+    const overall = avg(QUESTIONS.map((q, i) => (q.pillar ? val(i) : null)).filter(v => v != null));
+    const weakest = ORDER.reduce((w, p) => ((sc[p] ?? 0) < (sc[w] ?? 0) ? p : w), ORDER[0]);
+    const hiF = (sc.found ?? 0) >= 3, hiC = (sc.convert ?? 0) >= 3;
     const type = hiF && hiC ? { title: 'Impossible to ignore', line: 'Seen and trusted.', body: 'The work now is staying ahead and turning that attention into steady growth.' }
       : !hiF && hiC ? { title: 'Hidden gem', line: 'Strong work, not enough visibility.', body: 'The people who find you trust you. Not enough of them are finding you.' }
       : hiF && !hiC ? { title: 'Loud but thin', line: 'Attention but not authority.', body: "People see you, but what they find doesn't build enough trust to buy." }
       : { title: 'Starting out', line: 'Not seen or trusted enough yet.', body: "Outside your network, buyers can't find much, and what they find doesn't prove how good you are." };
     const said = QUESTIONS[0].options[S.answers[0]] || null;
-    return { pct, score, weakest, type, top: score >= 85, said: said && said[0], saidPillar: said && said[1] };
+    return { sc, overall, weakest, type, top: (overall ?? 0) >= 4.5, said: said && said[0], saidPillar: said && said[1] };
   }
 
-  // Package pick, per tier_reference.md's selection rules. The scores give the need (a pillar under 50 is weak:
-  // both answers below "Sometimes"/"Somewhat" on average); the budget can only step it down, cutting scope, not price.
+  // Package pick, per tier_reference.md's selection rules. The scores give the need (a pillar averaging under 3,
+  // Established, is weak); the budget can only step it down, cutting scope, not price.
   function recommend(r) {
-    const weak = p => r.pct[p] < 50, nm = k => PACKAGES[k].name;
+    const weak = p => r.sc[p] == null || r.sc[p] < 3, nm = k => PACKAGES[k].name;
     const pr = weak('found') || weak('convert'), leads = weak('scale'), b = S.budget, notes = [];
     const [need, needWhy] = pr && leads ? ['influence', 'Weak on PR (found or trust) and on leads. Leads plus PR is Influence; never stack Visibility with growth work.']
       : pr ? ['visibility', 'The gap is being found or trusted, and leads are OK. PR is the main need, so Visibility.']
@@ -701,7 +712,7 @@
   function renderQuestion() {
     const i = S.step, q = QUESTIONS[i], a = AREAS[q.area];
     const noteKey = q.id;
-    const opts = q.options.map((o, n) => `<button type="button" class="opt${S.answers[i] === n ? ' on' : ''}" data-pick="${n}" aria-pressed="${S.answers[i] === n}"><span class="k">${'ABCD'[n]}</span>${esc(label(q, n))}</button>`).join('');
+    const opts = q.options.map((o, n) => `<button type="button" class="opt${S.answers[i] === n ? ' on' : ''}" data-pick="${n}" aria-pressed="${S.answers[i] === n}"><span class="k">${q.pillar ? n + 1 : 'ABCD'[n]}</span><span class="ot">${esc(label(q, n))}${q.pillar ? `<small>${SCALE[n]}</small>` : ''}</span></button>`).join('');
     app.innerHTML = `<div class="fade">
       <div class="meta"><span>Question ${i + 1} of ${TOTAL}</span><span>${q.pillar ? esc(PILLARS[q.pillar].name) : 'Where it hurts'}</span></div>
       <div class="prog"><i style="width:${(i / TOTAL) * 100 + 4}%"></i></div>
@@ -734,12 +745,12 @@
       <div class="eyebrow" tabindex="-1">${first ? `${esc(first)}'s scorecard` : f.company ? `${esc(f.company)} scorecard` : 'Your scorecard'}</div>
       ${r.said ? `<p class="said">You told us <q>${esc(r.said)}</q></p>` : ''}
       <p class="agree">${agree}</p>
-      ${missing.length ? `<div class="warn rep">${missing.length === 1 ? 'One question is' : `${missing.length} questions are`} not answered yet, so ${missing.length === 1 ? 'it counts' : 'they count'} as zero: ${missing.map(i => `<button type="button" class="link" data-go="${i}">${pad(i + 1)}</button>`).join(' ')}</div>` : ''}
+      ${missing.length ? `<div class="warn rep">${missing.length === 1 ? 'One question is' : `${missing.length} questions are`} not answered yet, so ${missing.length === 1 ? "it's" : "they're"} left out of the score: ${missing.map(i => `<button type="button" class="link" data-go="${i}">${pad(i + 1)}</button>`).join(' ')}</div>` : ''}
       <div class="scorebox">
-        <div class="ring" role="img" aria-label="Score ${r.score} out of 100">
+        <div class="ring" role="img" aria-label="Score ${fmt(r.overall)} out of 5, ${scaleWord(r.overall)}">
           <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="var(--line)" stroke-width="10"/>
             <circle id="arc" cx="60" cy="60" r="52" fill="none" stroke="var(--pink)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C}" style="transition:stroke-dashoffset 1.1s cubic-bezier(.22,1,.36,1)"/></svg>
-          <div class="v"><b>${r.score}</b><span>out of 100</span></div>
+          <div class="v"><b>${fmt(r.overall)}</b><span>out of 5</span></div>
         </div>
         <div>
           <p class="type-line">${esc(r.type.line)}</p>
@@ -748,6 +759,7 @@
         </div>
       </div>
       <div class="bars">${barsHtml(r, true)}</div>
+      ${scaleKey()}
       <div class="gap">
         <div class="k">${r.top ? 'Your edge to sharpen' : "What's holding you back"}</div>
         <h3>${esc(w.name)}: ${esc(w.ask)}</h3>
@@ -772,19 +784,23 @@
     showNutshellState();
     requestAnimationFrame(() => requestAnimationFrame(() => {
       const arc = app.querySelector('#arc');
-      if (arc) arc.style.strokeDashoffset = C * (1 - r.score / 100);
+      if (arc) arc.style.strokeDashoffset = C * (1 - (r.overall || 0) / 5);
       app.querySelectorAll('.bars .track i').forEach((el, n) => setTimeout(() => { el.style.width = el.dataset.w + '%'; }, 200 + n * 120));
     }));
   }
 
   function barsHtml(r, animate) {
     return ORDER.map(p => {
-      const hot = p === r.weakest && !r.top, w = Math.max(r.pct[p], 3);
+      const hot = p === r.weakest && !r.top, w = Math.max((r.sc[p] || 0) / 5 * 100, 3);
       return `<div class="bar">
         <div class="row"><span class="nm">${esc(PILLARS[p].name)} <span>· ${esc(PILLARS[p].ask)}</span></span>
-          <span style="display:flex;gap:8px;align-items:center">${hot ? '<span class="flag">FIX FIRST</span>' : ''}<span class="pct">${r.pct[p]}</span></span></div>
+          <span style="display:flex;gap:8px;align-items:center">${hot ? '<span class="flag">FIX FIRST</span>' : ''}<span class="pct">${fmt(r.sc[p])}<em>${esc(scaleWord(r.sc[p]))}</em></span></span></div>
         <div class="track"><i class="${hot ? 'hot' : ''}" ${animate ? `data-w="${w}"` : `style="width:${w}%"`}></i></div></div>`;
     }).join('');
+  }
+
+  function scaleKey() {
+    return `<div class="scalekey" aria-label="Scale">${SCALE.map((w, n) => `<span><b>${n + 1}</b> ${esc(w)}</span>`).join('')}</div>`;
   }
 
   function renderNext(r = result()) {
@@ -860,11 +876,12 @@
       ${r.said ? `<p class="said">You told us <q>${esc(r.said)}</q></p>` : ''}
       <div class="scorebox">
         <div class="ring"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="var(--line)" stroke-width="10"/>
-          <circle cx="60" cy="60" r="52" fill="none" stroke="var(--pink)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - r.score / 100)}"/></svg>
-          <div class="v"><b>${r.score}</b><span>out of 100</span></div></div>
+          <circle cx="60" cy="60" r="52" fill="none" stroke="var(--pink)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - (r.overall || 0) / 5)}"/></svg>
+          <div class="v"><b>${fmt(r.overall)}</b><span>out of 5</span></div></div>
         <div><p class="type-line">${esc(r.type.line)}</p><div class="type">${esc(r.type.title)}</div><p class="sub">${esc(r.type.body)}</p></div>
       </div>
       <div class="bars">${barsHtml(r, false)}</div>
+      ${scaleKey()}
       <div class="gap">
         <div class="k">${r.top ? 'Your edge to sharpen' : "What's holding you back"}</div>
         <h3>${esc(w.name)}: ${esc(w.ask)}</h3>
@@ -903,8 +920,9 @@
       '',
       "Thanks for the time today. Here's the scorecard we walked through.",
       '',
-      `Overall score: ${r.score} out of 100. ${r.type.title}: ${r.type.line.charAt(0).toLowerCase()}${r.type.line.slice(1)}`,
-      ...ORDER.map(p => `${PILLARS[p].name}: ${r.pct[p]}`),
+      `Overall score: ${fmt(r.overall)} out of 5 (${scaleWord(r.overall)}). ${r.type.title}: ${r.type.line.charAt(0).toLowerCase()}${r.type.line.slice(1)}`,
+      ...ORDER.map(p => `${PILLARS[p].name}: ${r.sc[p] == null ? 'not scored' : `${fmt(r.sc[p])} out of 5, ${scaleWord(r.sc[p])}`}`),
+      `(Scale: ${SCALE.map((w, n) => `${n + 1} ${w}`).join(', ')})`,
       '',
       `${r.top ? 'Your edge to sharpen' : 'Where to start'}: ${w.name}. ${w.problem}`,
       '',
@@ -933,14 +951,14 @@
     return [
       `STRATEGY CALL · via Strategy Scorecard · ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
       '',
-      `Score: ${r.score}/100, ${r.type.title}. Fix first: ${PILLARS[r.weakest].name}`,
-      ORDER.map(p => `${PILLARS[p].name} ${r.pct[p]}`).join(' · '),
+      `Score: ${fmt(r.overall)}/5 (${scaleWord(r.overall)}), ${r.type.title}. Fix first: ${PILLARS[r.weakest].name}`,
+      ORDER.map(p => `${PILLARS[p].name} ${r.sc[p] == null ? 'not scored' : fmt(r.sc[p])}`).join(' · '),
       `Budget: ${S.budget ? budgetLabel(S.budget) : 'not asked'}`,
       `Recommended: ${P.name}, Start here ${P.start} (${how})`,
       S.nextStep ? `Agreed next step: ${S.nextStep}` : null,
       '',
       'Answers',
-      ...QUESTIONS.flatMap((q, i) => [`${i + 1}. ${q.text} ${S.answers[i] == null ? '(not asked)' : label(q, S.answers[i])}`,
+      ...QUESTIONS.flatMap((q, i) => [`${i + 1}. ${q.text} ${S.answers[i] == null ? '(not asked)' : q.pillar ? `${S.answers[i] + 1} ${SCALE[S.answers[i]]}: ${label(q, S.answers[i])}` : label(q, S.answers[i])}`,
         noteFor(q.id) ? `   Note: ${noteFor(q.id)}` : null]),
       ...(S.booking.length ? ['', 'From their booking', ...S.booking.map(([q, a]) => `${q}: ${a}`)] : []),
     ].filter(l => l !== null).join('\n');
@@ -1156,13 +1174,13 @@
     else if (t.id === 'rep') { repEmail = t.value; try { localStorage.setItem(REP_KEY, repEmail); } catch {} }
   });
 
-  // A to D (or 1 to 4) picks an answer; arrow keys move between questions.
+  // 1 to 5 (or A to E) picks an answer; arrow keys move between questions.
   document.addEventListener('keydown', e => {
     if (e.metaKey || e.ctrlKey || e.altKey || /input|textarea|select/i.test(e.target.tagName) || document.querySelector('dialog[open]')) return;
     if (e.key === 'ArrowRight') { go('next'); return; }
     if (e.key === 'ArrowLeft') { go('prev'); return; }
     if (S.step >= TOTAL || e.key.length !== 1) return;
-    const k = e.key.toLowerCase(), n = 'abcd'.indexOf(k) >= 0 ? 'abcd'.indexOf(k) : '1234'.indexOf(k);
+    const k = e.key.toLowerCase(), n = 'abcde'.indexOf(k) >= 0 ? 'abcde'.indexOf(k) : '12345'.indexOf(k);
     if (n >= 0 && n < QUESTIONS[S.step].options.length) pick(n);
   });
 
