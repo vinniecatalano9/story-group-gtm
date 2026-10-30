@@ -1185,12 +1185,18 @@ async function ensureNutshellLead(lead, contactId) {
 /** Move the lead forward to the outcome's stage. Returns a line for the timeline. */
 async function applyStage(lead, leadId, outcome) {
   const nutshell = require('./nutshell');
-  // Closed as Lost through the REST API: Not qualified = "Not a strategic fit",
-  // Not interested = "Lost - Any reason". Still on record, just not open.
-  if (outcome === 'not_interested' || outcome === 'not_qualified') {
-    const why = outcome === 'not_qualified' ? 'Not a strategic fit' : 'Lost - Any reason';
+  // Closed as Lost through the REST API (Vincent, 10/30): Not qualified = "Not a
+  // strategic fit", Not interested = "Said no", no reply after the full cadence =
+  // "Never responded". Still on record, just not open. A lead someone already
+  // closed by hand keeps their reason.
+  const CLOSE_AS = { not_qualified: 'not_fit', not_interested: 'said_no', no_response: 'never_responded' };
+  if (CLOSE_AS[outcome]) {
+    const lostId = nutshell.LOST[CLOSE_AS[outcome]];
+    const why = { not_fit: 'Not a strategic fit', said_no: 'Said no', never_responded: 'Never responded' }[CLOSE_AS[outcome]];
     try {
-      await nutshell.closeLead(leadId, outcome === 'not_qualified' ? nutshell.LOST.not_fit : nutshell.LOST.any);
+      const open = await nutshell.call('getLead', { leadId });
+      if (open.status !== 0) return `Nutshell lead already closed, left as is (wanted Lost, ${why})`;
+      await nutshell.closeLead(leadId, lostId);
       return `Nutshell lead closed as Lost (${why})`;
     } catch (e) {
       await ping(`Nutshell: couldn't close <b>${esc(fullName(lead))}</b> (${esc(e.message)}). Mark it Lost, ${why}: https://app.nutshell.com/lead/${leadId}`);
@@ -1359,6 +1365,20 @@ async function runIntake() {
   }
 }
 
+// The intro track ran out and they never replied (state 'done'): once
+// NO_RESPONSE_DAYS pass after the last touch, the Nutshell lead closes as
+// Lost, "Never responded" (Vincent, 10/30). A reply after that still pings.
+const NO_RESPONSE_DAYS = 3;
+async function closeNoResponse(lead) {
+  const last = toDate(lead.last_touch_at);
+  if (!last || Date.now() - last < NO_RESPONSE_DAYS * 864e5) return false;
+  const touches = Object.values(lead.steps_done || {}).filter(s => s && s.status === 'sent').length;
+  await saveLead(lead.email, { closed_no_response: new Date(), sheet_dirty: true });
+  await addTimeline(lead.email, timelineEntry('outcome', { text: `No reply after the full cadence (${touches} touches)` }));
+  await logToNutshell(lead, `${today(lead.tz)} No reply after the full cadence (${touches} touches). Closed as Lost, Never responded.`, { outcome: 'no_response' });
+  return true;
+}
+
 async function tick() {
   if (MODE() === 'off') return { skipped: 'CADENCE_MODE=off' };
   if (_running) return { skipped: 'previous run still going' };
@@ -1372,8 +1392,12 @@ async function tick() {
     const r = await sendApproved();
     for (const [id, x] of Object.entries(r)) (x.status === 'sent' ? out.sent : out.waiting).push(`${x.email} ${x.step}: ${x.status}`);
 
-    for (const lead of (await listLeads()).filter(l => l.running && !l.pending_approval)) {
+    const all = await listLeads();
+    for (const lead of all.filter(l => l.running && !l.pending_approval)) {
       await queueDue(lead.email, out);
+    }
+    for (const lead of all.filter(l => l.state === 'done' && !l.closed_no_response)) {
+      if (await closeNoResponse(lead)) (out.closed = out.closed || []).push(lead.email);
     }
     out.sheet_rows = await syncSheet();
     await require('./clearout').checkUsageAlert().catch(e => console.warn('[cadence] Clearout usage alert:', e.message));

@@ -155,8 +155,9 @@ async function newPipelineLead({ description, contactId, stagesetId, milestoneId
 
 // Closing a lead isn't in the JSON-RPC API; the REST API does it
 // (POST /rest/leads/<id>/status). Outcome ids from GET /rest/outcomes (10/22):
-// 2 Lost - Any reason, 4 Not a strategic fit, 5 Budget or timing mismatch.
-const LOST = { any: 2, not_fit: 4, budget: 5 };
+// 2 Lost - Any reason, 4 Not a strategic fit, 5 Budget or timing mismatch;
+// 12 Never responded and 13 Said no were added 10/30. Outcomes are account-wide.
+const LOST = { any: 2, not_fit: 4, budget: 5, never_responded: 12, said_no: 13 };
 
 async function closeLead(leadId, outcomeId) {
   if (!isConfigured()) throw new Error('NUTSHELL_API_KEY is not set on the server');

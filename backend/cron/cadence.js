@@ -7,7 +7,7 @@ const cadence = require('../services/cadence');
 
 async function runCadence() {
   const r = await cadence.tick();
-  if (r && (r.queued?.length || r.sent?.length || r.replies?.email || r.replies?.sms || r.blocked?.length)) {
+  if (r && (r.queued?.length || r.sent?.length || r.replies?.email || r.replies?.sms || r.blocked?.length || r.closed?.length)) {
     console.log('[cadence]', JSON.stringify(r));
   }
   return r;
