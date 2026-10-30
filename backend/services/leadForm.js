@@ -29,7 +29,7 @@ const consentRuleOn = () => /^(on|true|1)$/i.test(process.env.SMS_CONSENT_RULE |
 
 // ── The Nutshell note ────────────────────────────────────────────────────────
 
-const NOTE_RE = /Strategy call request submitted/i;
+const NOTE_RE = /Strategy call request submitted|Scorecard submitted on the website/i; // the second: routes/scorecard.js (10/30)
 const KEYS = {
   company: 'Company', situation: 'Situation', timeline: 'Timeline', org_size: 'Organization size',
   budget: 'Budget', booking_route: 'Booking route', consent_text: 'Consent text', submitted_at: 'Submitted at',

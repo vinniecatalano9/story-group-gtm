@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Visibility Scorecard | Story Group</title>
+<meta name="description" content="Seven quick questions. Find out if your business is held back by getting found, converting, or scaling." />
+<meta property="og:title" content="What's holding your business back?" />
+<meta property="og:description" content="A free 60 second scorecard from Story Group." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,600&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --navy: #00193B; --deep: #000F26; --pink: #FF2257; --pink-soft: rgba(255,34,87,.12);
+    --text: #E8ECF1; --muted: #8A99B0; --card: #0D1F3C; --card2: #0A1830; --line: #2A3F5F;
+    --serif: 'Playfair Display', Georgia, serif; --sans: 'Montserrat', Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; background: var(--navy); color: var(--text); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+  body { min-height: 100vh; background: radial-gradient(1200px 600px at 50% -200px, #0B2A57 0%, var(--navy) 60%); }
+  a { color: inherit; }
+  button { font: inherit; color: inherit; }
+  .topbar { height: 6px; background: var(--pink); }
+  header { max-width: 680px; margin: 0 auto; padding: 18px 16px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .logo { font-size: 24px; line-height: 1; text-decoration: none; letter-spacing: -.2px; }
+  .logo .s { font-family: var(--serif); font-style: italic; font-weight: 600; color: var(--pink); }
+  .logo .g { color: var(--muted); font-weight: 400; }
+  .tag { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+  main { max-width: 680px; margin: 0 auto; padding: 22px 16px 48px; }
+  .hero { padding: 6px 0 22px; }
+  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--pink); }
+  h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(32px, 7vw, 46px); line-height: 1.08; margin: 10px 0 12px; }
+  h1 em { color: var(--pink); }
+  .hero p { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.5; max-width: 520px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px; box-shadow: 0 30px 60px -30px rgba(0,0,0,.7); scroll-margin-top: 16px; }
+  @media (min-width: 640px) { .card { padding: 34px; } }
+  .meta { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+  .prog { margin-top: 10px; height: 4px; border-radius: 4px; background: var(--line); overflow: hidden; }
+  .prog i { display: block; height: 100%; background: var(--pink); transition: width .45s ease; }
+  .num { margin-top: 26px; font-family: var(--serif); font-style: italic; font-size: 52px; line-height: 1; color: var(--pink); opacity: .9; }
+  .q { margin: 10px 0 0; font-size: clamp(21px, 4.6vw, 26px); font-weight: 700; line-height: 1.3; outline: none; }
+  .pillar-tag { display: inline-block; margin-top: 14px; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+  .opts { display: grid; gap: 10px; margin-top: 22px; }
+  .opt { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 15px 16px; min-height: 58px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--card2); font-size: 16px; line-height: 1.35; cursor: pointer; transition: border-color .15s, background .15s, transform .1s; }
+  .opt:hover { border-color: var(--muted); }
+  .opt:active { transform: scale(.99); }
+  .opt:focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; }
+  .opt .k { flex: none; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-size: 12px; font-weight: 700; color: var(--muted); }
+  .opt.on { border-color: var(--pink); background: var(--pink-soft); }
+  .opt.on .k { border-color: var(--pink); background: var(--pink); color: #fff; }
+  .nav { display: flex; justify-content: space-between; align-items: center; margin-top: 22px; min-height: 40px; }
+  .link { background: none; border: 0; padding: 8px 0; color: var(--muted); font-size: 14px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+  .link:hover { color: var(--text); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; border: 0; border-radius: 10px; padding: 16px 24px; font-size: 16px; font-weight: 700;
+    background: var(--pink); color: #fff; cursor: pointer; text-decoration: none; transition: filter .15s, transform .1s; }
+  .btn:hover { filter: brightness(1.08); }
+  .btn:active { transform: scale(.99); }
+  .btn[disabled] { opacity: .55; cursor: wait; }
+  .btn.wide { width: 100%; }
+  h2 { font-family: var(--serif); font-weight: 600; font-size: clamp(26px, 5.5vw, 32px); line-height: 1.15; margin: 10px 0 8px; outline: none; }
+  .sub { color: var(--muted); font-size: 15px; line-height: 1.5; margin: 0; }
+  form { display: grid; gap: 12px; margin-top: 22px; }
+  label.f { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
+  label.f span em { font-style: normal; font-weight: 400; }
+  input[type=text], input[type=email], input[type=tel] { width: 100%; padding: 14px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--card2);
+    color: var(--text); font: inherit; font-size: 16px; }
+  input:focus { outline: none; border-color: var(--pink); }
+  .consent { display: flex; gap: 10px; align-items: flex-start; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+  .consent input { margin-top: 2px; width: 18px; height: 18px; accent-color: var(--pink); flex: none; }
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  .err { color: #FF8FA8; font-size: 14px; min-height: 1em; margin: 0; }
+  .fine { color: var(--muted); font-size: 12.5px; text-align: center; margin: 4px 0 0; }
+  /* Results */
+  .said { font-family: var(--serif); font-style: italic; font-size: clamp(20px, 4.4vw, 24px); line-height: 1.3; margin: 10px 0 6px; }
+  .said q { color: var(--text); }
+  .agree { color: var(--muted); margin: 0; font-size: 15px; }
+  .agree b { color: var(--text); }
+  .scorebox { display: grid; gap: 20px; align-items: center; margin-top: 24px; padding: 20px; border-radius: 12px; background: var(--card2); border: 1px solid var(--line); }
+  @media (min-width: 560px) { .scorebox { grid-template-columns: auto 1fr; } }
+  .ring { position: relative; width: 136px; height: 136px; margin: 0 auto; }
+  .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring .v { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+  .ring .v b { font-size: 42px; line-height: 1; }
+  .ring .v span { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .type { font-family: var(--serif); font-size: 28px; line-height: 1.1; margin: 4px 0 6px; }
+  .type-line { color: var(--pink); font-weight: 700; font-size: 14px; margin: 0 0 6px; }
+  .bars { display: grid; gap: 18px; margin-top: 26px; }
+  .bar .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .bar .nm { font-weight: 700; font-size: 15px; }
+  .bar .nm span { font-weight: 400; color: var(--muted); }
+  .bar .pct { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .flag { font-size: 10.5px; font-weight: 700; letter-spacing: 1.5px; padding: 4px 8px; border-radius: 999px; background: var(--pink-soft); color: var(--pink); white-space: nowrap; }
+  .track { margin-top: 8px; height: 10px; border-radius: 6px; background: var(--line); overflow: hidden; }
+  .track i { display: block; height: 100%; width: 0; border-radius: 6px; background: rgba(138,153,176,.6); transition: width 1s cubic-bezier(.22,1,.36,1); }
+  .track i.hot { background: var(--pink); }
+  .gap { margin-top: 26px; padding: 20px; border-radius: 12px; border: 1px solid var(--line); background: var(--card2); }
+  .gap .k { font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+  .gap h3 { margin: 6px 0 8px; font-size: 20px; color: var(--pink); }
+  .gap p { margin: 0; line-height: 1.55; }
+  .gap ul { margin: 14px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+  .gap li { display: flex; gap: 10px; line-height: 1.45; font-size: 15px; }
+  .gap li::before { content: ''; flex: none; width: 8px; height: 8px; margin-top: 7px; border-radius: 50%; background: var(--pink); }
+  .cta { margin-top: 26px; padding: 24px; border-radius: 12px; border: 1px solid var(--pink); background: linear-gradient(180deg, rgba(255,34,87,.12), rgba(255,34,87,.03)); text-align: center; }
+  .cta h3 { font-family: var(--serif); font-size: 26px; margin: 0 0 8px; }
+  .cta p { margin: 0 auto 18px; color: var(--muted); line-height: 1.5; max-width: 460px; }
+  .foot { margin-top: 18px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; color: var(--muted); font-size: 12.5px; }
+  footer { max-width: 680px; margin: 0 auto; padding: 0 16px 28px; color: var(--muted); font-size: 12px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .fade { animation: fade .35s ease both; }
+  @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .fade { animation: none; } .track i, .prog i { transition: none; } }
+  @media (max-width: 559px) {
+    header { padding-top: 14px; }
+    main { padding-top: 14px; }
+    .hero { padding-bottom: 16px; }
+    h1 { font-size: 30px; margin: 8px 0 8px; }
+    .hero p { font-size: 14.5px; }
+    .card { padding: 18px; }
+    .num { margin-top: 16px; font-size: 38px; }
+    .q { font-size: 20px; }
+    .pillar-tag { margin-top: 10px; }
+    .opts { gap: 8px; margin-top: 16px; }
+    .opt { min-height: 52px; padding: 12px 14px; font-size: 15.5px; }
+  }
+  body.embed { background: transparent; min-height: 0; }
+  body.embed .topbar, body.embed header, body.embed footer { display: none; }
+  body.embed main { padding-top: 4px; padding-bottom: 8px; }
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<header>
+  <a class="logo" href="https://storygroup.io" target="_top"><span class="s">story</span> <span class="g">group</span></a>
+  <span class="tag">Free scorecard</span>
+</header>
+<main>
+  <section class="hero" id="hero">
+    <div class="eyebrow">60 second scorecard</div>
+    <h1>What's holding your business <em>back?</em></h1>
+    <p>Seven quick questions. Find out if your gap is getting found, converting, or scaling, then meet with our experts to close it.</p>
+  </section>
+  <section class="card" id="app" aria-live="polite"></section>
+</main>
+<footer><span>© Story Group</span><a href="https://storygroup.io" target="_top">storygroup.io</a></footer>
+
+<script>
+(() => {
+  const BOOKING = 'https://growth.storygroup.io/n/schedule-booking/388067/kEdQlC';
+  const API = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? 'http://localhost:3001' : 'https://gtm-api.srv1364275.hstgr.cloud';
+  const CONSENT_TEXT = 'Text me about my scorecard. Msg and data rates may apply. Msg frequency varies. Reply STOP to opt out.';
+
+  // Pillars: the colleague's "found, convert, scale". Fix lines are the client lines from the Call Scorecard's audit areas.
+  const PILLARS = {
+    found: { name: 'Get found', ask: 'are buyers finding you?',
+      problem: "Buyers can't pick you if they never see you. Right now you aren't showing up enough where they search, read, and decide.",
+      fixes: ['Show up where your buyers search, read, and decide.', 'A proactive PR strategy that earns coverage, interviews, podcasts, and stages.'] },
+    convert: { name: 'Convert', ask: 'do they trust you enough to buy?',
+      problem: "People find you, but what they find doesn't show how good you really are. So they keep shopping.",
+      fixes: ['A public reputation that matches how strong your company really is.', 'Leaders who are recognized as experts outside the company.'] },
+    scale: { name: 'Scale', ask: 'does new business come in on its own?',
+      problem: "Growth still leans on referrals and hustle. New business doesn't come in steadily, and it's hard to see what's working.",
+      fixes: ['Digital channels that consistently bring in qualified leads.', 'Measure what your PR and marketing actually produce in leads and revenue.'] },
+  };
+  const ORDER = ['found', 'convert', 'scale'];
+
+  // First question is the ad form's, unscored. The rest score 0 to 3, two per pillar.
+  const QUESTIONS = [
+    { id: 'frustration', text: "What's your biggest frustration right now?",
+      options: [['Strong work, but not enough visibility', 'found'], ['Getting attention but not authority', 'convert'], ['Growth has hit a ceiling', 'scale'], ['Not sure where the gap is', null]] },
+    { id: 'search', pillar: 'found', text: 'When someone searches your company or your name, what do they find?',
+      options: ['Not much, or old stuff', 'Our website and a few social profiles', 'Some press, interviews, or podcasts', 'Current coverage that makes us look like the leader'] },
+    { id: 'media', pillar: 'found', text: 'How do you land press, podcasts, or speaking spots today?',
+      options: ["We don't", 'Once in a while, by luck', 'Sometimes, but with no real plan', 'On purpose, with a steady plan'] },
+    { id: 'rep', pillar: 'convert', text: 'When a buyer checks you out, does your reputation match how good you really are?',
+      options: ['No, we look smaller than we are', 'Somewhat, but there are gaps', 'Mostly', 'Yes, the proof is everywhere'] },
+    { id: 'exec', pillar: 'convert', text: 'Is your CEO or leadership known as an expert outside the company?',
+      options: ['Not at all', 'A little, mostly on LinkedIn', 'Some interviews, podcasts, or talks', 'Yes, they get quoted and booked'] },
+    { id: 'inbound', pillar: 'scale', text: 'How often do new customers find you on their own?',
+      options: ["Rarely. It's mostly referrals and hustle", 'Sometimes', 'Pretty often', "It's most of our new business"] },
+    { id: 'leads', pillar: 'scale', text: 'Do new leads come in steadily from channels you can measure?',
+      options: ["No, it's feast or famine", "Some, but it's hard to track", "Yes, but it's uneven", 'Yes, steady and measured'] },
+  ];
+  const TOTAL = QUESTIONS.length;
+
+  const params = new URLSearchParams(location.search);
+  const EMBED = params.get('embed') === '1';
+  if (EMBED) document.body.classList.add('embed');
+  const UTM = Object.fromEntries(['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].map(k => [k, params.get(k) || '']));
+
+  const app = document.getElementById('app');
+  const hero = document.getElementById('hero');
+  const answers = new Array(TOTAL).fill(null);
+  let step = 0, started = false, sent = false;
+
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const pad = n => String(n).padStart(2, '0');
+
+  // Analytics hooks: dataLayer if the host has it, Meta pixel if loaded, and the parent page when embedded.
+  function track(name, data = {}) {
+    try { (window.dataLayer = window.dataLayer || []).push({ event: name, ...data }); } catch {}
+    try { if (window.fbq && name === 'scorecard_lead') window.fbq('track', 'Lead'); if (window.fbq && name === 'scorecard_book') window.fbq('track', 'Schedule'); } catch {}
+    try { if (window.parent !== window) window.parent.postMessage({ type: 'sg-scorecard', event: name, ...data }, '*'); } catch {}
+  }
+  function postHeight() {
+    if (!EMBED || window.parent === window) return;
+    try { window.parent.postMessage({ type: 'sg-scorecard-height', height: document.documentElement.scrollHeight }, '*'); } catch {}
+  }
+  new ResizeObserver(postHeight).observe(document.body);
+
+  function result() {
+    const pct = {};
+    for (const p of ORDER) {
+      const qs = QUESTIONS.map((q, i) => [q, i]).filter(([q]) => q.pillar === p);
+      pct[p] = Math.round(qs.reduce((s, [, i]) => s + (answers[i] || 0), 0) / (qs.length * 3) * 100);
+    }
+    const scored = QUESTIONS.map((q, i) => (q.pillar ? answers[i] || 0 : 0));
+    const score = Math.round(scored.reduce((a, b) => a + b, 0) / ((TOTAL - 1) * 3) * 100);
+    const weakest = ORDER.reduce((w, p) => (pct[p] < pct[w] ? p : w), ORDER[0]);
+    const hiF = pct.found >= 67, hiC = pct.convert >= 67; // two answers per pillar: 67 means mostly C or better
+    const type = hiF && hiC ? { title: 'Impossible to ignore', line: 'Seen and trusted.', body: 'The work now is staying ahead and turning that attention into steady growth.' }
+      : !hiF && hiC ? { title: 'Hidden gem', line: 'Strong work, not enough visibility.', body: 'The people who find you trust you. Not enough of them are finding you.' }
+      : hiF && !hiC ? { title: 'Loud but thin', line: 'Attention but not authority.', body: "People see you, but what they find doesn't build enough trust to buy." }
+      : { title: 'Starting out', line: 'Not seen or trusted enough yet.', body: "Outside your network, buyers can't find much, and what they find doesn't prove how good you are." };
+    const said = QUESTIONS[0].options[answers[0]] || null;
+    return { pct, score, weakest, type, said: said && said[0], saidPillar: said && said[1] };
+  }
+
+  function focusTop(sel) {
+    const el = app.querySelector(sel);
+    if (el) el.focus({ preventScroll: true });
+    const r = app.getBoundingClientRect();
+    if (r.top < 0 || r.top > window.innerHeight * 0.4) app.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderQuestion() {
+    const q = QUESTIONS[step];
+    const opts = q.options.map((o, i) => {
+      const label = Array.isArray(o) ? o[0] : o;
+      return `<button type="button" class="opt${answers[step] === i ? ' on' : ''}" data-i="${i}" aria-pressed="${answers[step] === i}"><span class="k">${'ABCD'[i]}</span>${esc(label)}</button>`;
+    }).join('');
+    app.innerHTML = `<div class="fade">
+      <div class="meta"><span>Question ${step + 1} of ${TOTAL}</span><span>About 60 seconds</span></div>
+      <div class="prog"><i style="width:${(step / TOTAL) * 100 + 4}%"></i></div>
+      <div class="num">${pad(step + 1)}</div>
+      ${q.pillar ? `<span class="pillar-tag">${esc(PILLARS[q.pillar].name)}</span>` : ''}
+      <p class="q" tabindex="-1">${esc(q.text)}</p>
+      <div class="opts" role="group" aria-label="${esc(q.text)}">${opts}</div>
+      <div class="nav">${step > 0 ? '<button type="button" class="link" id="back">Back</button>' : '<span></span>'}${answers[step] != null ? '<button type="button" class="link" id="fwd">Next</button>' : ''}</div>
+    </div>`;
+    app.querySelectorAll('.opt').forEach(b => b.addEventListener('click', () => pick(Number(b.dataset.i))));
+    const back = app.querySelector('#back');
+    if (back) back.addEventListener('click', () => go(step - 1));
+    const fwd = app.querySelector('#fwd');
+    if (fwd) fwd.addEventListener('click', () => go(step + 1));
+  }
+
+  let advancing = null;
+  function pick(i) {
+    if (!started) { started = true; track('scorecard_start', { utm_source: UTM.utm_source }); }
+    answers[step] = i;
+    app.querySelectorAll('.opt').forEach(b => { const on = Number(b.dataset.i) === i; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+    clearTimeout(advancing);
+    advancing = setTimeout(() => go(step + 1), 260);
+  }
+
+  function go(n) {
+    clearTimeout(advancing);
+    step = Math.max(0, Math.min(n, TOTAL));
+    hero.hidden = step > 0;
+    if (step < TOTAL) { renderQuestion(); if (n !== 0) focusTop('.q'); }
+    else renderGate();
+  }
+
+  function renderGate() {
+    app.innerHTML = `<div class="fade">
+      <div class="meta"><span>Done</span><span>One last step</span></div>
+      <div class="prog"><i style="width:100%"></i></div>
+      <div class="eyebrow" style="margin-top:24px">Your scorecard is ready</div>
+      <h2 tabindex="-1">Where can we reach you?</h2>
+      <p class="sub">Your score shows on the next screen. One of our experts may reach out to walk you through it.</p>
+      <form id="gate" novalidate>
+        <label class="f"><span>Full name</span><input type="text" name="name" autocomplete="name" required /></label>
+        <label class="f"><span>Work email</span><input type="email" name="email" autocomplete="email" inputmode="email" required /></label>
+        <label class="f"><span>Company</span><input type="text" name="company" autocomplete="organization" required /></label>
+        <label class="f"><span>Phone <em>(optional)</em></span><input type="tel" name="phone" autocomplete="tel" inputmode="tel" /></label>
+        <label class="consent" id="consentRow" hidden><input type="checkbox" name="sms" /><span>${esc(CONSENT_TEXT)}</span></label>
+        <div class="hp" aria-hidden="true"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off" /></label></div>
+        <p class="err" id="err" role="alert"></p>
+        <button class="btn wide" type="submit" id="go">Show my score</button>
+        <p class="fine">No spam. We only use this to follow up on your scorecard.</p>
+      </form>
+      <div class="nav"><button type="button" class="link" id="back">Back to the last question</button><span></span></div>
+    </div>`;
+    const f = app.querySelector('#gate');
+    const phone = f.elements.phone, consentRow = app.querySelector('#consentRow');
+    phone.addEventListener('input', () => { consentRow.hidden = !phone.value.replace(/\D/g, ''); postHeight(); });
+    app.querySelector('#back').addEventListener('click', () => go(TOTAL - 1));
+    f.addEventListener('submit', submit);
+    focusTop('h2');
+  }
+
+  async function send(body) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const ctl = new AbortController();
+        const t = setTimeout(() => ctl.abort(), 10000);
+        const r = await fetch(`${API}/api/scorecard/lead`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctl.signal });
+        clearTimeout(t);
+        if (r.ok || r.status === 400 || r.status === 429) return r;
+      } catch {}
+    }
+    return null;
+  }
+
+  async function submit(e) {
+    e.preventDefault();
+    const f = e.target, err = app.querySelector('#err'), btn = app.querySelector('#go');
+    const v = k => f.elements[k].value.trim();
+    const name = v('name'), email = v('email'), company = v('company'), phone = v('phone');
+    if (!name) { err.textContent = 'Add your name.'; f.elements.name.focus(); return; }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = 'Add a valid email.'; f.elements.email.focus(); return; }
+    if (!company) { err.textContent = 'Add your company.'; f.elements.company.focus(); return; }
+    err.textContent = '';
+    btn.disabled = true; btn.textContent = 'Scoring...';
+    const r = result();
+    const body = {
+      name, email, company, phone, sms_consent: !!(phone && f.elements.sms.checked), consent_text: CONSENT_TEXT, website: v('website'),
+      frustration: r.said || '', score: r.score, type: r.type.title, fix_first: PILLARS[r.weakest].name,
+      pillars: ORDER.map(p => ({ name: PILLARS[p].name, pct: r.pct[p] })),
+      answers: QUESTIONS.map((q, i) => ({ q: q.text, a: answers[i] == null ? '' : (Array.isArray(q.options[answers[i]]) ? q.options[answers[i]][0] : q.options[answers[i]]) })),
+      utm: UTM, landing_page: location.href.split('#')[0], referrer: document.referrer || '',
+    };
+    if (!sent) {
+      const res = await send(body);
+      if (res && res.status === 400) { btn.disabled = false; btn.textContent = 'Show my score'; err.textContent = 'Check your name and email.'; return; }
+      sent = true;
+      track('scorecard_lead', { score: r.score, fix_first: r.weakest });
+    }
+    renderResults(r, name);
+  }
+
+  function renderResults(r, name) {
+    const first = String(name || '').split(/\s+/)[0];
+    const w = PILLARS[r.weakest];
+    const agree = r.saidPillar == null
+      ? `Here's where your answers point: <b>${esc(w.name)}</b> first.`
+      : r.saidPillar === r.weakest ? `The scores agree. <b>${esc(w.name)}</b> is where to start.`
+      : `Your answers point to <b>${esc(w.name)}</b> first.`;
+    const C = 2 * Math.PI * 52;
+    const top = r.score >= 85;
+    app.innerHTML = `<div class="fade">
+      <div class="eyebrow">${first ? `${esc(first)}'s scorecard` : 'Your scorecard'}</div>
+      ${r.said ? `<p class="said">You told us <q>${esc(r.said)}</q></p>` : ''}
+      <p class="agree">${agree}</p>
+      <div class="scorebox">
+        <div class="ring" role="img" aria-label="Score ${r.score} out of 100">
+          <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="var(--line)" stroke-width="10"/>
+            <circle id="arc" cx="60" cy="60" r="52" fill="none" stroke="var(--pink)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C}" style="transition:stroke-dashoffset 1.1s cubic-bezier(.22,1,.36,1)"/></svg>
+          <div class="v"><b>${r.score}</b><span>out of 100</span></div>
+        </div>
+        <div>
+          <p class="type-line">${esc(r.type.line)}</p>
+          <div class="type">${esc(r.type.title)}</div>
+          <p class="sub">${esc(r.type.body)}</p>
+        </div>
+      </div>
+      <div class="bars">${ORDER.map(p => `<div class="bar">
+        <div class="row"><span class="nm">${esc(PILLARS[p].name)} <span>· ${esc(PILLARS[p].ask)}</span></span>
+          <span style="display:flex;gap:8px;align-items:center">${p === r.weakest && !top ? '<span class="flag">FIX FIRST</span>' : ''}<span class="pct">${r.pct[p]}</span></span></div>
+        <div class="track"><i class="${p === r.weakest && !top ? 'hot' : ''}" data-w="${Math.max(r.pct[p], 3)}"></i></div></div>`).join('')}</div>
+      <div class="gap">
+        <div class="k">${top ? 'Your edge to sharpen' : "What's holding you back"}</div>
+        <h3>${esc(w.name)}: ${esc(w.ask)}</h3>
+        <p>${esc(w.problem)}</p>
+        <ul>${w.fixes.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+      </div>
+      <div class="cta">
+        <h3>Meet with our experts</h3>
+        <p>A free 30 minute call. We'll walk through your scores and show you what's holding you back from getting found, converting, or scaling.</p>
+        <a class="btn" id="book" href="${BOOKING}" target="_blank" rel="noopener">Book my free call</a>
+      </div>
+      <div class="foot"><span>A quick self-check, not a full audit. Our full audit scores 11 areas of your business.</span><button type="button" class="link" id="retake">Retake</button></div>
+    </div>`;
+    hero.hidden = true;
+    app.querySelector('#book').addEventListener('click', () => track('scorecard_book', { score: r.score }));
+    app.querySelector('#retake').addEventListener('click', () => { answers.fill(null); started = false; go(0); });
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      app.querySelector('#arc').style.strokeDashoffset = C * (1 - r.score / 100);
+      app.querySelectorAll('.track i').forEach((el, i) => setTimeout(() => { el.style.width = el.dataset.w + '%'; }, 200 + i * 120));
+    }));
+    focusTop('.eyebrow');
+  }
+
+  // Keys A to D (or 1 to 4) pick an answer.
+  document.addEventListener('keydown', e => {
+    if (step >= TOTAL || e.metaKey || e.ctrlKey || e.altKey || /input|textarea/i.test(e.target.tagName)) return;
+    const i = 'abcd'.indexOf(e.key.toLowerCase()) >= 0 ? 'abcd'.indexOf(e.key.toLowerCase()) : '1234'.indexOf(e.key);
+    if (i >= 0 && i < QUESTIONS[step].options.length) pick(i);
+  });
+
+  go(0);
+})();
+</script>
+</body>
+</html>

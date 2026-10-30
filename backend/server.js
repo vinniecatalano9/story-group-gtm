@@ -32,6 +32,7 @@ app.use('/api/nutshell', require('./routes/nutshell'));
 app.use('/api/assist', require('./routes/assist'));
 app.use('/api/approve', require('./routes/approve'));
 app.use('/api/cadence', require('./routes/cadence'));
+app.use('/api/scorecard', require('./routes/scorecard'));
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -71,7 +71,7 @@ async function findOrCreateAccount({ company, website }) {
   return { id: made.id, created: true };
 }
 
-async function findOrCreateContact({ name, email, title, accountId }) {
+async function findOrCreateContact({ name, email, phone, title, accountId }) {
   if (email) {
     const found = await call('searchByEmail', { emailAddressString: email });
     const hit = found && found.contacts && found.contacts[0];
@@ -84,6 +84,7 @@ async function findOrCreateContact({ name, email, title, accountId }) {
   if (!name && !email) return null;
   const contact = { name: name || email };
   if (email) contact.email = { '--primary': email };
+  if (phone) contact.phone = { '--primary': phone };
   if (accountId) contact.accounts = [{ id: accountId, relationship: title || '' }];
   const made = await call('newContact', { contact });
   return { id: made.id, created: true };
