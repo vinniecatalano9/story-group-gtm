@@ -270,6 +270,7 @@
       <label class="f"><span>Title <em>(optional)</em></span><input type="text" data-field="title" autocomplete="off" /></label>
       <label class="f"><span>Website <em>(optional)</em></span><input type="text" data-field="website" autocomplete="off" /></label>
       <label class="f"><span>Nutshell lead link <em>(notes land on it)</em></span><input type="url" data-field="lead" autocomplete="off" placeholder="https://app.nutshell.com/lead/..." /></label>
+      <label class="f"><span>Monthly budget <em>(picks the package)</em></span><select data-budget aria-label="Monthly budget"></select></label>
     </div>
     <div class="row-btns"><button type="button" class="btn ghost sm" id="pasteBtn">Paste booking info</button><button type="button" class="link" id="newCall">New call</button></div>
   </details>
@@ -381,6 +382,18 @@
       includes: 'A custom scope across your brands, executives, and markets, with communications, earned media, reputation, and digital growth as needed.' },
   };
   const PKG_ORDER = ['kickstart', 'bge', 'visibility', 'influence', 'command', 'cdg', 'custom'];
+  const START = { bge: 7500, visibility: 10000, influence: 20000, command: 30000, cdg: 33500 };  // Start here, per month
+
+  // Budget bands are the Call Scorecard's, so both tools agree. FITS is the lowest band each package fits there
+  // (cut scope before price); Command & Digital Growth only at $33.5K+ (the $30K rule).
+  const BUDGETS = [['', 'Not asked yet'], ['none', "Won't do a monthly retainer"], ['u5', 'Under $5K a month'], ['b5', '$5K to $10K a month'],
+    ['b10', '$10K to $20K a month'], ['b20', '$20K to $30K a month'], ['b30', '$30K to $33K a month'], ['b33', '$33.5K or more a month']];
+  const BANDS = ['u5', 'b5', 'b10', 'b20', 'b30', 'b33'];
+  const BAND_MIN = { b5: 5000, b10: 10000, b20: 20000, b30: 30000 };
+  const BAND_WORDS = { b5: ['$5k', '$10k'], b10: ['$10k', '$20k'], b20: ['$20k', '$30k'], b30: ['$30k', '$33k'] };
+  const FITS = { kickstart: 'u5', bge: 'b5', visibility: 'b5', influence: 'b10', command: 'b20', cdg: 'b33', custom: 'b33' };
+  const fits = (k, b) => BANDS.indexOf(b) >= BANDS.indexOf(FITS[k]);
+  const budgetLabel = b => (BUDGETS.find(([k]) => k === b) || BUDGETS[0])[1];
   const REPS = [['vincent@storygroup.io', 'Vincent'], ['mmoonan@storygroup.io', 'McKenna'], ['michelle@storygroup.io', 'Michelle'], ['aaron@storygroup.io', 'Aaron'], ['annette@storygroup.io', 'Annette'], ['lydia@storygroup.io', 'Lydia']];
 
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -390,11 +403,16 @@
 
   /* ---------- State (saved in this browser so a reload mid-call loses nothing) ---------- */
   const blank = () => ({ v: 1, fields: { name: '', email: '', company: '', title: '', website: '', lead: '' }, answers: new Array(TOTAL).fill(null),
-    notes: { why: '', found: '', convert: '', scale: '' }, step: 0, pick: '', noRetainer: false, nextStep: '', booking: [], nutshell: null });
+    notes: { why: '', found: '', convert: '', scale: '' }, step: 0, pick: '', budget: '', nextStep: '', booking: [], nutshell: null });
   function load() {
     try {
       const s = JSON.parse(localStorage.getItem(STORE));
-      if (s && s.v === 1 && Array.isArray(s.answers) && s.answers.length === TOTAL) { const b = blank(); return { ...b, ...s, fields: { ...b.fields, ...s.fields }, notes: { ...b.notes, ...s.notes } }; }
+      if (s && s.v === 1 && Array.isArray(s.answers) && s.answers.length === TOTAL) {
+        const b = blank();
+        if (s.noRetainer && !s.budget) s.budget = 'none';
+        delete s.noRetainer;
+        return { ...b, ...s, fields: { ...b.fields, ...s.fields }, notes: { ...b.notes, ...s.notes } };
+      }
     } catch {}
     return blank();
   }
@@ -440,17 +458,31 @@
     return { pct, score, weakest, type, top: score >= 85, said: said && said[0], saidPillar: said && said[1] };
   }
 
-  // Package pick, per tier_reference.md's selection rules. A pillar under 50 is weak (both answers below "Sometimes"/"Somewhat" on average).
+  // Package pick, per tier_reference.md's selection rules. The scores give the need (a pillar under 50 is weak:
+  // both answers below "Sometimes"/"Somewhat" on average); the budget can only step it down, cutting scope, not price.
   function recommend(r) {
-    const weak = p => r.pct[p] < 50;
-    const pr = weak('found') || weak('convert'), leads = weak('scale');
-    const [autoKey, why] = S.noRetainer ? ['kickstart', 'Budget under $5K a month or no monthly retainer, so Kickstart. Every monthly package already starts with the Kickstart work, so only pick it for this reason.']
-      : pr && leads ? ['influence', 'Weak on PR (found or trust) and on leads. Leads plus PR is Influence; never stack Visibility with growth work.']
+    const weak = p => r.pct[p] < 50, nm = k => PACKAGES[k].name;
+    const pr = weak('found') || weak('convert'), leads = weak('scale'), b = S.budget, notes = [];
+    const [need, needWhy] = pr && leads ? ['influence', 'Weak on PR (found or trust) and on leads. Leads plus PR is Influence; never stack Visibility with growth work.']
       : pr ? ['visibility', 'The gap is being found or trusted, and leads are OK. PR is the main need, so Visibility.']
       : leads ? ['bge', 'Found and trusted, but new business is uneven. Leads with no PR ask is Business Growth Engagement.']
       : ['influence', 'No weak pillar. To pull further ahead on media and growth, Influence. Pick Visibility if they only want PR.'];
-    if (S.pick && PACKAGES[S.pick]) return { key: S.pick, autoKey, why: S.pick === autoKey ? why : `Your pick. The scores pointed to ${PACKAGES[autoKey].name}.` };
-    return { key: autoKey, autoKey, why };
+    let auto = need, why = needWhy;
+    if (b === 'none' || b === 'u5') {
+      auto = 'kickstart';
+      why = `${b === 'none' ? "They won't do a monthly retainer" : 'Budget under $5K a month'}, so Kickstart. Every monthly package already starts with the Kickstart work, so only pick it for this reason.`;
+    } else if (b && !fits(need, b)) {
+      auto = need === 'influence' && r.weakest !== 'scale' ? 'visibility' : 'bge';
+      why = `Best fit by the scores is ${nm(need)}, but that's above their budget, so ${nm(auto)} (less scope, not a discount). Offer ${nm(need)} once as the step up.`;
+    } else if (!b) notes.push('Budget not asked yet, so this is the best fit by need only. Ask before you name a price. Under $5K a month means Kickstart.');
+    const key = S.pick && PACKAGES[S.pick] ? S.pick : auto;
+    if (key !== auto) why = `Your pick. The scores${b ? ' and budget' : ''} pointed to ${nm(auto)}.`;
+    const monthlyBudget = b && b !== 'none' && b !== 'u5';
+    if (monthlyBudget && key === 'kickstart') notes.push('Kickstart is only for under $5K a month or no retainer. Their budget fits a monthly package.');
+    else if (monthlyBudget && !fits(key, b)) notes.push(key === 'cdg' && b === 'b30' ? '$30K rule: below $33.5K a month, sell Command, not Command & Digital Growth.' : `${nm(key)} is above their budget range.`);
+    else if (monthlyBudget && BAND_MIN[b] && START[key] > BAND_MIN[b]) notes.push(`${nm(key)} starts above the bottom of their range. Ask: "Where in that range are you leaning: closer to ${BAND_WORDS[b][0]} or closer to ${BAND_WORDS[b][1]}?"`);
+    if (monthlyBudget && fits('command', b) && ['bge', 'visibility', 'influence'].includes(key)) notes.push('Their budget fits more. Only go up to Command if they want reputation, crisis readiness, or national visibility; don\'t add scope they didn\'t ask for.');
+    return { key, autoKey: auto, why, notes };
   }
 
   /* ---------- Rendering ---------- */
@@ -465,8 +497,15 @@
   function renderCallInfo() {
     const f = S.fields;
     document.querySelectorAll('[data-field]').forEach(el => { if (document.activeElement !== el) el.value = f[el.dataset.field] || ''; });
-    const who = [f.name, f.company].filter(Boolean).join(', ');
-    $('#callSum').textContent = who ? `Call with ${who}` : 'Call details: add their name and company';
+    document.querySelectorAll('select[data-budget]').forEach(el => {
+      if (!el.options.length) el.innerHTML = BUDGETS.map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join('');
+      el.value = S.budget;
+    });
+    $('#callSum').textContent = callSum();
+  }
+  function callSum() {
+    const who = [S.fields.name, S.fields.company].filter(Boolean).join(', ');
+    return (who ? `Call with ${who}` : 'Call details: add their name and company') + (S.budget ? ` · ${budgetLabel(S.budget)}` : '');
   }
 
   function renderRail() {
@@ -576,9 +615,12 @@
           <p>${esc(P.includes)}</p><p class="term">${esc(P.term)}</p>
           <div class="repbox rep">
             <div class="rk">Rep only</div>
-            <p><b>Start here:</b> ${esc(P.start)}. Say one number; the lower ladder stays internal.</p>
+            <label class="f"><span>Their monthly budget</span><select data-budget aria-label="Their monthly budget">${BUDGETS.map(([k, l]) => `<option value="${k}"${S.budget === k ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
+            ${S.budget ? '' : `<p class="probe">“Have you set aside a budget for this, or are we still figuring it out? Roughly what range: $5 to 10k a month, $10 to 20k, or higher?”</p>
+            <p class="plain"><b>If they dodge:</b> “Totally fair. The work at $5k is different from the work at $20k. I'm trying to figure out which conversation we're having.”</p>`}
+            <p style="margin-top:12px"><b>Start here:</b> ${esc(P.start)}. Say one number; the lower ladder stays internal.</p>
             <p class="why">${esc(rec.why)}</p>
-            <label class="chk"><input type="checkbox" id="noRetainer"${S.noRetainer ? ' checked' : ''} /> Budget under $5K a month, or won't do a monthly retainer</label>
+            ${rec.notes.map(n => `<p class="why"><b>Note:</b> ${esc(n)}</p>`).join('')}
             <label class="f" style="margin-top:10px"><span>Recommend</span><select id="pkgPick">
               <option value="">Auto from the scores (${esc(PACKAGES[rec.autoKey].name)})</option>
               ${PKG_ORDER.map(k => `<option value="${k}"${S.pick === k ? ' selected' : ''}>${esc(PACKAGES[k].name)}</option>`).join('')}</select></label>
@@ -674,13 +716,14 @@
 
   function crmNote() {
     const r = result(), rec = recommend(r), P = PACKAGES[rec.key];
-    const how = S.pick ? "rep's pick" : S.noRetainer ? 'no retainer' : 'auto from the scores';
+    const how = S.pick ? "rep's pick" : S.budget ? 'auto from the scores and budget' : 'auto from the scores, budget not asked';
     const noteFor = k => (S.notes[k] || '').trim();
     return [
       `STRATEGY CALL · via Strategy Scorecard · ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
       '',
       `Score: ${r.score}/100, ${r.type.title}. Fix first: ${PILLARS[r.weakest].name}`,
       ORDER.map(p => `${PILLARS[p].name} ${r.pct[p]}`).join(' · '),
+      `Budget: ${S.budget ? budgetLabel(S.budget) : 'not asked'}`,
       `Recommended: ${P.name}, Start here ${P.start} (${how})`,
       S.nextStep ? `Agreed next step: ${S.nextStep}` : null,
       '',
@@ -794,6 +837,20 @@
     }
     return null;
   }
+  // "$10k a month" or "10 to 20k" in a budget answer picks the band of its lowest number.
+  function guessBudget(answers) {
+    for (const [q, a] of answers) {
+      if (!/budget|invest|spend/i.test(q)) continue;
+      if (/no retainer|one.?time|project basis/i.test(a)) return 'none';
+      const m = String(a).replace(/,/g, '').match(/(\d+(?:\.\d+)?)\s*(k|thousand)?/i);
+      if (!m) continue;
+      let v = Number(m[1]) * (m[2] || /\d\s*k\b/i.test(a) ? 1000 : 1);
+      if (/year|annual|\/yr/i.test(a)) v /= 12;
+      if (v < 500) continue;
+      return v < 5000 ? 'u5' : v < 10000 ? 'b5' : v < 20000 ? 'b10' : v < 30000 ? 'b20' : v < 33500 ? 'b30' : 'b33';
+    }
+    return '';
+  }
   function b64urlJson(s) {
     const bin = atob(s.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(s.length / 4) * 4, '='));
     return JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, ch => ch.charCodeAt(0))));
@@ -811,6 +868,7 @@
       .filter(x => Array.isArray(x) && x.length === 2).map(([q, a]) => [clip(q, 120), clip(a, 400)]);
     if (answers.length) S.booking = answers;
     if (S.answers[0] == null) { const g = guessFrustration(answers); if (g != null) S.answers[0] = g; }
+    if (!S.budget) S.budget = guessBudget(answers);
     $('#callinfo').open = !S.fields.name || !S.fields.company;
     save(); render();
     return true;
@@ -863,7 +921,7 @@
     if (t.dataset.field) {
       S.fields[t.dataset.field] = t.value; save();
       if (t.dataset.field === 'company') $('#heroTitle').innerHTML = `What's holding ${t.value.trim() ? esc(t.value.trim()) : 'your business'} <em>back?</em>`;
-      if (t.dataset.field === 'name' || t.dataset.field === 'company') { const who = [S.fields.name, S.fields.company].filter(Boolean).join(', '); $('#callSum').textContent = who ? `Call with ${who}` : 'Call details: add their name and company'; }
+      if (t.dataset.field === 'name' || t.dataset.field === 'company') $('#callSum').textContent = callSum();
       if (t.dataset.field === 'lead') showNutshellState();
     } else if (t.dataset.note) { S.notes[t.dataset.note] = t.value; save(); }
     else if (t.id === 'nextStep') {
@@ -876,7 +934,12 @@
   document.addEventListener('change', e => {
     const t = e.target;
     if (t.id === 'pkgPick') { S.pick = t.value; save(); renderNext(); }
-    else if (t.id === 'noRetainer') { S.noRetainer = t.checked; save(); renderNext(); }
+    else if (t.matches('select[data-budget]')) {
+      S.budget = t.value; save();
+      document.querySelectorAll('select[data-budget]').forEach(el => { el.value = S.budget; });
+      $('#callSum').textContent = callSum();
+      if (S.step === TOTAL) renderNext();
+    }
     else if (t.id === 'rep') { repEmail = t.value; try { localStorage.setItem(REP_KEY, repEmail); } catch {} }
   });
 
