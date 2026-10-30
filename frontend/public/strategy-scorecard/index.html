@@ -29,6 +29,7 @@
   .logo .g { color: var(--muted); font-weight: 400; }
   .hdr-r { display: flex; align-items: center; gap: 14px; }
   .tag { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+  .hdr-reset { padding: 7px 14px; border-radius: 999px; font-size: 12.5px; }
   .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--card2); }
   .seg button { border: 0; background: none; padding: 7px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 700; color: var(--muted); cursor: pointer; white-space: nowrap; }
   .seg button[aria-pressed="true"][data-view="rep"] { background: var(--gold); color: #1A1200; }
@@ -190,6 +191,8 @@
     .hdr .tag { display: none; }
     .logo { font-size: 21px; }
     .seg button { padding: 7px 10px; font-size: 12px; }
+    .hdr-r { gap: 8px; }
+    .hdr-reset { padding: 7px 10px; font-size: 12px; }
     h1 { font-size: 29px; margin: 8px 0 8px; }
     .hero p { font-size: 14.5px; }
     .card { padding: 18px; }
@@ -216,6 +219,8 @@
   .toast { position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; background: #fff; color: var(--navy); font-weight: 600; font-size: 14px;
     padding: 11px 16px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.4); transition: opacity .2s, transform .2s; z-index: 20; max-width: calc(100vw - 32px); }
   .toast.on { opacity: 1; transform: translate(-50%, 0); }
+  .toast.act { pointer-events: auto; display: flex; align-items: center; gap: 14px; }
+  .toast .tbtn { border: 0; background: var(--pink); color: #fff; font-weight: 700; font-size: 13.5px; padding: 6px 12px; border-radius: 8px; cursor: pointer; }
 
   /* Client one-pager (print only) */
   #report { display: none; }
@@ -285,6 +290,7 @@
     <a class="logo" href="https://storygroup.io" target="_blank" rel="noopener"><span class="s">story</span> <span class="g">group</span></a>
     <div class="hdr-r">
       <span class="tag">Strategy call</span>
+      <button type="button" class="btn ghost sm rep hdr-reset" data-reset>Reset</button>
       <div class="seg" role="group" aria-label="Screen view">
         <button type="button" data-view="rep" aria-pressed="true">Rep view</button>
         <button type="button" data-view="client" aria-pressed="false">Client view</button>
@@ -305,7 +311,7 @@
       <label class="f"><span>Nutshell lead link <em>(notes land on it)</em></span><input type="url" data-field="lead" autocomplete="off" placeholder="https://app.nutshell.com/lead/..." /></label>
       <label class="f"><span>Monthly budget <em>(picks the package)</em></span><select data-budget aria-label="Monthly budget"></select></label>
     </div>
-    <div class="row-btns"><button type="button" class="btn ghost sm" id="pasteBtn">Paste booking info</button><button type="button" class="link" id="newCall">New call</button></div>
+    <div class="row-btns"><button type="button" class="btn ghost sm" id="pasteBtn">Paste booking info</button><button type="button" class="link" data-reset>Reset for a new call</button></div>
   </details>
   <section class="hero" id="hero">
     <div class="eyebrow">Strategy call</div>
@@ -583,10 +589,28 @@
   let repEmail = '';
   try { repEmail = localStorage.getItem(REP_KEY) || ''; } catch {}
 
-  function toast(msg) {
+  function toast(msg, action) {
     const t = $('#toast');
-    t.textContent = msg; t.classList.add('on');
-    clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2600);
+    t.innerHTML = esc(msg) + (action ? ` <button type="button" class="tbtn">${esc(action.label)}</button>` : '');
+    t.classList.toggle('act', !!action);
+    if (action) t.querySelector('.tbtn').onclick = () => { t.classList.remove('on', 'act'); action.fn(); };
+    t.classList.add('on');
+    clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on', 'act'), action ? 10000 : 2600);
+  }
+
+  // Reset clears the call for the next one; Undo brings it back for 10 seconds. The rep's name stays.
+  function resetCall() {
+    if (!hasWork() && !Object.values(S.fields).some(Boolean) && !S.budget && !S.pick && !S.booking.length) { toast('Nothing to reset'); return; }
+    if (!confirm('Reset the scorecard for a new call? You can undo for 10 seconds.')) return;
+    const before = JSON.stringify(S);
+    S = blank(); save(); render();
+    $('#callinfo').open = true;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    toast('Scorecard reset.', { label: 'Undo', fn: () => {
+      S = Object.assign(blank(), JSON.parse(before)); save();
+      $('#callinfo').open = !S.fields.name || !S.fields.company;
+      render(); toast('Brought it back');
+    } });
   }
 
   function setView(v) {
@@ -1075,6 +1099,7 @@
     if (v) { setView(v.dataset.view); return; }
     const g = e.target.closest('[data-go]');
     if (g) { go(g.dataset.go); return; }
+    if (e.target.closest('[data-reset]')) { resetCall(); return; }
     const o = e.target.closest('[data-pick]');
     if (o) { pick(Number(o.dataset.pick)); return; }
     const id = e.target.closest('button') && e.target.closest('button').id;
@@ -1093,9 +1118,6 @@
         const got = ['name', 'email', 'company'].filter(k => p[k]);
         toast(`Loaded ${got.length ? got.join(', ') + ' and ' : ''}${p.answers.length} answer${p.answers.length === 1 ? '' : 's'}`);
       }
-    } else if (id === 'newCall') {
-      if ((hasWork() || Object.values(S.fields).some(Boolean)) && !confirm('Clear everything and start a new call?')) return;
-      S = blank(); save(); render(); $('#callinfo').open = true; window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   });
 
