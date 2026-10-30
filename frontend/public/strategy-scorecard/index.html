@@ -595,18 +595,21 @@
     t.classList.toggle('act', !!action);
     if (action) t.querySelector('.tbtn').onclick = () => { t.classList.remove('on', 'act'); action.fn(); };
     t.classList.add('on');
-    clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on', 'act'), action ? 10000 : 2600);
+    clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on', 'act'), action ? 15000 : 2600);
   }
 
-  // Reset clears the call for the next one; Undo brings it back for 10 seconds. The rep's name stays.
+  // Reset clears the call and goes back to question 1; Undo brings it back for 15 seconds. The rep's name stays.
+  // No confirm() popups on this page: some browsers and embedded windows block them, and a blocked one reads as "no".
   function resetCall() {
-    if (!hasWork() && !Object.values(S.fields).some(Boolean) && !S.budget && !S.pick && !S.booking.length) { toast('Nothing to reset'); return; }
-    if (!confirm('Reset the scorecard for a new call? You can undo for 10 seconds.')) return;
+    if (!hasWork() && !Object.values(S.fields).some(Boolean) && !S.budget && !S.pick && !S.booking.length) { toast('Already at the start'); window.scrollTo(0, 0); return; }
     const before = JSON.stringify(S);
     S = blank(); save(); render();
     $('#callinfo').open = true;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    toast('Scorecard reset.', { label: 'Undo', fn: () => {
+    window.scrollTo(0, 0);
+    offerUndo('Reset. Ready for a new call.', before);
+  }
+  function offerUndo(msg, before) {
+    toast(msg, { label: 'Undo', fn: () => {
       S = Object.assign(blank(), JSON.parse(before)); save();
       $('#callinfo').open = !S.fields.name || !S.fields.company;
       render(); toast('Brought it back');
@@ -966,12 +969,15 @@
     nsStatus(`Nutshell: <a href="https://app.nutshell.com/lead/${encodeURIComponent(id)}" target="_blank" rel="noopener">open lead</a>${sent}`);
   }
 
-  async function sendNutshell() {
+  async function sendNutshell(newLeadOk) {
     const f = S.fields;
     if (!f.name && !f.email && !f.company) { toast('Add their name, email, or company in Call details first'); $('#callinfo').open = true; return; }
     if (!repEmail) { toast('Pick your name next to the button first'); $('#rep').focus(); return; }
     const leadId = leadIdFrom(f.lead) || (S.nutshell && S.nutshell.leadId) || null;
-    if (!leadId && !confirm('No Nutshell lead link, so this makes a new lead.\n\nIf they took the website scorecard or booked through Nutshell, they likely have a lead already. Cancel, then paste its link in Call details.\n\nMake a new lead?')) return;
+    if (!leadId && !newLeadOk) {
+      nsStatus('No Nutshell lead link, so this would make a new lead. If they took the website scorecard or booked through Nutshell, they likely have one: paste its link in Call details first. <button type="button" class="link" id="sendNsNew">Make a new lead anyway</button>');
+      return;
+    }
     const btn = $('#sendNs');
     btn.disabled = true;
     const body = {
@@ -1065,11 +1071,11 @@
 
   function startFromPrefill(p) {
     const f = S.fields, same = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
-    const other = (p.email && f.email && !same(p.email, f.email)) || (!p.email && p.name && f.name && !same(p.name, f.name));
-    if (other) {
-      if (hasWork() && !confirm(`Start a new call for ${p.name || p.email}? This clears the scorecard for ${f.name || f.email}.`)) return false;
-      S = blank();
-    }
+    const differs = (x, y) => !!(x && y && !same(x, y));
+    const sameEmail = !!(p.email && f.email && same(p.email, f.email));
+    const other = !sameEmail && (differs(p.email, f.email) || differs(p.name, f.name));
+    const before = other && hasWork() ? JSON.stringify(S) : null;
+    if (other) S = blank();
     ['name', 'email', 'company', 'title', 'website', 'lead'].forEach(k => { if (p[k]) S.fields[k] = String(p[k]).trim().slice(0, 300); });
     const answers = (Array.isArray(p.answers) && p.answers.length ? p.answers : p.booking ? parseBooking(p.booking).answers : [])
       .filter(x => Array.isArray(x) && x.length === 2).map(([q, a]) => [clip(q, 120), clip(a, 400)]);
@@ -1078,6 +1084,7 @@
     if (!S.budget) S.budget = guessBudget(answers);
     $('#callinfo').open = !S.fields.name || !S.fields.company;
     save(); render();
+    if (before) { window.scrollTo(0, 0); offerUndo(`Started a new call for ${p.name || p.email}.`, before); }
     return true;
   }
 
@@ -1107,6 +1114,7 @@
     else if (id === 'copyEmail') copy(recapEmail(), 'Recap email copied');
     else if (id === 'copyNote') copy(crmNote(), 'CRM note copied');
     else if (id === 'sendNs') sendNutshell();
+    else if (id === 'sendNsNew') sendNutshell(true);
     else if (id === 'pasteBtn') { $('#pasteText').value = ''; $('#pasteDlg').showModal(); $('#pasteText').focus(); }
     else if (id === 'pasteCancel') $('#pasteDlg').close();
     else if (id === 'pasteLoad') {
@@ -1116,7 +1124,7 @@
       if (startFromPrefill(p)) {
         $('#pasteDlg').close();
         const got = ['name', 'email', 'company'].filter(k => p[k]);
-        toast(`Loaded ${got.length ? got.join(', ') + ' and ' : ''}${p.answers.length} answer${p.answers.length === 1 ? '' : 's'}`);
+        if (!$('#toast').classList.contains('act')) toast(`Loaded ${got.length ? got.join(', ') + ' and ' : ''}${p.answers.length} answer${p.answers.length === 1 ? '' : 's'}`);
       }
     }
   });
