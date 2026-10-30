@@ -1145,7 +1145,9 @@ const today = tz => shortDate(new Date(), tz || 'America/Chicago');
 const KICKSTART_STAGESET = 5;
 // Contacted (added 10/30, right after New Diagnostic Opportunity): any sent step or a Hit once call.
 const CONTACTED_STAGE = 123;
-// Lost (added 10/30, last column): a lead closed as Lost moves here first.
+// Unqualified and Lost (added 10/30, the last two columns): a lead closed as
+// Not a strategic fit moves to Unqualified first; Never responded and Said no to Lost.
+const UNQUALIFIED_STAGE = 125;
 const LOST_STAGE = 124;
 const STAGE_FOR = { contacted: CONTACTED_STAGE, hit_once: CONTACTED_STAGE, talked_yes: 115, meeting: 116 }; // Qualified for Kickstart, Kickstart Call Scheduled
 const normName = v => String(v || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -1203,9 +1205,10 @@ async function applyStage(lead, leadId, outcome) {
     try {
       const open = await nutshell.call('getLead', { leadId });
       if (open.status !== 0) return `Nutshell lead already closed, left as is (wanted Lost, ${why})`;
-      // Into the Lost column first, so the closed card sits there on the board (Vincent, 10/30).
-      if (LOST_STAGE && open.stageset && open.stageset.id === KICKSTART_STAGESET) {
-        await nutshell.call('editLead', { leadId, rev: open.rev, lead: { milestoneId: LOST_STAGE } }, { attempts: 1 })
+      // Into the Unqualified or Lost column first, so the closed card sits there on the board (Vincent, 10/30).
+      const column = outcome === 'not_qualified' ? UNQUALIFIED_STAGE : LOST_STAGE;
+      if (column && open.stageset && open.stageset.id === KICKSTART_STAGESET) {
+        await nutshell.call('editLead', { leadId, rev: open.rev, lead: { milestoneId: column } }, { attempts: 1 })
           .catch(e => console.warn('[cadence] Lost column move failed:', e.message));
       }
       await nutshell.closeLead(leadId, lostId);
