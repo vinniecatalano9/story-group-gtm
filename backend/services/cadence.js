@@ -915,7 +915,7 @@ async function dispatch(id) {
     }
     await saveLead(lead.email, patch);
     await addTimeline(lead.email, timelineEntry('sent', { step: a.step, channel: a.channel, text: a.text, subject: a.subject || null, edited: !!a.edited }));
-    await logToNutshell(lead, `${shortDate(now, lead.tz)} ${step.label} sent (${a.channel === 'email' ? 'email' : 'text'})\n\n${a.subject ? `Subject: ${a.subject}\n\n` : ''}${a.text}`);
+    await logToNutshell(lead, `${shortDate(now, lead.tz)} ${step.label} sent (${a.channel === 'email' ? 'email' : 'text'})\n\n${a.subject ? `Subject: ${a.subject}\n\n` : ''}${a.text}`, { contacted: true });
     await markCard(a, `Sent ${z.clock(now, 'America/Chicago')} CT`);
     if (okInChat(lead, a.step)) await ping(`✅ ${esc(step.label)} sent to <b>${esc(fullName(lead))}</b> at ${z.clock(now, 'America/New_York')} ET, as you OK'd in chat.\n\n${a.subject ? `Subject: ${esc(a.subject)}\n\n` : ''}${esc(a.text)}`);
     await refreshNext(lead.email);
@@ -1061,7 +1061,8 @@ async function checkReplies() {
 // The ad form leads already sit in Nutshell as leads named after the person
 // (Kickstart / Diagnostic Pipeline, created by Annette, no contact attached).
 // Notes go on that lead when there's exactly one open lead with the name,
-// else on the contact. Outcome stages (Vincent approved 10/22): Talked yes =
+// else on the contact. Any sent step or Hit once = Contacted (10/30).
+// Outcome stages (Vincent approved 10/22): Talked yes =
 // Qualified for Kickstart, Meeting yes = Kickstart Call Scheduled, only in
 // that pipeline and only forward. Not interested = Lost, but the API can't
 // close a lead, so Vincent gets a Telegram line to click Lost himself.
@@ -1069,10 +1070,10 @@ async function checkReplies() {
 const nutshellQueue = () => db().collection('nutshell_queue');
 const REP = () => (process.env.AD_LEADS_REP || 'Vincent').toLowerCase();
 
-async function logToNutshell(lead, text, { outcome = null } = {}) {
+async function logToNutshell(lead, text, { outcome = null, contacted = false } = {}) {
   if (lead.rep && !String(lead.rep).toLowerCase().includes(REP())) return;
   try {
-    await nutshellQueue().add({ email: lead.email, text: text || null, outcome, status: 'pending', attempts: 0, created_at: new Date() });
+    await nutshellQueue().add({ email: lead.email, text: text || null, outcome, contacted, status: 'pending', attempts: 0, created_at: new Date() });
   } catch (e) {
     console.warn('[cadence] Nutshell queue write failed:', e.message);
   }
@@ -1116,6 +1117,10 @@ async function drainNutshell({ max = 20 } = {}) {
             if (!leadId) await ping(`Nutshell: no single open lead named <b>${esc(fullName(lead))}</b>, so the ${esc(job.outcome)} stage wasn't set. The note is on the contact.`);
           }
         }
+        if (job.contacted && leadId) {
+          const line = await applyStage(lead, leadId, 'contacted');
+          if (line) await addTimeline(lead.email, timelineEntry('note', { text: line }));
+        }
         await d.ref.update({ status: 'done', done_at: new Date(), contact_id: contactId, lead_id: leadId || null });
         done++;
       } catch (e) {
@@ -1133,7 +1138,9 @@ async function drainNutshell({ max = 20 } = {}) {
 const today = tz => shortDate(new Date(), tz || 'America/Chicago');
 
 const KICKSTART_STAGESET = 5;
-const STAGE_FOR = { talked_yes: 115, meeting: 116 }; // Qualified for Kickstart, Kickstart Call Scheduled
+// Contacted (added 10/30, right after New Diagnostic Opportunity): any sent step or a Hit once call.
+const CONTACTED_STAGE = 123;
+const STAGE_FOR = { contacted: CONTACTED_STAGE, hit_once: CONTACTED_STAGE, talked_yes: 115, meeting: 116 }; // Qualified for Kickstart, Kickstart Call Scheduled
 const normName = v => String(v || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
 /** Open Nutshell leads named exactly after this person. */
@@ -1192,11 +1199,13 @@ async function applyStage(lead, leadId, outcome) {
   }
   const target = STAGE_FOR[outcome];
   if (!target) return null;
+  // Every send asks for Contacted, so that move stays quiet unless it happens.
+  const quiet = outcome === 'contacted';
   const l = await nutshell.call('getLead', { leadId });
-  if (!l.stageset || l.stageset.id !== KICKSTART_STAGESET) return `Nutshell stage not changed: lead is in ${l.stageset ? l.stageset.name : 'no pipeline'}`;
+  if (!l.stageset || l.stageset.id !== KICKSTART_STAGESET) return quiet ? null : `Nutshell stage not changed: lead is in ${l.stageset ? l.stageset.name : 'no pipeline'}`;
   const ms = await nutshell.call('findMilestones', {});
   const pos = id => (ms.find(m => m.id === id) || {}).position || 0;
-  if (l.milestone && pos(l.milestone.id) >= pos(target)) return `Nutshell stage left at ${l.milestone.name} (already there or past it)`;
+  if (l.milestone && pos(l.milestone.id) >= pos(target)) return quiet ? null : `Nutshell stage left at ${l.milestone.name} (already there or past it)`;
   // editLead takes milestoneId; a { milestone: { id } } stub makes Nutshell 500.
   await nutshell.call('editLead', { leadId, rev: l.rev, lead: { milestoneId: target } }, { attempts: 1 });
   return `Nutshell stage set to ${(ms.find(m => m.id === target) || {}).name}`;
