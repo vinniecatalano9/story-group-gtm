@@ -17,7 +17,7 @@
         ]
       },
       {
-        "source": "/@(call-scorecard|scorecard|pr-mastery|tracker|lead-filter|live-coach)/**",
+        "source": "/@(call-scorecard|scorecard|strategy-scorecard|pr-mastery|tracker|lead-filter|live-coach)/**",
         "headers": [
           {
             "key": "Cache-Control",
