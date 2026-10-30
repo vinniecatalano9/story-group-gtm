@@ -159,6 +159,21 @@
   .steps .term { color: var(--muted); font-size: 13.5px; }
   .steps .dots { margin-top: 8px; }
   .steps input { margin-top: 8px; }
+  .steps .pk { min-width: 0; }
+  .incl { margin-top: 16px; }
+  .incl .k2 { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin: 20px 0 10px; }
+  .incl .k2:first-child { margin-top: 0; }
+  .groups { columns: 2 240px; column-gap: 24px; }
+  .grp { break-inside: avoid; margin: 0 0 14px; }
+  .grp b { display: block; font-size: 14px; line-height: 1.35; }
+  .grp ul { list-style: none; margin: 5px 0 0; padding: 0; }
+  .grp li { position: relative; padding-left: 13px; margin: 3px 0; font-size: 13.5px; line-height: 1.45; color: var(--muted); }
+  .grp li::before { content: ''; position: absolute; left: 0; top: .6em; width: 5px; height: 5px; border-radius: 50%; background: var(--pink); }
+  .phases { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .phases li { padding: 10px 12px; border-left: 2px solid var(--pink); background: rgba(255,255,255,.02); border-radius: 0 8px 8px 0; }
+  .phases b { display: block; font-size: 14px; }
+  .phases span { display: block; margin-top: 3px; font-size: 13.5px; line-height: 1.5; color: var(--muted); }
+  .steps .pnotes p, .pnotes p { margin: 8px 0 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
   .foot { margin-top: 18px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; color: var(--muted); font-size: 12.5px; }
   .actions { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
   .actions .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
@@ -241,6 +256,24 @@
   .rp .nxt { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
   .rp .fine { margin-top: 12px; color: var(--muted); font-size: 10px; line-height: 1.5; }
   .rp .tagline { font-family: var(--serif); font-style: italic; color: var(--pink); text-align: center; margin-top: 12px; font-size: 14px; }
+  .rp + .rp { break-before: page; page-break-before: always; }
+  .rp .intro { margin: 10px 0 0; font-size: 12px; line-height: 1.5; }
+  .rp .incl { margin-top: 14px; }
+  .rp .incl .k2 { font-size: 9.5px; margin: 12px 0 7px; }
+  .rp .incl .k2:first-child { margin-top: 0; }
+  .rp .groups { columns: 3; column-gap: 18px; }
+  .rp.p2 h1 { font-size: 25px; margin-top: 0; }
+  .rp.p2 .lbar { margin-bottom: 14px; }
+  .rp .grp { margin-bottom: 8px; }
+  .rp .grp b { font-size: 11px; }
+  .rp .grp ul { margin-top: 2px; }
+  .rp .grp li { font-size: 9.8px; line-height: 1.35; margin: 1px 0; padding-left: 10px; }
+  .rp .grp li::before { width: 4px; height: 4px; }
+  .rp .phases { grid-template-columns: 1fr 1fr; gap: 7px 12px; }
+  .rp .phases li { padding: 6px 10px; }
+  .rp .phases b { font-size: 10.5px; }
+  .rp .phases span { font-size: 9.5px; line-height: 1.4; }
+  .rp .pnotes p { font-size: 8.5px; margin-top: 4px; }
   .rp .rfoot { position: absolute; left: 52px; right: 52px; bottom: 26px; border-top: .5px solid var(--pink); padding-top: 8px; font-size: 8px; letter-spacing: .25em;
     color: var(--muted); text-transform: uppercase; display: flex; justify-content: space-between; }
 </style>
@@ -365,21 +398,140 @@
 
   // Package names and Start here prices from tier_reference.md (the final 9/18/2026 package doc), read 10/30/2026.
   // Only the Start here price lives here; the lower ladder stays internal. When the doc changes, update from that file.
+  // intro, groups, phases, and notes are the doc's client-facing package pages, word for word, except:
+  // "Influence & Growth" is written "Influence", and the retired Growth & Visibility line is left out.
   const PACKAGES = {
-    kickstart: { name: 'Kickstart', start: '$5,500 one time', term: 'One time, 10 to 30 days, with 3 strategy sessions', ns: 'Kickstart $5,500 one-time',
-      includes: 'A business audit, go-to-market strategy, brand messaging, social media direction, and a 30/60/90 day roadmap, delivered as a branded findings report.' },
-    bge: { name: 'Business Growth Engagement', start: '$7,500/mo for 3 months ($22,500)', term: '3 month engagement', ns: 'Business Growth Engagement $7,500/mo × 3',
-      includes: 'A business and digital audit, growth strategy and messaging, a sales and conversion plan, and one managed ad channel (Google Ads) with lead tracking and monthly reporting.' },
-    visibility: { name: 'Visibility', start: '$10,000/mo for 6 months ($60,000)', term: '6 month engagement', ns: 'Visibility $10,000/mo × 6',
-      includes: 'PR and earned media strategy, media messaging and expert positioning, proactive pitching to print and digital outlets, podcast bookings, brand and media monitoring, and monthly reporting.' },
-    influence: { name: 'Influence', start: '$20,000/mo for 6 months ($120,000)', term: '6 month engagement, then ongoing', ns: 'Influence $20,000/mo × 6',
-      includes: 'Growth and PR working together: one managed ad channel and conversion work, plus earned media, executive positioning, podcasts, broadcast pitching by fit, and speaking opportunities.' },
-    command: { name: 'Command', start: '$30,000/mo for 12 months ($360,000)', term: '12 month engagement', ns: 'Command $30,000/mo × 12',
-      includes: 'A dedicated senior strategist with access to Story Group leadership, premium earned media including national pursuit by fit, executive positioning, reputation strategy and monitoring, and crisis readiness.' },
-    cdg: { name: 'Command & Digital Growth', start: '$33,500/mo for 12 months ($402,000)', term: '12 month engagement', ns: 'Command & Digital Growth $33,500/mo × 12',
-      includes: 'Everything in Command, plus digital growth: Google Ads management, GEO and AEO optimization, website conversion work, and integrated performance reporting.' },
-    custom: { name: 'Custom Enterprise', start: 'No price on the call. Capture the full scope, then bring it back for approval (Aaron, Dr. Brown, or Schneider)', term: 'Scope based', ns: 'Custom Enterprise (scope based)',
-      includes: 'A custom scope across your brands, executives, and markets, with communications, earned media, reputation, and digital growth as needed.' },
+    kickstart: { name: 'Kickstart', start: '$5,500 one time', ns: 'Kickstart $5,500 one-time',
+      term: 'One time · 10 to 30 days · 3 strategy sessions, up to 60 minutes each',
+      intro: 'The Kickstart Package is designed for businesses at an important stage of growth, evolution or repositioning. Story Group takes a comprehensive look at your business, brand and market presence to uncover what is working, identify what is limiting growth and establish the strategic priorities needed to move forward. The result is a clearer position, stronger messaging and an actionable roadmap built around where your business is going next.',
+      groups: [
+        ['Business Audit & Diagnostic', ['Review of your current business model, offers, positioning, audience, marketing, sales, digital presence, website/funnel, CRM, and key growth gaps']],
+        ['Go-to-Market Strategy', ['Market positioning and audience alignment', 'Offer positioning', 'Brand voice and communication recommendations', 'Target audience alignment and Ideal Client Profile (ICP) development, as needed']],
+        ['Brand Messaging', ['Core messaging direction', 'Brand voice and communication strategy', 'Foundational brand alignment']],
+        ['Logo', ['Logo refresh or new logo creation, as needed']],
+        ['Social Media Approach', ['Content direction and messaging themes', 'Platform recommendations', 'Audience positioning and visibility strategy', 'Recommended posting cadence and posting times provided']],
+        ['30/60/90-Day Roadmap', ['Prioritized 30-day action plan', '60-day growth priorities', '90-day strategic direction', 'Recommended next steps']],
+        ['Strategy Sessions', ['Kickoff & Discovery', 'Findings & Strategy', 'Roadmap & Next Steps', 'Three sessions, up to 60 minutes each']],
+        ['Final Findings & Recommendations', ['Key findings and priority recommendations', 'Identified opportunities', 'Recommended next steps for implementation', 'Final findings and recommendations delivered in a branded PDF']],
+      ],
+      phases: [],
+      notes: ['Based on the findings of your Business Audit & Diagnostic, Story Group may recommend a website or funnel refresh or creation. These services are scoped and priced separately and can be credited to your upgraded package.'] },
+    bge: { name: 'Business Growth Engagement', start: '$7,500/mo for 3 months ($22,500)', ns: 'Business Growth Engagement $7,500/mo × 3',
+      term: '3 months · Initial strategy sessions with ongoing strategic support',
+      intro: 'Designed for businesses ready to move from inconsistent growth to a more strategic, scalable approach. We strengthen the foundation behind your brand, sales and digital presence, then activate a growth strategy built to generate qualified opportunities, improve conversion and prepare your business for greater visibility and market authority.',
+      groups: [
+        ['Business & Digital Audit', ['Business model and offers review', 'Brand and market positioning', 'Target audience review', 'Marketing and lead-generation review', 'Sales and conversion review', 'CRM and automation review', 'Website, social media and digital presence review', 'Identification of key growth opportunities']],
+        ['Website & Search Visibility Audit', ['Current website performance review', 'Current search visibility and ranking assessment', 'SEO, GEO and AEO visibility review', 'Identification of discoverability gaps', 'Strategic recommendations for improvement']],
+        ['Growth Strategy', ['Customized findings and recommendations', 'Growth opportunity identification', 'Prioritized solutions', '30, 60 and 90-day growth direction']],
+        ['Brand Messaging & Go-to-Market Strategy', ['Market positioning and audience alignment', 'Ideal Client Profile (ICP) development, as needed', 'Offer positioning', 'Core messaging refinement', 'Brand voice and communication recommendations']],
+        ['Sales & Conversion Strategy', ['Sales process review', 'Sales script development or refinement', 'Lead conversion recommendations', 'Follow-up strategy', 'Identification of conversion opportunities']],
+        ['Paid Advertising Strategy & Management', ['One paid advertising channel', 'Campaign strategy, setup and management', 'Audience and targeting strategy', 'Ad messaging and copy direction', 'Retargeting', 'Ongoing campaign optimization']],
+        ['Lead Monitoring & Optimization', ['Inbound lead monitoring', 'Lead-quality review', 'Conversion observations', 'Targeting adjustments', 'Performance-based optimization']],
+        ['CRM & Automation Review', ['Current CRM review', 'Lead-management and follow-up review', 'Current automation review', 'Identification of workflow gaps', 'Recommendations for improved efficiency']],
+        ['Performance Monitoring & Reporting', ['Advertising performance monitoring', 'Lead activity review', 'Conversion observations', 'Optimization recommendations', 'Monthly performance reporting']],
+        ['Strategy Sessions', ['Initial Strategy Session 1: Kickoff & Discovery', 'Initial Strategy Session 2: Findings & Growth Strategy', 'Ongoing strategic sessions throughout the engagement', 'Campaign and optimization review', 'Performance and next-step planning']],
+      ],
+      phases: [
+        ['Month 1: Audit & Strategy', 'Kickoff & Discovery Strategy Session, Business & Digital Audit, website and search visibility assessment, target audience and ICP alignment, brand messaging and positioning review, sales, CRM and automation review, Findings & Growth Strategy Session, 30, 60 and 90-day growth direction.'],
+        ['Month 2: Build & Prepare', 'Go-to-market messaging refinement, sales script development or refinement, lead follow-up and conversion recommendations, paid advertising strategy, audience and targeting strategy, ad messaging and copy development, Google Ads campaign preparation, evaluate whether a dedicated funnel is needed.'],
+        ['Month 3: Launch & Generate', 'Google Ads launch and management, begin generating inbound leads, inbound lead and lead-quality monitoring, campaign performance monitoring, initial optimization and retargeting where appropriate, funnel recommendation and scope discussion if needed, performance review and ongoing growth strategy, PR and earned-media readiness discussion.'],
+      ],
+      notes: ['Advertising spend and third-party platform fees are separate from the Story Group monthly investment and are funded directly by the client.', 'Website or funnel development, when recommended, is scoped separately.'] },
+    visibility: { name: 'Visibility', start: '$10,000/mo for 6 months ($60,000)', ns: 'Visibility $10,000/mo × 6',
+      term: '6 months · Monthly strategy with ongoing media support',
+      intro: 'Designed for businesses and leaders ready to strengthen their market presence, elevate credibility, and become more visible in the conversations that matter. The engagement begins with a comprehensive Business & Brand Audit to understand your business, positioning, audience, messaging, digital presence, and current visibility. From those findings, Story Group develops the positioning, narratives, and earned-media strategy needed to create meaningful opportunities and build sustained market recognition.',
+      groups: [
+        ['Business & Brand Audit', ['Business model and offers review', 'Brand and market positioning review', 'Target audience and Ideal Client Profile review', 'Core messaging review', 'Website and digital presence review', 'Social media presence review', 'Current media and visibility review', 'Key positioning, credibility, and visibility gaps', 'Priority opportunities and recommendations']],
+        ['PR & Earned Media Strategy', ['Customized PR and earned-media strategy', 'Media positioning and visibility priorities', 'Story and narrative development', 'Identification of timely and relevant media opportunities']],
+        ['Media Messaging & Positioning', ['Executive and brand messaging alignment', 'Media-ready talking points', 'Expert positioning', 'Story-angle development and message refinement']],
+        ['Proactive Media Outreach', ['Print and digital media pitching', 'Relevant journalist and media outreach', 'Targeted media opportunities based on client fit', 'Ongoing pitching around approved stories and narratives']],
+        ['Responsive Media Opportunities', ['Journalist-opportunity monitoring', 'Expert-response development', 'Timely response to relevant media requests', 'Positioning for appropriate commentary opportunities']],
+        ['Newsjacking & Timely Positioning', ['Monitoring relevant news cycles and industry conversations', 'Development of timely expert angles', 'Rapid positioning around appropriate topics and trends']],
+        ['Media Advisories', ['Development of media advisories when appropriate', 'Distribution and outreach strategy for relevant announcements or events']],
+        ['Brand & Media Monitoring', ['Brand mention monitoring', 'Media activity monitoring', 'Identification of emerging visibility opportunities']],
+        ['Strategy & Reporting', ['Monthly PR strategy review', 'Media activity and opportunity reporting', 'Performance review', 'Recommendations for continued visibility and next-stage authority building']],
+      ],
+      phases: [
+        ['Foundation & Positioning', 'Business & Brand Audit, PR strategy and media positioning, messaging alignment and expert positioning, story and narrative development, priority media themes and opportunities.'],
+        ['Active Media Outreach', 'Proactive print and digital pitching, journalist and media outreach, responsive media opportunities, newsjacking and timely expert positioning, media advisories when appropriate.'],
+        ['Ongoing Visibility', 'Brand and media monitoring, monthly strategy review, media activity and opportunity reporting, continued pitching and positioning, recommendations for expanded visibility and authority.'],
+      ],
+      notes: ['Earned media is dependent on editorial interest, timing, news relevance, and third-party media decisions. Story Group strategically develops and pursues opportunities, but specific placements, publication dates, or media outcomes cannot be guaranteed.'] },
+    influence: { name: 'Influence', start: '$20,000/mo for 6 months ($120,000)', ns: 'Influence $20,000/mo × 6',
+      term: '6 months · Business growth, PR and brand authority building',
+      intro: 'Designed for established businesses and leaders ready to move beyond visibility and become recognized authorities in their market. Influence combines strategic growth, demand generation, PR and earned media with expanded authority-building opportunities designed to increase recognition, strengthen credibility, and position your expertise in front of the audiences that matter most.',
+      groups: [
+        ['Business & Brand Audit', ['Business model and offers review', 'Brand and market positioning', 'Target audience and ICP review', 'Website and digital presence review', 'Sales, CRM and conversion review', 'Current visibility and media presence review', 'Priority growth, positioning and authority opportunities']],
+        ['Growth Strategy & Demand Generation', ['30/60/90-day growth direction', 'Go-to-market strategy', 'One paid advertising channel', 'Google Ads strategy, setup and management', 'Inbound lead monitoring', 'Retargeting and campaign optimization']],
+        ['Brand Messaging & Market Positioning', ['Core messaging refinement', 'Executive and brand voice alignment', 'Offer positioning', 'Market positioning', 'Authority-focused communication strategy']],
+        ['Sales & Conversion Strategy', ['Sales process review', 'Sales script development or refinement', 'Lead follow-up strategy', 'Conversion recommendations', 'Identification of conversion gaps']],
+        ['PR & Earned Media', ['Customized PR strategy', 'Proactive print and digital pitching', 'Journalist opportunity monitoring', 'Expert-response development', 'Newsjacking and timely positioning', 'Media advisories when appropriate', 'Brand and media monitoring']],
+        ['Executive & Expert Positioning', ['Executive positioning strategy', 'Expert talking points', 'Thought-leadership themes', 'Media-ready narratives', 'Strategic authority positioning']],
+        ['Podcast Opportunities', ['Identification of relevant podcast opportunities', 'Targeted podcast outreach and pitching', 'Guest positioning and topic development', 'Interview preparation and messaging support']],
+        ['Broadcast Opportunities', ['Identification of relevant television, radio and broadcast opportunities', 'Broadcast pitching and positioning', 'Expert-response development', 'Interview messaging preparation']],
+        ['Speaking & Thought Leadership', ['Identification of relevant speaking opportunities', 'Speaker positioning and topic alignment', 'Thought-leadership recommendations', 'Strategic opportunity outreach when appropriate']],
+        ['Rapid Response & Newsjacking', ['Monitoring relevant news and industry conversations', 'Rapid expert-angle development', 'Timely media positioning', 'Responsive commentary opportunities']],
+        ['Performance, Strategy & Reporting', ['Growth and advertising performance review', 'Media activity and opportunity reporting', 'Lead-quality and conversion observations', 'Monthly strategy review', 'Recommendations for continued growth, visibility and authority']],
+      ],
+      phases: [
+        ['Month 1: Discover, Audit & Align', 'Onboarding, access and asset collection, Business & Brand Audit, current-state review, goals and KPI alignment, initial strategy sessions, findings and 30/60/90-day direction.'],
+        ['Month 2: Build & Activate', 'Refine positioning and messaging, prepare growth and authority assets, develop paid advertising strategy, establish media narratives, begin outreach preparation, workflows and tracking.'],
+        ['Month 3: Launch, Measure & Optimize', 'Launch or expand Google Ads and inbound lead generation, begin/expand proactive media outreach, monitor early performance, optimize targeting and messaging, activate authority opportunities.'],
+        ['Ongoing: Scale & Expand', 'Continue growth management, PR pitching, media monitoring, authority positioning, podcast/broadcast/speaking outreach, performance reporting and strategic expansion.'],
+      ],
+      notes: ['Advertising spend and third-party platform fees are separate from the Story Group monthly investment and are funded directly by the client.', 'Earned media, podcast, broadcast, and speaking opportunities depend on editorial interest, event selection, timing, relevance, and third-party decisions. Story Group strategically develops and pursues opportunities, but specific placements or outcomes cannot be guaranteed.', 'Website or funnel development, additional paid advertising channels, paid placements, and other expanded production needs are scoped separately when required.'] },
+    command: { name: 'Command', start: '$30,000/mo for 12 months ($360,000)', ns: 'Command $30,000/mo × 12',
+      term: '12 months · Executive strategy, reputation and media',
+      intro: 'Command is Story Group’s premier, highest-level strategic communications partnership, built for prominent executives, founders, organizations, and brands whose reputation, influence, and market presence require an elevated level of attention. This is a highly customized, high-touch engagement that provides direct access to senior strategic counsel and brings together executive positioning, premium media strategy, reputation management, thought leadership, crisis readiness, and ongoing communications advisory under one comprehensive partnership.',
+      groups: [
+        ['Executive Business & Brand Diagnostic', ['Business model, offers and strategic priorities review', 'Brand and market positioning review', 'Executive and organizational visibility assessment', 'Audience and stakeholder review', 'Current communications, media and reputation review', 'Digital presence review', 'Priority growth, authority, reputation and communications opportunities']],
+        ['Strategic Communications', ['Comprehensive communications strategy', 'Executive and organizational narrative development', 'Core messaging and talking points', 'Stakeholder communication priorities', 'Strategic communications planning across key initiatives']],
+        ['Executive Positioning & Authority', ['Executive narrative and positioning strategy', 'Thought-leadership themes', 'Expert talking points and media-ready narratives', 'Leadership visibility strategy', 'Executive communications support']],
+        ['Premium PR & Earned Media', ['Premium earned-media strategy and outreach', 'Proactive print and digital pitching', 'National media pursuit based on fit', 'Journalist-opportunity monitoring', 'Newsjacking and rapid expert positioning', 'Media advisories when appropriate']],
+        ['Podcast, Broadcast & Speaking Pursuit', ['Relevant podcast opportunity identification and outreach', 'Broadcast opportunity pursuit', 'Speaking opportunity identification and positioning', 'Topic and interview angle development', 'Appearance and interview preparation']],
+        ['Reputation Strategy & Intelligence', ['Brand and executive reputation monitoring', 'Media and narrative intelligence', 'Identification of emerging reputation opportunities or concerns', 'Strategic recommendations to strengthen and protect reputation']],
+        ['Crisis Readiness & Sensitive-Issue Counsel', ['Crisis communications preparedness', 'Scenario and response planning', 'Holding statement development when appropriate', 'Rapid-response messaging', 'Sensitive-issue communications counsel', 'Escalation and response recommendations']],
+        ['Executive Advisory & Leadership Access', ['Dedicated senior strategic oversight', 'Access to Story Group leadership', 'Executive-level strategic counsel', 'Ongoing communications and reputation advisory', 'Priority strategy support for high-impact opportunities and issues']],
+        ['Performance & Executive Reporting', ['Media activity and opportunity reporting', 'Reputation and communications observations', 'Strategic performance review', 'Executive-level recommendations', 'Ongoing priority and next-step planning']],
+      ],
+      phases: [
+        ['Month 1: Discover, Audit & Align', 'Executive onboarding, Business & Brand Diagnostic, communications and reputation assessment, goals and priority alignment, initial executive strategy sessions, findings and strategic direction.'],
+        ['Month 2: Build & Activate', 'Refine executive and organizational positioning, establish communications priorities, develop media narratives and thought-leadership themes, prepare reputation and crisis-readiness assets, and begin approved activation.'],
+        ['Month 3: Launch, Measure & Optimize', 'Expand active media and authority initiatives, monitor reputation and communications activity, pursue priority opportunities, optimize positioning and messaging, and establish ongoing executive priorities.'],
+        ['Ongoing: Scale, Protect & Expand', 'Continue senior strategic counsel, premium media outreach, authority building, reputation monitoring, crisis readiness, executive communications, opportunity pursuit and strategic expansion.'],
+      ],
+      notes: ['Earned media, podcast, broadcast and speaking opportunities depend on editorial interest, timing, relevance, availability and third-party decisions. Specific placements or outcomes cannot be guaranteed.', 'Paid advertising, advertising spend, third-party platform fees, website or funnel development, traditional SEO and expanded digital growth services are not included in standard Command and may be separately scoped.', 'Engagement priorities may evolve throughout the 12-month partnership based on business objectives, media opportunities, reputation considerations and emerging strategic needs.'] },
+    cdg: { name: 'Command & Digital Growth', start: '$33,500/mo for 12 months ($402,000)', ns: 'Command & Digital Growth $33,500/mo × 12',
+      term: '12 months · Command-level PR and brand communications paired with digital growth',
+      intro: 'Command & Digital Growth is Story Group’s most comprehensive, highest-level partnership, created for established executives, high-profile leaders, founders, and organizations that require communications, reputation, authority, visibility, and digital growth to operate as one connected strategy.',
+      groups: [
+        ['Executive Business & Brand Diagnostic', ['Business model, offers and strategic priorities review', 'Brand and market positioning review', 'Executive and organizational visibility assessment', 'Audience and stakeholder review', 'Current communications, media and reputation review', 'Digital presence and conversion review', 'Priority growth, authority, reputation and digital opportunities']],
+        ['Strategic Communications & Executive Positioning', ['Comprehensive communications strategy', 'Executive and organizational narrative development', 'Core messaging and talking points', 'Thought-leadership themes', 'Executive positioning and visibility strategy', 'Strategic communications planning across key initiatives']],
+        ['Premium PR & Earned Media', ['Premium earned-media strategy and outreach', 'Proactive print and digital pitching', 'National media pursuit based on fit', 'Journalist-opportunity monitoring', 'Newsjacking and rapid expert positioning', 'Media advisories when appropriate']],
+        ['Podcast, Broadcast & Speaking Pursuit', ['Relevant podcast opportunity identification and outreach', 'Broadcast opportunity pursuit', 'Speaking opportunity identification and positioning', 'Topic and interview angle development', 'Appearance and interview preparation']],
+        ['Reputation Strategy & Crisis Readiness', ['Brand and executive reputation monitoring', 'Media and narrative intelligence', 'Crisis communications preparedness', 'Scenario and response planning', 'Rapid-response messaging', 'Sensitive-issue communications counsel']],
+        ['Senior Strategic Advisory', ['Dedicated senior strategic oversight', 'Access to Story Group leadership', 'Executive-level strategic counsel', 'Ongoing communications and reputation advisory', 'Priority strategy support for high-impact opportunities and issues']],
+        ['Digital Growth Strategy', ['Integrated digital growth strategy aligned with communications and PR', 'Brand-awareness-to-lead-generation strategy', 'Digital conversion review', 'Campaign planning and channel recommendations', 'Integrated growth priorities and optimization roadmap']],
+        ['Google Ads Management', ['Google Ads strategy, setup and management', 'Audience and targeting strategy', 'Ad messaging and copy direction', 'Retargeting and campaign optimization', 'Inbound lead generation and monitoring']],
+        ['GEO & AEO Optimization', ['Generative Engine Optimization', 'Answer Engine Optimization', 'Digital discoverability improvements within the approved scope', 'Recommendations based on evolving search and AI visibility']],
+        ['Website & Digital Conversion Optimization', ['Website and digital conversion review', 'Conversion recommendations', 'User-journey and lead-capture improvement recommendations', 'Website optimization within the approved scope', 'Funnel or larger web-development needs identified for separate scoping when required']],
+        ['Tracking, Monitoring & Reporting', ['Campaign tracking', 'Performance monitoring', 'Lead and conversion observations', 'Digital performance reporting', 'Media and communications reporting', 'Integrated strategic recommendations and next-step planning']],
+      ],
+      phases: [
+        ['Month 1: Discover, Audit & Align', 'We establish the strategic foundation across the business, brand, executive presence, communications, reputation and digital ecosystem.'],
+        ['Month 2: Build, Position & Prepare', 'We turn the findings into the messaging, media, reputation and digital infrastructure required for coordinated execution.'],
+        ['Month 3: Launch, Generate & Activate', 'Communications and digital growth move into active execution together. Visibility is intentionally connected to discoverability, lead generation and conversion.'],
+        ['Ongoing: Scale, Protect & Expand', "We continuously manage the client's communications, reputation, authority and digital growth strategy based on performance, opportunities and evolving business priorities."],
+      ],
+      notes: ['Advertising spend and third-party platform fees are separate from the Story Group monthly investment and are funded directly by the client.', 'Traditional SEO, major website development, custom funnels, additional paid advertising channels, CRM builds, AI systems and expanded digital requirements may require separate scope and pricing.', 'Earned media, podcast, broadcast and speaking opportunities depend on editorial interest, timing, relevance, availability and third-party decisions. Specific placements or outcomes cannot be guaranteed.'] },
+    custom: { name: 'Custom Enterprise', start: 'No price on the call. Capture the full scope, then bring it back for approval (Aaron, Dr. Brown, or Schneider)', ns: 'Custom Enterprise (scope based)',
+      term: 'Based on scope',
+      intro: 'For enterprise organizations, established brands, and high-profile leaders with complex needs that extend beyond Story Group’s standard packages: customized enterprise strategy, communications, visibility, reputation, and growth.',
+      groups: [
+        ['What it covers', ['Customized scope based on organizational needs', 'Executive and corporate communications strategy', 'Earned-media strategy and outreach', 'Executive visibility and positioning', 'Reputation strategy', 'Crisis readiness and communications', 'Digital growth services as required', 'Multi-brand or multi-executive support as required', 'Strategic advisory', 'Customized reporting and KPIs', 'Additional approved services based on scope']],
+      ],
+      phases: [],
+      notes: [] },
   };
   const PKG_ORDER = ['kickstart', 'bge', 'visibility', 'influence', 'command', 'cdg', 'custom'];
   const START = { bge: 7500, visibility: 10000, influence: 20000, command: 30000, cdg: 33500 };  // Start here, per month
@@ -403,7 +555,7 @@
 
   /* ---------- State (saved in this browser so a reload mid-call loses nothing) ---------- */
   const blank = () => ({ v: 1, fields: { name: '', email: '', company: '', title: '', website: '', lead: '' }, answers: new Array(TOTAL).fill(null),
-    notes: { why: '', found: '', convert: '', scale: '' }, step: 0, pick: '', budget: '', nextStep: '', booking: [], nutshell: null });
+    notes: Object.fromEntries(QUESTIONS.map(q => [q.id, ''])), step: 0, pick: '', budget: '', nextStep: '', booking: [], nutshell: null });
   function load() {
     try {
       const s = JSON.parse(localStorage.getItem(STORE));
@@ -411,6 +563,11 @@
         const b = blank();
         if (s.noRetainer && !s.budget) s.budget = 'none';
         delete s.noRetainer;
+        if (s.notes && ('why' in s.notes || 'found' in s.notes)) {
+          const old = s.notes, first = { why: 'frustration', found: 'search', convert: 'rep', scale: 'inbound' };
+          s.notes = {};
+          for (const [k, id] of Object.entries(first)) if (old[k]) s.notes[id] = old[k];
+        }
         return { ...b, ...s, fields: { ...b.fields, ...s.fields }, notes: { ...b.notes, ...s.notes } };
       }
     } catch {}
@@ -516,7 +673,7 @@
 
   function renderQuestion() {
     const i = S.step, q = QUESTIONS[i], a = AREAS[q.area];
-    const noteKey = q.pillar || 'why';
+    const noteKey = q.id;
     const opts = q.options.map((o, n) => `<button type="button" class="opt${S.answers[i] === n ? ' on' : ''}" data-pick="${n}" aria-pressed="${S.answers[i] === n}"><span class="k">${'ABCD'[n]}</span>${esc(label(q, n))}</button>`).join('');
     app.innerHTML = `<div class="fade">
       <div class="meta"><span>Question ${i + 1} of ${TOTAL}</span><span>${q.pillar ? esc(PILLARS[q.pillar].name) : 'Where it hurts'}</span></div>
@@ -531,8 +688,8 @@
         <p class="plain"><b>${q.pillar ? "You're rating" : 'Goal'}:</b> ${esc(a.plain)}</p>
         ${a.ask ? `<details><summary>Full audit statement</summary><p class="plain">${esc(a.ask)}</p></details>` : ''}
         ${i === 0 && S.booking.length ? `<div class="booked"><b>From their booking</b>${S.booking.map(([bq, ba]) => `<div><span>${esc(bq)}</span> “${esc(ba)}”</div>`).join('')}</div>` : ''}
-        <label class="f note"><span>${q.pillar ? `Note on ${esc(PILLARS[q.pillar].name)}` : 'In their words'}</span>
-          <textarea rows="2" data-note="${noteKey}" placeholder="${q.pillar ? 'What they said, numbers, names' : 'Why they booked, what they want fixed'}">${esc(S.notes[noteKey])}</textarea></label>
+        <label class="f note"><span>${q.pillar ? 'Your note on this question' : 'In their words'}</span>
+          <textarea rows="2" data-note="${noteKey}" placeholder="${q.pillar ? 'What they said, numbers, names' : 'Why they booked, what they want fixed'}">${esc(S.notes[noteKey] || '')}</textarea></label>
       </div>
       <div class="nav">${i > 0 ? '<button type="button" class="link" data-go="prev">Back</button>' : '<span></span>'}
         <button type="button" class="btn${S.answers[i] == null ? ' ghost' : ''}" id="fwd" data-go="next">${i === TOTAL - 1 ? 'See the results' : 'Next'}</button></div>
@@ -611,8 +768,8 @@
       <ol class="steps">
         <li><div><div class="t">${r.top ? 'Sharpen' : 'Fix'} <em>${esc(w.name)}</em> first</div>
           <ul class="dots">${w.fixes.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div></li>
-        <li><div><div class="t">Our recommendation: <em>${esc(P.name)}</em></div>
-          <p>${esc(P.includes)}</p><p class="term">${esc(P.term)}</p>
+        <li><div class="pk"><div class="t">Our recommendation: <em>${esc(P.name)}</em></div>
+          <p class="term">${esc(P.term)}</p>
           <div class="repbox rep">
             <div class="rk">Rep only</div>
             <label class="f"><span>Their monthly budget</span><select data-budget aria-label="Their monthly budget">${BUDGETS.map(([k, l]) => `<option value="${k}"${S.budget === k ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
@@ -624,11 +781,23 @@
             <label class="f" style="margin-top:10px"><span>Recommend</span><select id="pkgPick">
               <option value="">Auto from the scores (${esc(PACKAGES[rec.autoKey].name)})</option>
               ${PKG_ORDER.map(k => `<option value="${k}"${S.pick === k ? ' selected' : ''}>${esc(PACKAGES[k].name)}</option>`).join('')}</select></label>
-          </div></div></li>
+          </div>
+          <p>${esc(P.intro)}</p>
+          ${pkgDetail(P)}</div></li>
         <li id="nextLi" class="${S.nextStep ? '' : 'rep'}"><div><div class="t">Next step</div>
           <p class="client-only" id="nextTxt">${esc(S.nextStep)}</p>
           <input type="text" class="rep" id="nextStep" value="${esc(S.nextStep)}" placeholder="What you agreed, e.g. proposal review Tuesday at 2pm" aria-label="Agreed next step" /></div></li>
       </ol>`;
+  }
+
+  // What the package includes, from the doc's client-facing page. Same markup on screen and on the one-pager.
+  function pkgDetail(P) {
+    return `<div class="incl">
+      <div class="k2">What's included</div>
+      <div class="groups">${P.groups.map(([h, items]) => `<div class="grp"><b>${esc(h)}</b><ul>${items.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div>
+      ${P.phases.length ? `<div class="k2">How the engagement runs</div><ol class="phases">${P.phases.map(([n, t]) => `<li><b>${esc(n)}</b><span>${esc(t)}</span></li>`).join('')}</ol>` : ''}
+      ${P.notes.length ? `<div class="pnotes">${P.notes.map(n => `<p>${esc(n)}</p>`).join('')}</div>` : ''}
+    </div>`;
   }
 
   function go(n) {
@@ -678,12 +847,22 @@
       <div class="gap rec">
         <div class="k">Suggested next steps</div>
         <h3>Our recommendation: ${esc(P.name)}</h3>
-        <p>${esc(P.includes)}</p>
         <p class="term">${esc(P.term)}</p>
+        <p>Everything the engagement includes is on the next page.</p>
         ${S.nextStep || repName() ? `<div class="nxt">${S.nextStep ? `<p><b>Next step:</b> ${esc(S.nextStep)}</p>` : ''}${repName() ? `<p><b>Your strategist:</b> ${esc(repName())} · ${esc(repEmail)}</p>` : ''}</div>` : ''}
       </div>
       <p class="fine">A quick read from our conversation, not a full audit. Earned media depends on editorial interest, so we never promise specific placements.</p>
       <div class="tagline">Your story unleashed.</div>
+      <div class="rfoot"><span>${esc((f.company || 'Prospect').toUpperCase())} X STORY GROUP &nbsp;|&nbsp; ${esc(date.toUpperCase())} &nbsp;|&nbsp; CONFIDENTIAL</span><span>storygroup.io</span></div>
+    </div>
+    <div class="rp p2">
+      <div class="rtop"></div>
+      <div class="rhead"><div class="logo"><span class="s">story</span> <span class="g">group</span></div><div class="tag">Recommended engagement</div></div>
+      <div class="lbar"></div>
+      <h1>Our recommendation: <em>${esc(P.name)}</em></h1>
+      <div class="rmeta">${esc(P.term)}</div>
+      <p class="intro">${esc(P.intro)}</p>
+      ${pkgDetail(P)}
       <div class="rfoot"><span>${esc((f.company || 'Prospect').toUpperCase())} X STORY GROUP &nbsp;|&nbsp; ${esc(date.toUpperCase())} &nbsp;|&nbsp; CONFIDENTIAL</span><span>storygroup.io</span></div>
     </div>`;
   }
@@ -705,7 +884,13 @@
       'What fixes it:',
       ...w.fixes.map(x => `• ${x}`),
       '',
-      `Our recommendation: ${P.name}. ${P.includes}`,
+      `Our recommendation: ${P.name} (${P.term})`,
+      P.intro,
+      '',
+      "What's included:",
+      ...P.groups.map(([h, items]) => `• ${h}: ${items.join('; ')}`),
+      ...(P.phases.length ? ['', 'How the engagement runs:', ...P.phases.map(([n, t]) => `• ${n}: ${t}`)] : []),
+      ...(P.notes.length ? ['', ...P.notes] : []),
       '',
       `Next step: ${S.nextStep || '[next step]'}`,
       '',
@@ -717,7 +902,7 @@
   function crmNote() {
     const r = result(), rec = recommend(r), P = PACKAGES[rec.key];
     const how = S.pick ? "rep's pick" : S.budget ? 'auto from the scores and budget' : 'auto from the scores, budget not asked';
-    const noteFor = k => (S.notes[k] || '').trim();
+    const noteFor = k => String(S.notes[k] || '').trim();
     return [
       `STRATEGY CALL · via Strategy Scorecard · ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
       '',
@@ -728,10 +913,8 @@
       S.nextStep ? `Agreed next step: ${S.nextStep}` : null,
       '',
       'Answers',
-      ...QUESTIONS.map((q, i) => `${i + 1}. ${q.text} ${S.answers[i] == null ? '(not asked)' : label(q, S.answers[i])}`),
-      ...(Object.values(S.notes).some(v => v.trim()) ? ['', 'Notes',
-        noteFor('why') ? `In their words: ${noteFor('why')}` : null,
-        ...ORDER.map(p => (noteFor(p) ? `${PILLARS[p].name}: ${noteFor(p)}` : null))] : []),
+      ...QUESTIONS.flatMap((q, i) => [`${i + 1}. ${q.text} ${S.answers[i] == null ? '(not asked)' : label(q, S.answers[i])}`,
+        noteFor(q.id) ? `   Note: ${noteFor(q.id)}` : null]),
       ...(S.booking.length ? ['', 'From their booking', ...S.booking.map(([q, a]) => `${q}: ${a}`)] : []),
     ].filter(l => l !== null).join('\n');
   }
