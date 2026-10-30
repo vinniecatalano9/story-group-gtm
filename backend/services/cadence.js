@@ -474,7 +474,7 @@ async function buildMessage(lead, step, { sendAt = new Date(), dryRun = false } 
   const subject = step.channel === 'email'
     ? (c.subject ? copy.render(step, c.subject, lead, times, meeting) || c.subject : (step.id === 'email1' ? copy.SUBJECT : threadReply(lead)))
     : null;
-  return { subject, text, offer, times };
+  return { subject, text, offer, times, offered: offer ? offeredTimes(c.template, offer) : null };
 }
 
 // ── Sending ──────────────────────────────────────────────────────────────────
@@ -505,6 +505,7 @@ async function queueStep(lead, step, msg) {
     to: step.channel === 'email' ? lead.email : lead.phone,
     subject: msg.subject || null, text: msg.text,
     offer: msg.offer ? { today: msg.offer.today, day: msg.offer.day, am: msg.offer.am, pm: msg.offer.pm } : null,
+    offered: msg.offered || null,
     status: (MODE() === 'live' && !step.alwaysApprove) || okInChat(lead, step.id) ? 'approved' : 'pending', token, created_at: new Date(),
   };
   await ref.set(a);
@@ -825,10 +826,14 @@ async function dispatch(id) {
   const setAt = lead.send_at && toDate(lead.send_at[a.step]);
   if (!setAt && !step.beforeMeetingMinutes && !step.afterMeetingMinutes && !inWindow(now, lead.tz)) return { status: `waiting: outside ${lead.first_name}'s send window, goes out ${shortDate(intoWindow(now, lead.tz), lead.tz)} after 9:30am their time` };
 
-  // Times that went stale while the card waited: re-plan on a fresh card.
+  // Times that went stale while the card waited: re-plan on a fresh card. Only
+  // the times the message actually offers count (10/30: Email 3 cards went stale
+  // on a planned "today" slot their text never mentioned). Cards from before
+  // then have no list, so all their planned times count.
   const off = a.offer || {};
-  const stale = (off.today && toDate(off.today).getTime() < now.getTime() + 45 * 6e4)
-    || [off.am, off.pm].some(t => t && toDate(t).getTime() < now.getTime() + 30 * 6e4);
+  const todayAt = off.today && toDate(off.today).getTime();
+  const offered = (a.offered || [off.today, off.am, off.pm]).filter(Boolean).map(toDate);
+  const stale = offered.some(t => t.getTime() < now.getTime() + (t.getTime() === todayAt ? 45 : 30) * 6e4);
   if (stale) {
     await ref.update({ status: 'stale' });
     await markCard(a, 'Times went stale: a fresh card with new times is coming');
