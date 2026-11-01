@@ -1022,4 +1022,6 @@ app.listen(PORT, () => {
   console.log(`   Scrapers: http://localhost:${PORT}/api/scrapers`);
   console.log(`   Ulinc: ${process.env.ULINC_NEW_MESSAGE_URL ? 'Active (polling)' : 'Not configured'}`);
   console.log(`\n   Cron: Cleanup Sun 11pm EST, Dashboard Mon 8am EST\n`);
+  // Reply Bot answers what Vincent types in its chat.
+  require('./services/replyBotChat').start();
 });
