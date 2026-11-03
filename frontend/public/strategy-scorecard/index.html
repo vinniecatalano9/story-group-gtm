@@ -553,6 +553,9 @@
   };
   const PKG_ORDER = ['kickstart', 'bge', 'visibility', 'influence', 'command', 'cdg', 'custom'];
   const START = { bge: 7500, visibility: 10000, influence: 20000, command: 30000, cdg: 33500 };  // Start here, per month
+  const FLOOR = { bge: 5000, visibility: 8500, influence: 16500, command: 25000, cdg: 31500 };  // Lowest approved, final close only (internal)
+  const MONTHS = { bge: 3, visibility: 6, influence: 6, command: 12, cdg: 12 };
+  const money = n => '$' + n.toLocaleString('en-US');
 
   // Budget bands are the Call Scorecard's, so both tools agree. FITS is the lowest band each package fits there
   // (cut scope before price); Command & Digital Growth only at $33.5K+ (the $30K rule).
@@ -706,7 +709,21 @@
     const monthlyBudget = b && b !== 'none' && b !== 'u5';
     if (monthlyBudget && key === 'kickstart') notes.push('Kickstart is only for under $5K a month or no retainer. Their budget fits a monthly package.');
     else if (monthlyBudget && !fits(key, b)) notes.push(key === 'cdg' && b === 'b30' ? '$30K rule: below $33.5K a month, sell Command, not Command & Digital Growth.' : `${nm(key)} is above their budget range.`);
-    else if (monthlyBudget && BAND_MIN[b] && START[key] > BAND_MIN[b]) notes.push(`${nm(key)} starts above the bottom of their range. Ask: "Where in that range are you leaning: closer to ${BAND_WORDS[b][0]} or closer to ${BAND_WORDS[b][1]}?"`);
+    else if (monthlyBudget && BAND_MIN[b] && START[key] > BAND_MIN[b]) {
+      const [lo, hi] = BAND_WORDS[b];
+      notes.push(`${nm(key)} starts above the bottom of their range. Ask: "Where in that range are you leaning: closer to ${lo} or closer to ${hi}?"`);
+      // Under the lowest approved price the band can't decide it, so the rep asks more (Call 1 Beat 3, Aaron's ROI math,
+      // scope before price) before falling back. A $5K+ budget never falls back to Kickstart (Vincent, 10/6).
+      const down = key === 'influence' ? (r.weakest === 'scale' ? 'bge' : 'visibility') : key === 'command' ? auto : '';
+      const fallback = key === 'visibility'
+        ? leads ? `switch to ${nm('bge')} for the leads work. At Month 3 it moves up to Influence to add PR.`
+          : `no PR package fits, so let them go kindly: "Let me be straight. Our PR work starts at $10k a month on a six-month commitment, so we're not going to be the right partner right now." Then: "When you're ready, call me directly. And anyone you know where a real PR budget makes sense? We pay $500 as a thank-you on signed referrals."`
+        : down ? `step down to ${nm(down)}${key === 'influence' ? `, the half that fixes ${PILLARS[r.weakest].name}, their fix first` : ', the pick from their scores'}. Less scope, not a discount.` : '';
+      if (FLOOR[key] > BAND_MIN[b] && fallback) {
+        notes.push(`If they say closer to ${lo}, ask more before you decide: "Is that a set number, or are you still figuring it out?" Then: "How many clients would you need for this to pay off?" Do the math out loud: one client's value against the ${money(START[key] * MONTHS[key])} total.`);
+        notes.push(`If the number is firm, cut scope, not price: ask what in the plan they need less of. Still under ${money(FLOOR[key])} (lowest approved) after that: ${fallback}`);
+      }
+    }
     // A bigger budget is a reason to ask, never to add scope they didn't ask for. Command has no lead generation,
     // so it's never the step up for leads work.
     const up = !monthlyBudget ? ''

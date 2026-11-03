@@ -775,6 +775,8 @@ const SIGNAL_TOPICS = {
 const SCRIPTS = {
   d10: '"Fair answer. Help me understand what would make you ready? A piece of info you\'d need to see, a person you\'d need to talk to, a threshold in the business?" Then: "So if we addressed that on the next call, you\'d be in position to say yes?"',
   d11: '"Let me be straight. Our PR work starts at $10k a month on a six-month commitment, so we\'re not going to be the right partner right now." If it\'s a real business: "Where most people in your spot start is our Kickstart, a one-time $5,500 engagement." Then: "Anyone you know where a real PR budget makes sense? We pay $500 as a thank-you on signed referrals."',
+  // D-11 without the Kickstart line, for a $5K+ budget that wants PR only (Kickstart stays under $5K, Vincent 10/6).
+  d11pr: '"Let me be straight. Our PR work starts at $10k a month on a six-month commitment, so we\'re not going to be the right partner right now." Then: "When you\'re ready, call me directly. And anyone you know where a real PR budget makes sense? We pay $500 as a thank-you on signed referrals."',
   d12: '"When the actual decision-maker isn\'t in the room, nobody wins. Go have a 10-minute conversation with [DM] this week. If they\'re open to a 45-minute call, email me back. Fair?"',
 };
 
@@ -1370,7 +1372,7 @@ function analyze() {
     budgetNote = `Best fit is ${pkgName(ideal)}, but that's above their budget, so this shows ${pkgName(pick)} (less scope, not a discount).`;
     stepped = true;
   } else if (pick && min !== undefined && !PACKAGES[pick].once && PACKAGES[pick].floor > min) {
-    budgetNote = `Their budget range starts at ${money(min)}, below this package's lowest price (${money(PACKAGES[pick].floor)}). Check they're at the top of their range.`;
+    budgetNote = `Their budget range starts at ${money(min)}, below this package's lowest price (${money(PACKAGES[pick].floor)}). Ask where in the range they're leaning before you decide.`;
   }
 
   let next = null;
@@ -1416,9 +1418,25 @@ function flags(a) {
   // The package vs their budget, by the budget answer, with words to say.
   const BAND = { b5: ['$5k', '$10k'], b10: ['$10k', '$20k'], b20: ['$20k', '$30k'], b30: ['$30k', '$33k'] };
   if (a.stepped) add('secSize', '', a.budgetNote);
-  else if (a.pick && BAND[f.budget] && !PACKAGES[a.pick].once && PACKAGES[a.pick].floor > BUDGET_MIN[f.budget])
-    add('secSize', '', `${pkgName(a.pick)} starts at ${money(PACKAGES[a.pick].floor)} (lowest approved), above the bottom of their range.`,
-      `"Where in that range are you leaning: closer to ${BAND[f.budget][0]} or closer to ${BAND[f.budget][1]}?"`);
+  {
+    // Under the lowest approved price the band can't decide it, so the rep asks more (Call 1 Beat 3, Aaron's ROI math,
+    // scope before price) before falling back. A $5K+ budget never falls back to Kickstart (Vincent, 10/6).
+    const p = PACKAGES[a.pick], band = BAND[f.budget];
+    if (p && band && !p.once && p.floor > BUDGET_MIN[f.budget]) {
+      add('secSize', '', `${pkgName(a.pick)} starts at ${money(p.floor)} (lowest approved), above the bottom of their range.`,
+        `"Where in that range are you leaning: closer to ${band[0]} or closer to ${band[1]}?"`);
+      const fallback = a.pick === 'vis'
+        ? a.needGrowth ? 'switch to Business Growth for the leads work. At Month 3 it moves up to Influence to add PR.' : 'no PR package fits, so let them go kindly:'
+        : a.pick === 'ig' ? 'step down to Visibility for the PR, or Business Growth if leads matter more to them. Less scope, not a discount.'
+        : a.pick === 'cmd' ? 'step down to Influence. Less scope, not a discount.' : '';
+      if (fallback) {
+        add('secSize', '', `If they say closer to ${band[0]}, ask more before you decide:`,
+          `"Is that a set number, or are you still figuring it out?" Then: "How many clients would you need for this to pay off?" Do the math out loud: one client's value against the ${money(p.monthly * p.months)} total.`);
+        add('secSize', '', `If the number is firm, cut scope, not price: ask what in the plan they need less of. Still under ${money(p.floor)} after that: ${fallback}`,
+          a.pick === 'vis' && !a.needGrowth ? SCRIPTS.d11pr : undefined);
+      }
+    }
+  }
   if (t === 'crisis' && a.pick && f.budget) add('secSize', '', 'For a crisis, Aaron anchors high on Call 2: "Crisis contracts start at $30 to 35K on the low end."');
   if (c.soloSeller && (f.revenue === 'r3' || f.revenue === 'r4')) add('secSize', '', 'Says $2M+ in revenue, but the founder is the only salesperson. Ask who would handle twice the leads.');
   const sec = elapsed();
