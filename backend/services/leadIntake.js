@@ -363,6 +363,7 @@ async function addLead(p, d, ref, { out, seen, who, owner, form, source, at }) {
 // its note (leadForm.assessmentFrom, 10/25).
 
 const NUTSHELL_WAIT_MS = 20 * 6e4;
+const NOTE_GIVE_UP_MS = 6 * 36e5; // no contact and no form note after 6 hours: claim it and flag it
 const NUTSHELL_EVERY_MS = 3 * 6e4;
 let _lastNutshell = 0;
 const nutshellMeta = () => db().collection('cadence_meta').doc('nutshell_intake');
@@ -388,11 +389,15 @@ async function nutshellAssigned(out) {
   for (const l of leads) {
     if (linked.has(l.id)) continue;
     const ref = db().collection('lead_intake').doc(`nutshell_${l.id}`);
-    try { await ref.create({ nutshell_lead_id: l.id, status: 'claimed', at: new Date() }); } catch { continue; }
+    if ((await ref.get()).exists) continue;
     const c = (l.contacts || [])[0];
     const k = c ? await contactKeys(c.id) : {};
     // No email or phone on a contact: assessment leads have no contact, just a note (10/25).
     const a = !k.email && !k.phone ? leadForm.assessmentFrom((await nutshell.call('getLead', { leadId: l.id })).notes) : null;
+    // The note is the whole lead (11/3): with no contact and no note yet, don't claim it.
+    // Look again next run; after NOTE_GIVE_UP_MS claim it anyway so it surfaces as no_channel.
+    if (!k.email && !k.phone && !a && Date.now() - new Date(l.createdTime) < NOTE_GIVE_UP_MS) continue;
+    try { await ref.create({ nutshell_lead_id: l.id, status: 'claimed', at: new Date() }); } catch { continue; }
     const full = (c && c.name) || (a && a.full_name) || '';
     const p = {
       full_name: full, first_name: firstName(full), last_name: full.split(/\s+/).slice(1).join(' '),
