@@ -165,14 +165,15 @@
   };
   const ORDER = ['found', 'convert', 'scale'];
 
-  // First question is the ad form's, unscored. The rest score 0 to 3, two per pillar.
+  // First question is the ad form's, unscored. The rest score 0 to 3, two per pillar. On Michelle's audit scale (the
+  // strategy scorecard's), A and B are her 1 and 2, a gap, and C is 3, Established. Keep the answers in step with it.
   const QUESTIONS = [
     { id: 'frustration', text: "What's your biggest frustration right now?",
       options: [['Strong work, but not enough visibility', 'found'], ['Getting attention but not authority', 'convert'], ['Growth has hit a ceiling', 'scale'], ['Not sure where the gap is', null]] },
     { id: 'search', pillar: 'found', text: 'When someone searches your company or your name, what do they find?',
       options: ['Not much, or old stuff', 'Our website and a few social profiles', 'Some press, interviews, or podcasts', 'Current coverage that makes us look like the leader'] },
     { id: 'media', pillar: 'found', text: 'How do you land press, podcasts, or speaking spots today?',
-      options: ["We don't", 'Once in a while, by luck', 'Sometimes, but with no real plan', 'On purpose, with a steady plan'] },
+      options: ["We don't", 'Once in a while, with no real plan', "Often, with a plan we're still building", 'On purpose, with a steady plan'] },
     { id: 'rep', pillar: 'convert', text: 'When a buyer checks you out, does your reputation match how good you really are?',
       options: ['No, we look smaller than we are', 'Somewhat, but there are gaps', 'Mostly', 'Yes, the proof is everywhere'] },
     { id: 'exec', pillar: 'convert', text: 'Is your CEO or leadership known as an expert outside the company?',
@@ -209,22 +210,28 @@
   }
   new ResizeObserver(postHeight).observe(document.body);
 
+  // Same rules as the strategy scorecard: an A or B is a gap, so a pillar with one is a gap even when its other answer
+  // pulls it up. Fix first is a gap pillar: the one they said hurts when the scores back it up, else the lowest.
+  // Seen and trusted needs no gap in Get found or Convert, and "edge to sharpen" needs no gap at all.
   function result() {
-    const pct = {};
+    const pct = {}, gap = {};
     for (const p of ORDER) {
       const qs = QUESTIONS.map((q, i) => [q, i]).filter(([q]) => q.pillar === p);
       pct[p] = Math.round(qs.reduce((s, [, i]) => s + (answers[i] || 0), 0) / (qs.length * 3) * 100);
+      gap[p] = qs.some(([, i]) => (answers[i] || 0) < 2);
     }
     const scored = QUESTIONS.map((q, i) => (q.pillar ? answers[i] || 0 : 0));
     const score = Math.round(scored.reduce((a, b) => a + b, 0) / ((TOTAL - 1) * 3) * 100);
-    const weakest = ORDER.reduce((w, p) => (pct[p] < pct[w] ? p : w), ORDER[0]);
-    const hiF = pct.found >= 67, hiC = pct.convert >= 67; // two answers per pillar: 67 means mostly C or better
+    const said = QUESTIONS[0].options[answers[0]] || null, saidPillar = said ? said[1] : null;
+    const gaps = ORDER.filter(p => gap[p]);
+    const lowest = ps => ps.reduce((w, p) => (pct[p] < pct[w] || (pct[p] === pct[w] && p === saidPillar) ? p : w));
+    const weakest = gaps.includes(saidPillar) ? saidPillar : lowest(gaps.length ? gaps : ORDER);
+    const hiF = !gap.found, hiC = !gap.convert;
     const type = hiF && hiC ? { title: 'Impossible to ignore', line: 'Seen and trusted.', body: 'The work now is staying ahead and turning that attention into steady growth.' }
       : !hiF && hiC ? { title: 'Hidden gem', line: 'Strong work, not enough visibility.', body: 'The people who find you trust you. Not enough of them are finding you.' }
       : hiF && !hiC ? { title: 'Loud but thin', line: 'Attention but not authority.', body: "People see you, but what they find doesn't build enough trust to buy." }
       : { title: 'Starting out', line: 'Not seen or trusted enough yet.', body: "Outside your network, buyers can't find much, and what they find doesn't prove how good you are." };
-    const said = QUESTIONS[0].options[answers[0]] || null;
-    return { pct, score, weakest, type, said: said && said[0], saidPillar: said && said[1] };
+    return { pct, score, weakest, type, top: !gaps.length && score >= 85, said: said && said[0], saidPillar };
   }
 
   function focusTop(sel) {
@@ -349,7 +356,7 @@
       : r.saidPillar === r.weakest ? `The scores agree. <b>${esc(w.name)}</b> is where to start.`
       : `Your answers point to <b>${esc(w.name)}</b> first.`;
     const C = 2 * Math.PI * 52;
-    const top = r.score >= 85;
+    const top = r.top;
     app.innerHTML = `<div class="fade">
       <div class="eyebrow">${first ? `${esc(first)}'s scorecard` : 'Your scorecard'}</div>
       ${r.said ? `<p class="said">You told us <q>${esc(r.said)}</q></p>` : ''}
