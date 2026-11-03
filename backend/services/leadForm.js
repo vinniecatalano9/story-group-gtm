@@ -67,10 +67,14 @@ async function fromNutshell(leadId) {
 // straight on ("...on their own? Pretty oftenWhat is your biggest...").
 
 const QUESTIONS = {
-  found_on_own: /How often do new customers find you on their own\??/i,
-  frustration: /What is your biggest frustration right now\??/i,
-  role: /What best describes your role\??/i,
+  // Fuzzy on purpose: 11/3 notes say "How often do new customers find you:" and "Whats your biggest frustartion:".
+  found_on_own: /How often do new customers find you(?: on their own)?\s*[?:]*/i,
+  frustration: /What(?:'?s| is) your biggest frust\w*(?: right now)?\s*[?:]*/i,
+  role: /What best describes your role\s*[?:]*/i,
 };
+
+// 11/3: Annette's notes switched to labeled lines ("Full Name: x", "Phone Number: y").
+const label = (t, re) => { const m = t.match(new RegExp(`^\\s*(?:${re})\\s*:\\s*(.+)$`, 'im')); return m ? m[1].trim() : ''; };
 
 /** The assessment note's text -> { full_name, email, phone_raw, role, frustration, found_on_own }. */
 function parseAssessment(text) {
@@ -79,15 +83,15 @@ function parseAssessment(text) {
   const isPhone = s => /^\+?[\d\s().-]+$/.test(s) && /^1?\d{10}$/.test(s.replace(/\D/g, '')); // not the 18-digit ad id
   const first = lines[0] || '';
   const out = {
-    full_name: first && !first.includes('@') && !isPhone(first) && !Object.values(QUESTIONS).some(re => re.test(first)) ? first : '',
+    full_name: label(t, 'Full Name|Name') || (first && !first.includes(':') && !first.includes('@') && !isPhone(first) && !Object.values(QUESTIONS).some(re => re.test(first)) ? first : ''),
     email: ((t.match(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/) || [])[0] || '').toLowerCase(),
-    phone_raw: lines.find(isPhone) || '',
+    phone_raw: label(t, 'Phone Number|Phone') || lines.find(isPhone) || '',
     role: '', frustration: '', found_on_own: '',
   };
   // Each answer runs from its question to the next question or the end of its line.
   const qs = Object.entries(QUESTIONS).map(([k, re]) => { const m = t.match(re); return m && { k, start: m.index, end: m.index + m[0].length }; })
     .filter(Boolean).sort((a, b) => a.start - b.start);
-  qs.forEach((q, i) => { out[q.k] = t.slice(q.end, i + 1 < qs.length ? qs[i + 1].start : t.length).trim().split('\n')[0].trim(); });
+  qs.forEach((q, i) => { out[q.k] = t.slice(q.end, i + 1 < qs.length ? qs[i + 1].start : t.length).trim().split('\n')[0].replace(/^[\s:?]+/, '').trim(); });
   return out;
 }
 
