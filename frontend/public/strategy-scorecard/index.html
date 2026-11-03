@@ -344,7 +344,8 @@
   const STORE = 'sg-strategy-scorecard', VIEW_KEY = 'sg-strategy-view', REP_KEY = 'sg-scorecard-rep';  // REP_KEY is shared with the Call Scorecard
   const $ = s => document.querySelector(s);
 
-  // Same pillars, questions, and results as the website quiz (/scorecard/), so the call picks up where the ad left off.
+  // Same pillars and questions as the website quiz (/scorecard/), so the call picks up where the ad left off,
+  // scored on Michelle's 1 to 5 scale with five answers each.
   const PILLARS = {
     found: { name: 'Get found', ask: 'are buyers finding you?',
       problem: "Buyers can't pick you if they never see you. Right now you aren't showing up enough where they search, read, and decide.",
@@ -395,7 +396,7 @@
     { id: 'search', pillar: 'found', area: 'vis', text: 'When someone searches your company or your name, what do they find?',
       options: ['Not much, or old stuff', 'Our website and a few social profiles', 'Some press, interviews, or podcasts', 'Regular coverage, but not everywhere buyers look', 'Current coverage that makes us look like the leader'] },
     { id: 'media', pillar: 'found', area: 'media', text: 'How do you land press, podcasts, or speaking spots today?',
-      options: ["We don't", 'Once in a while, by luck', 'Sometimes, but with no real plan', "Often, with a plan we're still building", 'On purpose, with a steady plan'] },
+      options: ["We don't", 'Once in a while, with no real plan', "Often, with a plan we're still building", 'On purpose, with a steady plan', 'On a steady plan, and we track what it brings in'] },
     { id: 'rep', pillar: 'convert', area: 'rep', text: 'When a buyer checks you out, does your reputation match how good you really are?',
       options: ['No, we look smaller than we are', 'Somewhat, but there are big gaps', 'Mostly, with a few gaps', 'Yes, the proof is easy to find', 'Yes, the proof is everywhere'] },
     { id: 'exec', pillar: 'convert', area: 'exec', text: 'Is your CEO or leadership known as an expert outside the company?',
@@ -407,7 +408,10 @@
   ];
   const TOTAL = QUESTIONS.length;
   // Michelle's Story Group audit scale (same as the Call Scorecard). Scored answers are stored 0 to 4 and mean 1 to 5.
+  // Her guide: 2 is "some activity, but inconsistent", 3 is "a functioning foundation", and any 1 or 2 is a material gap.
   const SCALE = ['Not Established', 'In Progress', 'Established', 'Scalable', 'Optimized'];
+  // The answers scored 1 or 2 in these pillars, as "Earned Media & PR (2)".
+  const lowAreas = ps => QUESTIONS.flatMap((q, i) => (ps.includes(q.pillar) && S.answers[i] != null && S.answers[i] < 2 ? [`${AREAS[q.area].name} (${S.answers[i] + 1})`] : []));
   const label = (q, i) => (i == null ? '' : Array.isArray(q.options[i]) ? q.options[i][0] : q.options[i]);
 
   // Package names and Start here prices from tier_reference.md (the final 9/18/2026 package doc), read 10/30/2026.
@@ -570,13 +574,15 @@
   const scaleWord = v => (v == null ? 'Not scored' : SCALE[Math.min(4, Math.max(0, Math.floor(v + 1e-9) - 1))]);
 
   /* ---------- State (saved in this browser so a reload mid-call loses nothing) ---------- */
-  const blank = () => ({ v: 2, fields: { name: '', email: '', company: '', title: '', website: '', lead: '' }, answers: new Array(TOTAL).fill(null),
+  const blank = () => ({ v: 3, fields: { name: '', email: '', company: '', title: '', website: '', lead: '' }, answers: new Array(TOTAL).fill(null),
     notes: Object.fromEntries(QUESTIONS.map(q => [q.id, ''])), step: 0, pick: '', budget: '', nextStep: '', booking: [], nutshell: null });
   function load() {
     try {
       const s = JSON.parse(localStorage.getItem(STORE));
-      if (s && (s.v === 1 || s.v === 2) && Array.isArray(s.answers) && s.answers.length === TOTAL) {
+      if (s && [1, 2, 3].includes(s.v) && Array.isArray(s.answers) && s.answers.length === TOTAL) {
         if (s.v === 1) { s.answers = s.answers.map((a, i) => (QUESTIONS[i].pillar && a != null ? [0, 1, 2, 4][a] : a)); s.v = 2; }
+        // v3 moved the press answers onto Michelle's meanings: "by luck" and "no real plan" are both In Progress now.
+        if (s.v === 2) { const m = QUESTIONS.findIndex(q => q.id === 'media'); if (s.answers[m] != null) s.answers[m] = [0, 1, 1, 2, 3][s.answers[m]]; s.v = 3; }
         const b = blank();
         if (s.noRetainer && !s.budget) s.budget = 'none';
         delete s.noRetainer;
@@ -634,49 +640,83 @@
     try { localStorage.setItem(VIEW_KEY, view); } catch {}
   }
 
-  /* ---------- Scoring (same math as the website quiz) ---------- */
+  /* ---------- Scoring ---------- */
   // Each pillar is the average of its answered questions on the 1 to 5 scale; unanswered ones are left out.
-  // 3 (Established) or better is solid; below 3 is a gap, as in Michelle's audit where a 1 or 2 is a gap.
+  // Michelle's guide treats any area scored 1 or 2 as a material gap, so a pillar with a 1 or 2 in it is a gap
+  // even when its other answer pulls the average to 3 or more. Fix first is a gap pillar: the one they said hurts
+  // when the scores back it up, else the lowest. With no gaps it's the lowest pillar. Unscored pillars never count.
   function result() {
     const avg = xs => (xs.length ? xs.reduce((x, y) => x + y, 0) / xs.length : null);
-    const val = i => (S.answers[i] == null ? null : S.answers[i] + 1);
-    const sc = {};
-    for (const p of ORDER) sc[p] = avg(QUESTIONS.map((q, i) => (q.pillar === p ? val(i) : null)).filter(v => v != null));
-    const overall = avg(QUESTIONS.map((q, i) => (q.pillar ? val(i) : null)).filter(v => v != null));
-    const weakest = ORDER.reduce((w, p) => ((sc[p] ?? 0) < (sc[w] ?? 0) ? p : w), ORDER[0]);
-    const hiF = (sc.found ?? 0) >= 3, hiC = (sc.convert ?? 0) >= 3;
+    const vals = p => QUESTIONS.map((q, i) => (q.pillar === p && S.answers[i] != null ? S.answers[i] + 1 : null)).filter(v => v != null);
+    const sc = {}, gap = {};
+    for (const p of ORDER) { sc[p] = avg(vals(p)); gap[p] = vals(p).some(v => v <= 2); }
+    const overall = avg(ORDER.flatMap(vals));
+    const said = QUESTIONS[0].options[S.answers[0]] || null, saidPillar = said ? said[1] : null;
+    const scored = ORDER.filter(p => sc[p] != null), gaps = scored.filter(p => gap[p]);
+    const lowest = ps => ps.reduce((w, p) => (sc[p] < sc[w] || (sc[p] === sc[w] && p === saidPillar) ? p : w));
+    const weakest = !scored.length ? saidPillar || ORDER[0] : gaps.includes(saidPillar) ? saidPillar : lowest(gaps.length ? gaps : scored);
+    const hiF = sc.found != null && !gap.found, hiC = sc.convert != null && !gap.convert;
     const type = hiF && hiC ? { title: 'Impossible to ignore', line: 'Seen and trusted.', body: 'The work now is staying ahead and turning that attention into steady growth.' }
       : !hiF && hiC ? { title: 'Hidden gem', line: 'Strong work, not enough visibility.', body: 'The people who find you trust you. Not enough of them are finding you.' }
       : hiF && !hiC ? { title: 'Loud but thin', line: 'Attention but not authority.', body: "People see you, but what they find doesn't build enough trust to buy." }
       : { title: 'Starting out', line: 'Not seen or trusted enough yet.', body: "Outside your network, buyers can't find much, and what they find doesn't prove how good you are." };
-    const said = QUESTIONS[0].options[S.answers[0]] || null;
-    return { sc, overall, weakest, type, top: (overall ?? 0) >= 4.5, said: said && said[0], saidPillar: said && said[1] };
+    const top = scored.length === ORDER.length && !gaps.length && overall >= 4.5;
+    return { sc, gap, scored, gaps, overall, weakest, type, top, said: said && said[0], saidPillar };
   }
 
-  // Package pick, per tier_reference.md's selection rules. The scores give the need (a pillar averaging under 3,
-  // Established, is weak); the budget can only step it down, cutting scope, not price.
+  // Package pick. Michelle's guide: pick from "the lowest-scoring dimensions and the prospect's stated business
+  // priorities"; tier_reference.md: match what they said. So the gaps and the frustration they named give the need
+  // (PR, leads, or both), and the budget can only step it down, cutting scope, not price.
   function recommend(r) {
-    const weak = p => r.sc[p] == null || r.sc[p] < 3, nm = k => PACKAGES[k].name;
-    const pr = weak('found') || weak('convert'), leads = weak('scale'), b = S.budget, notes = [];
-    const [need, needWhy] = pr && leads ? ['influence', 'Weak on PR (found or trust) and on leads. Leads plus PR is Influence; never stack Visibility with growth work.']
-      : pr ? ['visibility', 'The gap is being found or trusted, and leads are OK. PR is the main need, so Visibility.']
-      : leads ? ['bge', 'Found and trusted, but new business is uneven. Leads with no PR ask is Business Growth Engagement.']
-      : ['influence', 'No weak pillar. To pull further ahead on media and growth, Influence. Pick Visibility if they only want PR.'];
-    let auto = need, why = needWhy;
+    const nm = k => PACKAGES[k].name, names = ps => ps.map(p => PILLARS[p].name).join(' and '), b = S.budget, notes = [];
+    const saidPR = r.saidPillar === 'found' || r.saidPillar === 'convert', saidLeads = r.saidPillar === 'scale';
+    const prGaps = ['found', 'convert'].filter(p => r.gap[p]), leadGaps = r.gap.scale ? ['scale'] : [];
+    const pr = prGaps.length > 0 || saidPR, leads = leadGaps.length > 0 || saidLeads;
+    // Where a need came from: the gap pillars, or their own words when the scores don't show that side.
+    const from = (gapPs, saidIt) => (gapPs.length ? `${gapPs.length > 1 ? 'gaps' : 'a gap'} in ${names(gapPs)}` : saidIt ? `they said "${r.said}"` : '');
+    let need, src, rule;
+    if (!r.scored.length) {
+      need = saidPR ? 'visibility' : saidLeads ? 'bge' : 'influence';
+      src = `nothing is scored yet${r.said ? ', so this only follows what they said' : ''}`; rule = 'Score the questions before you recommend a package.';
+    } else if (!r.gaps.length) {
+      need = 'influence'; src = 'no 1s or 2s'; rule = 'To pull further ahead on media and growth, Influence. Pick Visibility if they only want PR.';
+    } else if (pr && leads) {
+      need = 'influence'; src = `${from(prGaps, saidPR)}, plus ${from(leadGaps, saidLeads)}`; rule = 'Leads plus PR is Influence; never stack Visibility with growth work.';
+    } else if (pr) {
+      need = 'visibility'; src = `${from(prGaps, saidPR)}, no leads gap`; rule = 'PR only is Visibility.';
+    } else {
+      need = 'bge'; src = 'a gap in Scale, no PR gap or PR ask'; rule = 'Leads only is Business Growth Engagement.';
+    }
+    let auto = need, why = `${src.charAt(0).toUpperCase()}${src.slice(1)}. ${rule}`;
     if (b === 'none' || b === 'u5') {
       auto = 'kickstart';
       why = `${b === 'none' ? "They won't do a monthly retainer" : 'Budget under $5K a month'}, so Kickstart. Every monthly package already starts with the Kickstart work, so only pick it for this reason.`;
     } else if (b && !fits(need, b)) {
-      auto = need === 'influence' && r.weakest !== 'scale' ? 'visibility' : 'bge';
-      why = `Best fit by the scores is ${nm(need)}, but that's above their budget, so ${nm(auto)} (less scope, not a discount). Offer ${nm(need)} once as the step up.`;
+      // Only Influence on a $5K to $10K budget gets here: keep the half that fixes their fix first pillar.
+      auto = r.weakest === 'scale' ? 'bge' : 'visibility';
+      why = `Best fit is ${nm(need)} (${src}), but that's above their budget, so ${nm(auto)} for ${PILLARS[r.weakest].name}, their fix first: less scope, not a discount. Offer ${nm(need)} once as the step up.`;
+      const saidKey = saidPR ? 'visibility' : saidLeads ? 'bge' : '';
+      if (saidKey && saidKey !== auto) notes.push(`They said "${r.said}". If that matters more to them than ${PILLARS[r.weakest].name}, pick ${nm(saidKey)} instead.`);
     } else if (!b) notes.push('Budget not asked yet, so this is the best fit by need only. Ask before you name a price. Under $5K a month means Kickstart.');
+    const low = lowAreas(ORDER), unscored = ORDER.filter(p => r.sc[p] == null);
+    if (low.length) notes.push(`Scored 1 or 2: ${low.join(', ')}.`);
+    if (r.scored.length && unscored.length) notes.push(`${names(unscored)} ${unscored.length > 1 ? "aren't scored yet, so they're" : "isn't scored yet, so it's"} not in this pick.`);
     const key = S.pick && PACKAGES[S.pick] ? S.pick : auto;
     if (key !== auto) why = `Your pick. The scores${b ? ' and budget' : ''} pointed to ${nm(auto)}.`;
     const monthlyBudget = b && b !== 'none' && b !== 'u5';
     if (monthlyBudget && key === 'kickstart') notes.push('Kickstart is only for under $5K a month or no retainer. Their budget fits a monthly package.');
     else if (monthlyBudget && !fits(key, b)) notes.push(key === 'cdg' && b === 'b30' ? '$30K rule: below $33.5K a month, sell Command, not Command & Digital Growth.' : `${nm(key)} is above their budget range.`);
     else if (monthlyBudget && BAND_MIN[b] && START[key] > BAND_MIN[b]) notes.push(`${nm(key)} starts above the bottom of their range. Ask: "Where in that range are you leaning: closer to ${BAND_WORDS[b][0]} or closer to ${BAND_WORDS[b][1]}?"`);
-    if (monthlyBudget && fits('command', b) && ['bge', 'visibility', 'influence'].includes(key)) notes.push('Their budget fits more. Only go up to Command if they want reputation, crisis readiness, or national visibility; don\'t add scope they didn\'t ask for.');
+    // A bigger budget is a reason to ask, never to add scope they didn't ask for. Command has no lead generation,
+    // so it's never the step up for leads work.
+    const up = !monthlyBudget ? ''
+      : key === 'bge' && fits('influence', b) ? 'Their budget fits Influence, which adds PR to the leads work. Go up only if they want press, podcasts, or speaking too.'
+      : key === 'visibility' && fits('command', b) ? 'Their budget fits more. Influence adds leads, TV, and speaking; Command adds reputation, crisis readiness, and national media. Go up only for what they ask for.'
+      : key === 'visibility' && fits('influence', b) ? 'Their budget fits Influence, which adds leads, TV, and speaking. Go up only if they want those.'
+      : key === 'influence' && fits('cdg', b) ? 'Their budget fits Command & Digital Growth, which adds reputation, crisis readiness, and national media to the PR and leads work. Go up only if they ask for that.'
+      : key === 'influence' && fits('command', b) ? 'Their budget fits Command, but Command has no lead generation. Only switch if reputation, crisis readiness, or national media matter more to them than leads.'
+      : '';
+    if (up) notes.push(up);
     return { key, autoKey: auto, why, notes };
   }
 
@@ -794,7 +834,7 @@
       const hot = p === r.weakest && !r.top, w = Math.max((r.sc[p] || 0) / 5 * 100, 3);
       return `<div class="bar">
         <div class="row"><span class="nm">${esc(PILLARS[p].name)} <span>· ${esc(PILLARS[p].ask)}</span></span>
-          <span style="display:flex;gap:8px;align-items:center">${hot ? '<span class="flag">FIX FIRST</span>' : ''}<span class="pct">${fmt(r.sc[p])}<em>${esc(scaleWord(r.sc[p]))}</em></span></span></div>
+          <span style="display:flex;gap:8px;align-items:center">${hot ? '<span class="flag">FIX FIRST</span>' : ''}<span class="pct">${r.sc[p] == null ? '' : fmt(r.sc[p])}<em>${esc(scaleWord(r.sc[p]))}</em></span></span></div>
         <div class="track"><i class="${hot ? 'hot' : ''}" ${animate ? `data-w="${w}"` : `style="width:${w}%"`}></i></div></div>`;
     }).join('');
   }
@@ -953,6 +993,7 @@
       '',
       `Score: ${fmt(r.overall)}/5 (${scaleWord(r.overall)}), ${r.type.title}. Fix first: ${PILLARS[r.weakest].name}`,
       ORDER.map(p => `${PILLARS[p].name} ${r.sc[p] == null ? 'not scored' : fmt(r.sc[p])}`).join(' · '),
+      `Gaps (scored 1 or 2): ${lowAreas(ORDER).join(', ') || 'none'}`,
       `Budget: ${S.budget ? budgetLabel(S.budget) : 'not asked'}`,
       `Recommended: ${P.name}, Start here ${P.start} (${how})`,
       S.nextStep ? `Agreed next step: ${S.nextStep}` : null,
@@ -1068,15 +1109,18 @@
     }
     return null;
   }
-  // "$10k a month" or "10 to 20k" in a budget answer picks the band of its lowest number.
+  // "$10k a month" or "10 to 20k" in a budget answer picks the band of its lowest number; "under $5K" is just below
+  // it. A question about what they spend now is their current spend, not a budget for us, so it's skipped.
   function guessBudget(answers) {
     for (const [q, a] of answers) {
-      if (!/budget|invest|spend/i.test(q)) continue;
+      if (!/budget|invest|spend/i.test(q) || /current|today|right now/i.test(q)) continue;
       if (/no retainer|one.?time|project basis/i.test(a)) return 'none';
-      const m = String(a).replace(/,/g, '').match(/(\d+(?:\.\d+)?)\s*(k|thousand)?/i);
+      const t = String(a).replace(/,/g, ''), m = t.match(/(\d+(?:\.\d+)?)\s*(k|thousand|m|million)?\b/i);
       if (!m) continue;
-      let v = Number(m[1]) * (m[2] || /\d\s*k\b/i.test(a) ? 1000 : 1);
-      if (/year|annual|\/yr/i.test(a)) v /= 12;
+      const unit = m[2] || (t.match(/\d\s*(k|thousand|m|million)\b/i) || [])[1] || '';
+      let v = Number(m[1]) * (/^m/i.test(unit) ? 1e6 : unit ? 1000 : 1);
+      if (/year|annual|\/yr/i.test(t)) v /= 12; else if (/quarter/i.test(t)) v /= 3;
+      if (/^\W*(under|less than|below|up to|<)/i.test(t) || /or (less|under)/i.test(t)) v -= 1;
       if (v < 500) continue;
       return v < 5000 ? 'u5' : v < 10000 ? 'b5' : v < 20000 ? 'b10' : v < 30000 ? 'b20' : v < 33500 ? 'b30' : 'b33';
     }
