@@ -3,6 +3,7 @@
 The live Story Group GTM system: Express backend (`backend/`) and React dashboard (`frontend/`). The parent folder's `../CLAUDE.md` is the main guide (where it runs, deploy, backend map, CRM, env vars, conventions) and loads with this file. Read it first. This file only adds repo details.
 
 - The CRM is Nutshell. HubSpot and Coterie are retired: `services/hubspot.js` and `services/coteriehq.js` still get called but do nothing without keys, so swap in Nutshell when you touch that code.
+- **Go High Level is replacing Nutshell (decided 11/9/2026).** `services/ghl.js` mirrors `services/nutshell.js` and is deployed, switched off. `CRM_PROVIDER=ghl` moves everything; `CRM_PROVIDER_<AREA>=ghl` moves one area (`SCORECARD`, `CADENCE`, `FEED`, `INTAKE`, `STRIPE`). The pipeline is config: `GHL_PIPELINE` (name), `GHL_STAGES` (JSON, role to stage name; roles `new`, `contacted`, `qualified`, `meeting`, `unqualified`, `lost`, `won`), `GHL_INTAKE_PIPELINES`. Before switching an area on, run `ghl.checkConfig()` on the VPS: it lists roles with no stage and the lost reasons GHL has. GHL ids are stored as `ghl_opp_id` and `ghl_contact_id` next to the old `nutshell_lead_id`. Notes go on the contact; one opportunity per contact per pipeline.
 - GitHub `vinniecatalano9/story-group-gtm`, branch `main`. No tests, no linter.
 - npm scripts break on the colon in the folder path. Call binaries directly (`node --watch server.js`, `./node_modules/.bin/vite`).
 
