@@ -510,7 +510,7 @@
   </ol>
   <h3>After the call</h3>
   <ol>
-    <li>Pick your name and click <b>Send to Nutshell</b> (top right). It saves the lead with your notes and the price you quoted. Sending again after Call 2 adds the new notes to the same lead. Nutshell is slow, so give it a minute.</li>
+    <li>Pick your name and click <b>Send to the CRM</b> (top right). It saves the lead with your notes and the price you quoted. Sending again after Call 2 adds the new notes to the same lead. Nutshell is slow, so give it a minute.</li>
     <li><b>More</b> (top right) has the client one-pager, the proposal brief for Claude, a plain-text copy of your notes, and a backup download.</li>
   </ol>
   <h3>Good to know</h3>
@@ -2624,10 +2624,14 @@ const REP_KEY = 'sg-scorecard-rep';
 try { $('#rep').value = localStorage.getItem(REP_KEY) || ''; } catch (e) {}
 $('#rep').onchange = () => { try { localStorage.setItem(REP_KEY, $('#rep').value); } catch (e) {} };
 
+// Which CRM the server sends to (Nutshell until the Go High Level switch): labels follow it.
+let CRM = { crm: 'nutshell', name: 'Nutshell' };
+const crmLink = n => (n && n.url) || (n && n.leadId && /^\d+$/.test(String(n.leadId)) ? `https://app.nutshell.com/lead/${encodeURIComponent(n.leadId)}` : '');
 function nsStatus(html) { $('#nsStatus').innerHTML = html || ''; }
+fetch(`${API}/api/crm/provider`).then(r => r.json()).then(j => { if (j && j.name) { CRM = j; $('#sendNutshell').textContent = `Send to ${CRM.name}`; $('#rep').title = `Who the lead is assigned to in ${CRM.name}`; showNutshellState(); } }).catch(() => {});
 function showNutshellState() {
   const n = S.nutshell;
-  nsStatus(n && n.leadId ? `In Nutshell: <a href="https://app.nutshell.com/lead/${encodeURIComponent(n.leadId)}" target="_blank" rel="noopener" style="color:var(--pink)">open lead</a> (last sent ${new Date(n.sentAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })})` : '');
+  nsStatus(n && n.leadId && crmLink(n) ? `In ${n.crmName || 'Nutshell'}: <a href="${crmLink(n)}" target="_blank" rel="noopener" style="color:var(--pink)">open lead</a> (last sent ${new Date(n.sentAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })})` : '');
 }
 
 $('#sendNutshell').onclick = async () => {
@@ -2645,26 +2649,26 @@ $('#sendNutshell').onclick = async () => {
     leadId: n.leadId, contactId: n.contactId, accountId: n.accountId,
   };
   try {
-    nsStatus('Sending to Nutshell…');
-    const start = await fetch(`${API}/api/nutshell/scorecard`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    nsStatus(`Sending to ${CRM.name}…`);
+    const start = await fetch(`${API}/api/crm/scorecard`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const sj = await start.json().catch(() => ({}));
     if (!start.ok) throw new Error(sj.error || `Server said ${start.status}`);
     // Nutshell is slow: poll the job for up to ~6 minutes.
     for (let i = 0; i < 120; i++) {
       await new Promise(r => setTimeout(r, 3000));
-      const jr = await fetch(`${API}/api/nutshell/jobs/${sj.jobId}`);
+      const jr = await fetch(`${API}/api/crm/jobs/${sj.jobId}`);
       const job = await jr.json().catch(() => ({}));
       if (!jr.ok) throw new Error(job.error || 'Lost track of the send');
-      if (job.status === 'running') { nsStatus(`Sending to Nutshell… ${esc(job.step || '')}`); continue; }
+      if (job.status === 'running') { nsStatus(`Sending to ${CRM.name}… ${esc(job.step || '')}`); continue; }
       if (job.status === 'error') throw new Error(job.error);
       S.nutshell = { ...job.result, sentAt: Date.now() };
       save(); showNutshellState();
-      toast(job.result.created.length ? `Nutshell: created ${job.result.created.join(', ')} + notes` : 'Nutshell: notes added to the lead');
+      toast(job.result.created.length ? `${CRM.name}: created ${job.result.created.join(', ')} + notes` : `${CRM.name}: notes added to the lead`);
       return;
     }
-    throw new Error('Nutshell is taking too long. Check it in a few minutes before sending again.');
+    throw new Error(`${CRM.name} is taking too long. Check it in a few minutes before sending again.`);
   } catch (e) {
-    nsStatus(`<span style="color:var(--bad)">Nutshell: ${esc(e.message)}</span>`);
+    nsStatus(`<span style="color:var(--bad)">${CRM.name}: ${esc(e.message)}</span>`);
   } finally {
     btn.disabled = false;
   }

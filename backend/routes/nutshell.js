@@ -3,6 +3,10 @@
 const express = require('express');
 const crypto = require('crypto');
 const nutshell = require('../services/nutshell');
+const ghl = require('../services/ghl');
+// CRM_PROVIDER_SCORECARD (or CRM_PROVIDER) = ghl sends to Go High Level instead; same job shape either way.
+const crm = () => (ghl.on('scorecard') ? ghl : nutshell);
+const crmName = () => (ghl.on('scorecard') ? 'Go High Level' : 'Nutshell');
 
 const router = express.Router();
 const jobs = new Map();  // id -> { status, step, result, error, at }
@@ -18,13 +22,14 @@ router.use((req, res, next) => {
 
 router.post('/scorecard', (req, res) => {
   const b = req.body || {};
-  if (!nutshell.isConfigured()) return res.status(503).json({ error: 'Nutshell is not connected on the server yet' });
+  if (!crm().isConfigured()) return res.status(503).json({ error: `${crmName()} is not connected on the server yet` });
   if (!b.note || !(b.name || b.email || b.company)) return res.status(400).json({ error: 'Need a name, email, or company, plus notes' });
 
   const id = crypto.randomUUID();
   const job = { status: 'running', step: 'Starting', at: Date.now() };
   jobs.set(id, job);
-  nutshell.pushScorecard({
+  const name = crmName();
+  crm().pushScorecard({
     name: String(b.name || '').slice(0, 120),
     email: String(b.email || '').slice(0, 200),
     title: String(b.title || '').slice(0, 120),
@@ -38,16 +43,19 @@ router.post('/scorecard', (req, res) => {
     contactId: b.contactId || null,
     accountId: b.accountId || null,
   }, step => { job.step = step; })
-    .then(result => { Object.assign(job, { status: 'done', step: 'Done', result }); })
+    .then(result => { Object.assign(job, { status: 'done', step: 'Done', result: { crm: 'nutshell', crmName: name, url: result.leadId ? `https://app.nutshell.com/lead/${result.leadId}` : null, ...result } }); })
     .catch(e => {
-      console.error('[nutshell] scorecard push failed:', e.message);
-      Object.assign(job, { status: 'error', error: /timeout|504|aborted/i.test(e.message) ? 'Nutshell is responding slowly or is down. Try again in a few minutes.' : e.message });
+      console.error(`[${name}] scorecard push failed:`, e.message);
+      Object.assign(job, { status: 'error', error: /timeout|504|aborted/i.test(e.message) ? `${name} is responding slowly or is down. Try again in a few minutes.` : e.message });
     });
 
   // Forget old jobs.
   for (const [k, j] of jobs) if (Date.now() - j.at > JOB_TTL_MS) jobs.delete(k);
   res.status(202).json({ jobId: id });
 });
+
+// Which CRM the scorecard sends to, so the page can label its button.
+router.get('/provider', (req, res) => res.json({ crm: ghl.on('scorecard') ? 'ghl' : 'nutshell', name: crmName() }));
 
 router.get('/jobs/:id', (req, res) => {
   const job = jobs.get(req.params.id);

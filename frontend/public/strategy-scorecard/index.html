@@ -1036,8 +1036,15 @@
 
   /* ---------- Nutshell: same endpoint and job polling as the Call Scorecard ---------- */
   const leadIdFrom = s => { const m = String(s || '').match(/lead\/(\d+)/i) || String(s || '').trim().match(/^(\d+)$/); return m ? Number(m[1]) : null; };
+  // Which CRM the server sends to (Nutshell until the Go High Level switch): labels follow it.
+  let CRM = { crm: 'nutshell', name: 'Nutshell' };
+  const crmLink = n => (n && n.url) || (n && n.leadId && /^\d+$/.test(String(n.leadId)) ? `https://app.nutshell.com/lead/${encodeURIComponent(n.leadId)}` : '');
   function nsStatus(html) { const el = $('#nsStatus'); if (el) el.innerHTML = html || ''; }
+  function crmLabels() { const b = $('#sendNs'); if (b) b.textContent = `Send to ${CRM.name}`; const r = $('#rep'); if (r) r.title = `Who the lead is assigned to in ${CRM.name}, and who signs the recap`; }
+  fetch(`${API}/api/crm/provider`).then(r => r.json()).then(j => { if (j && j.name) { CRM = j; crmLabels(); showNutshellState(); } }).catch(() => {});
   function showNutshellState() {
+    crmLabels();
+    if (S.nutshell && S.nutshell.url) return nsStatus(`${S.nutshell.crmName || CRM.name}: <a href="${S.nutshell.url}" target="_blank" rel="noopener">open contact</a> (last sent ${new Date(S.nutshell.sentAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })})`);
     const id = leadIdFrom(S.fields.lead) || (S.nutshell && S.nutshell.leadId);
     if (!id) return nsStatus('');
     const sent = S.nutshell && S.nutshell.sentAt && S.nutshell.leadId === id
@@ -1050,7 +1057,8 @@
     if (!f.name && !f.email && !f.company) { toast('Add their name, email, or company in Call details first'); $('#callinfo').open = true; return; }
     if (!repEmail) { toast('Pick your name next to the button first'); $('#rep').focus(); return; }
     const leadId = leadIdFrom(f.lead) || (S.nutshell && S.nutshell.leadId) || null;
-    if (!leadId && !newLeadOk) {
+    // Go High Level finds the person by email and keeps one opportunity each, so a new one can't double up.
+    if (!leadId && !newLeadOk && CRM.crm !== 'ghl') {
       nsStatus('No Nutshell lead link, so this would make a new lead. If they took the website scorecard or booked through Nutshell, they likely have one: paste its link in Call details first. <button type="button" class="link" id="sendNsNew">Make a new lead anyway</button>');
       return;
     }
@@ -1058,30 +1066,31 @@
     btn.disabled = true;
     const body = {
       name: f.name, email: f.email, title: f.title, company: f.company, website: f.website,
-      source: 'Website: strategy call', repEmail, packageLine: PACKAGES[recommend(result()).key].ns, note: crmNote(), leadId,
+      source: 'Website: strategy call', repEmail, packageLine: PACKAGES[recommend(result()).key].ns, note: crmNote(), leadId, contactId: (S.nutshell && S.nutshell.contactId) || null,
     };
     try {
-      nsStatus('Sending to Nutshell…');
-      const start = await fetch(`${API}/api/nutshell/scorecard`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      nsStatus(`Sending to ${CRM.name}…`);
+      const start = await fetch(`${API}/api/crm/scorecard`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const sj = await start.json().catch(() => ({}));
       if (!start.ok) throw new Error(sj.error || `Server said ${start.status}`);
       // Nutshell is slow: poll the job for up to about 6 minutes.
       for (let i = 0; i < 120; i++) {
         await new Promise(res => setTimeout(res, 3000));
-        const jr = await fetch(`${API}/api/nutshell/jobs/${sj.jobId}`);
+        const jr = await fetch(`${API}/api/crm/jobs/${sj.jobId}`);
         const job = await jr.json().catch(() => ({}));
         if (!jr.ok) throw new Error(job.error || 'Lost track of the send');
-        if (job.status === 'running') { nsStatus(`Sending to Nutshell… ${esc(job.step || '')}`); continue; }
+        if (job.status === 'running') { nsStatus(`Sending to ${CRM.name}… ${esc(job.step || '')}`); continue; }
         if (job.status === 'error') throw new Error(job.error);
-        S.nutshell = { leadId: job.result.leadId, sentAt: Date.now() };
-        if (!leadIdFrom(S.fields.lead)) S.fields.lead = `https://app.nutshell.com/lead/${job.result.leadId}`;
+        S.nutshell = { leadId: job.result.leadId, contactId: job.result.contactId, url: job.result.crm === 'ghl' ? job.result.url : null, crmName: job.result.crmName, sentAt: Date.now() };
+        if (job.result.crm === 'ghl') S.fields.lead = job.result.url;
+        else if (!leadIdFrom(S.fields.lead)) S.fields.lead = `https://app.nutshell.com/lead/${job.result.leadId}`;
         save(); renderCallInfo(); showNutshellState();
-        toast(job.result.created.length ? `Nutshell: created ${job.result.created.join(', ')} and added the notes` : 'Nutshell: notes added to the lead');
+        toast(job.result.created.length ? `${CRM.name}: created ${job.result.created.join(', ')} and added the notes` : `${CRM.name}: notes added to the lead`);
         return;
       }
-      throw new Error('Nutshell is taking too long. Check it in a few minutes before sending again.');
+      throw new Error(`${CRM.name} is taking too long. Check it in a few minutes before sending again.`);
     } catch (e) {
-      nsStatus(`<span style="color:#FF8FA8">Nutshell: ${esc(e.message)}</span>`);
+      nsStatus(`<span style="color:#FF8FA8">${CRM.name}: ${esc(e.message)}</span>`);
     } finally {
       btn.disabled = false;
     }

@@ -47,7 +47,7 @@ const VINCENT_NAME = /^(vincent|vinnie)\b/i;
 const TEAMMATE_NAME = /^(mckenna|aaron|lydia|michelle|annette|sydney|gabriela)\b/i;
 const OUTBOUND = { linkedin: true, email: false };
 const scopeText = (what) => [
-  `Vincent only: ${what}. Prospects who are a teammate's lead in Nutshell are left out.`,
+  `Vincent only: ${what}. Prospects who are a teammate's lead in ${crmName()} are left out.`,
   OUTBOUND.linkedin ? 'LinkedIn outbound sends as Aaron but is his to work.' : 'LinkedIn outbound (sent as Aaron) is left out on purpose.',
   OUTBOUND.email ? 'Email numbers are all of Instantly, Lydia\'s journalist pitches included.' : 'Email outbound is left out on purpose (Instantly also carries Lydia\'s journalist pitches).',
 ].join(' ');
@@ -119,7 +119,29 @@ async function instantly(startDay, endDay) {
 }
 
 // ── Nutshell ─────────────────────────────────────────────────────────────────
+// Go High Level versions (CRM_PROVIDER_FEED=ghl): same shapes, so the brief reads the same.
+const ghl = require('../services/ghl');
+const crmUp = () => ghl.on('feed') || nutshell.isConfigured();
+const crmName = () => (ghl.on('feed') ? 'Go High Level' : 'Nutshell');
+
+async function ghlTasksDue() {
+  const endToday = new Date(ctMidnight(dayCT()).getTime() + 86400e3 - 1);
+  return (await ghl.tasksDue(ghl.ME(), endToday)).map(t => ({ id: t.id, title: clip(t.title, 120), due: t.due, lead: t.lead })).slice(0, 15);
+}
+
+// `last` is the newest opportunity's created time (Nutshell's was a lead id, so a number means "no baseline yet").
+async function ghlNewLeads(last) {
+  const since = typeof last === 'string' && !Number.isNaN(Date.parse(last)) ? last : null;
+  const all = await ghl.oppsSince(since || new Date().toISOString(), { limit: 50 });
+  const newest = (await ghl.searchOpps({ order: 'added_desc', limit: 1 }))[0];
+  const leads = all.filter(o => o.assignedTo === ghl.ME()).slice(0, 10).map(o => ({
+    id: o.id, what: realText(o.name, 100), contact: (o.contact && o.contact.name) || null, company: (o.contact && o.contact.companyName) || null, tags: ((o.contact && o.contact.tags) || []).slice(0, 4),
+  }));
+  return { maxId: newest ? newest.createdAt : since, leads, others: all.filter(o => o.assignedTo !== ghl.ME()).length };
+}
+
 async function nutshellTasksDue() {
+  if (ghl.on('feed')) return ghlTasksDue();
   const res = await nutshell.call('findTasks', { query: { assignee: { entityType: 'Users', id: VINCENT_NUTSHELL_ID } }, limit: 100 });
   const endToday = new Date(ctMidnight(dayCT()).getTime() + 86400e3 - 1);
   return (res || [])
@@ -130,6 +152,8 @@ async function nutshellTasksDue() {
 }
 
 async function nutshellNewLeads(lastId) {
+  if (ghl.on('feed')) return ghlNewLeads(lastId);
+  if (typeof lastId !== 'number') lastId = 0; // a GHL timestamp left over from a switch back
   const res = await nutshell.call('findLeads', { query: { status: 0 }, orderBy: 'id', orderDirection: 'DESC', limit: 25, stubResponses: true });
   const maxId = (res || []).reduce((m, l) => Math.max(m, l.id || 0), lastId || 0);
   // First run has no baseline: record it, report nothing.
@@ -160,6 +184,10 @@ function slot(fn) {
 }
 
 async function lookupOwner(email) {
+  if (ghl.on('feed')) {
+    const o = await slot(() => ghl.ownerOf({ email }));
+    return o.status === 'mine' ? 'vincent' : o.status === 'theirs' ? 'other' : null;
+  }
   if (!nutshell.isConfigured()) return null;
   const hit = await slot(() => nutshell.call('searchByEmail', { emailAddressString: email }));
   const contact = (hit?.contacts || [])[0];
@@ -349,8 +377,8 @@ async function digestFacts() {
     OUTBOUND.linkedin ? safe('not booked', () => findInterestedNotBooked({ marker: 'feed_notbooked_shown_at' }), []) : [],
     safe('today calls', todaysCalls, []),
     safe('yesterday calls', () => callsBetween(new Date(startToday.getTime() - 86400e3), startToday), []),
-    nutshell.isConfigured() ? safe('Nutshell tasks', nutshellTasksDue, null) : null,
-    nutshell.isConfigured() ? safe('Nutshell leads', () => nutshellNewLeads(state.last_lead_id), null) : null,
+    crmUp() ? safe(`${crmName()} tasks`, nutshellTasksDue, null) : null,
+    crmUp() ? safe(`${crmName()} leads`, () => nutshellNewLeads(state.last_lead_id), null) : null,
   ]);
 
   // LinkedIn replies live in Reply Bot (services/replyApprovals.js), where he
@@ -373,7 +401,7 @@ async function digestFacts() {
 
   const facts = {
     kind: 'digest', date: today, weekday: new Date().toLocaleDateString('en-US', { timeZone: CT, weekday: 'long' }),
-    scope: scopeText('his calls, follow-ups he owes, his Nutshell tasks and leads'),
+    scope: scopeText(`his calls, follow-ups he owes, his ${crmName()} tasks and leads`),
     replies_waiting: emailBoard.slice(0, 12).map(b => ({ name: b.name, company: clip(b.company, 50), email: b.email || null, channel: 'Email', type: b.classification, hot: b.hot, draft_ready: b.hasDraft, said: clip(b.reply, 160) })),
     replies_waiting_total: emailBoard.length,
     linkedin_replies_in_reply_bot: inReplyBot,
@@ -388,8 +416,8 @@ async function digestFacts() {
     linkedin_24h: li1, linkedin_7d: li7,
     email_yesterday: em1, email_7d: em7,
     sources_down: [
-      OUTBOUND.linkedin && !hr && 'HeyReach', OUTBOUND.email && !em7 && 'Instantly', tasks === null && 'Nutshell tasks', newLeads === null && 'Nutshell leads',
-      leadOwnerFailed && "Nutshell lead owners (a teammate's lead may slip in)",
+      OUTBOUND.linkedin && !hr && 'HeyReach', OUTBOUND.email && !em7 && 'Instantly', tasks === null && `${crmName()} tasks`, newLeads === null && `${crmName()} leads`,
+      leadOwnerFailed && `${crmName()} lead owners (a teammate's lead may slip in)`,
       !mine.ok && 'Fireflies (who was on each call, so follow-ups use invite lists only)',
     ].filter(Boolean),
     _mark: { last_lead_id: newLeads ? newLeads.maxId : state.last_lead_id || null, group_calls: [...new Set(stalled.filter(s => !realStalled.includes(s)).map(s => s.ref.path))] },
@@ -431,10 +459,10 @@ function digestText(f) {
   const yExt = f.calls_yesterday.filter(c => c.external.length);
   if (yExt.length) L.push('', `Yesterday's calls: ${yExt.map(c => c.title).join('; ')}`);
   if (f.nutshell_tasks_due && f.nutshell_tasks_due.length) {
-    L.push('', 'Nutshell tasks due');
+    L.push('', `${crmName()} tasks due`);
     for (const t of f.nutshell_tasks_due.slice(0, 5)) L.push(`• ${t.title} (${t.due})`);
   }
-  if (f.nutshell_new_leads && f.nutshell_new_leads.length) L.push('', `New Nutshell leads: ${f.nutshell_new_leads.map(l => [l.contact, l.company, l.what].filter(Boolean).join(', ')).join('; ')}`);
+  if (f.nutshell_new_leads && f.nutshell_new_leads.length) L.push('', `New ${crmName()} leads: ${f.nutshell_new_leads.map(l => [l.contact, l.company, l.what].filter(Boolean).join(', ')).join('; ')}`);
   const li = f.linkedin_24h;
   if (li && (li.invites || li.messages || li.replies)) L.push('', `LinkedIn, last 24h: ${li.invites} invites, ${li.accepted} accepted, ${li.replies} replies`);
   const em = f.email_yesterday;
@@ -497,7 +525,7 @@ async function weeklyFacts() {
       note: 'Different people sit in each count, so compare the trend week to week, not as an exact positive to meeting rate.',
     },
     insights_latest: insights && insights.date && (Date.now() - new Date(insights.date).getTime()) < 4 * 86400e3 ? insights : null,
-    sources_down: [OUTBOUND.linkedin && !hr && 'HeyReach', OUTBOUND.email && !emThis && 'Instantly', leadOwnerFailed && "Nutshell lead owners (a teammate's lead may slip in)"].filter(Boolean),
+    sources_down: [OUTBOUND.linkedin && !hr && 'HeyReach', OUTBOUND.email && !emThis && 'Instantly', leadOwnerFailed && `${crmName()} lead owners (a teammate's lead may slip in)`].filter(Boolean),
   };
   facts.text = weeklyText(facts);
   return facts;

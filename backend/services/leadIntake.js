@@ -145,7 +145,18 @@ const norm = v => String(v || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim
 const firstName = n => String(n || '').trim().split(/\s+/)[0];
 
 /** { status: 'mine' | 'theirs' | 'unassigned' | 'unknown', lead_id, owner } for a form lead. */
+// CRM_PROVIDER_INTAKE=ghl (11/9): the owner comes from the person's Go High
+// Level contact and opportunities, found by email or phone (no name matching).
+// lead_id is then the GHL opportunity id (a string), stored as ghl_opp_id.
+const onGhl = () => require('./ghl').on('intake');
+const crmName = () => (onGhl() ? 'Go High Level' : 'Nutshell');
+/** The id fields to store for an owner lookup's lead: ghl_* on GHL, nutshell_lead_id on Nutshell. */
+const crmIds = owner => (!owner || !owner.lead_id ? {} : typeof owner.lead_id === 'string'
+  ? { ghl_opp_id: owner.lead_id, ...(owner.contact_id ? { ghl_contact_id: owner.contact_id } : {}) }
+  : { nutshell_lead_id: owner.lead_id });
+
 async function nutshellOwner(p, at) {
+  if (onGhl()) return require('./ghl').ownerOf({ email: p.email, phone: p.phone });
   const nutshell = require('./nutshell');
   if (!nutshell.isConfigured()) return { status: 'unknown', why: 'Nutshell not set up' };
   const t = new Date(at || Date.now()).getTime();
@@ -199,7 +210,7 @@ async function run() {
     const d = decide(p, seen);
     let owner = null, form = null;
     if (d.action === 'add') {
-      owner = await nutshellOwner(p, m.date).catch(e => ({ status: 'unknown', why: `Nutshell: ${e.message}` }));
+      owner = await nutshellOwner(p, m.date).catch(e => ({ status: 'unknown', why: `${crmName()}: ${e.message}` }));
       // No owner yet: leave it unclaimed and look again next minute.
       if ((owner.status === 'unknown' || owner.status === 'unassigned') && Date.now() - new Date(m.date || 0) < OWNER_WAIT_MS) continue;
       // The form note (budget, consent, ad) lands seconds after the lead: wait for it a few minutes.
@@ -282,7 +293,7 @@ async function addOtherRow(p, d, ref, { out, seen, owner, form }) {
     return 'retry';
   }
   seen.push({ where: `sheet row ${row} (${rep})`, rep, email: p.email, phone: p.phone });
-  await ref.update({ status: 'other_rep_row', owner: owner.owner, nutshell_lead_id: owner.lead_id, sheet_row: row, parsed: p, notes });
+  await ref.update({ status: 'other_rep_row', owner: owner.owner, nutshell_lead_id: null, ...crmIds(owner), sheet_row: row, parsed: p, notes });
   out.skipped.push(`${p.email || p.phone}: ${rep}'s lead, sheet row ${row} only`);
   return 'added';
 }
@@ -324,9 +335,9 @@ async function addLead(p, d, ref, { out, seen, who, owner, form, source, at }) {
     return 'retry';
   }
   seen.push({ where: `sheet row ${row} (Vincent)`, email: p.email, phone: p.phone });
-  await ref.update({ status: 'appended', sheet_row: row, parsed: p, nutshell_lead_id: (owner && owner.lead_id) || null });
+  await ref.update({ status: 'appended', sheet_row: row, parsed: p, nutshell_lead_id: null, ...crmIds(owner) });
   try {
-    await cadence.importLeads([{ sheet_row: row, email: p.email, first_name: cap(p.first_name), last_name: p.last_name, phone: p.phone || p.phone_raw, role: p.role, frustration: p.frustration, company: p.company, source, rep: process.env.AD_LEADS_REP || 'Vincent', notes: '', nutshell_lead_id: owner && owner.lead_id }]);
+    await cadence.importLeads([{ sheet_row: row, email: p.email, first_name: cap(p.first_name), last_name: p.last_name, phone: p.phone || p.phone_raw, role: p.role, frustration: p.frustration, company: p.company, source, rep: process.env.AD_LEADS_REP || 'Vincent', notes: '', ...crmIds(owner) }]);
     const key = p.email || `phone:${p.phone}`;
     if (patch.form) await cadence.saveLead(key, patch);
     const odd = await oddName(p);
@@ -335,9 +346,9 @@ async function addLead(p, d, ref, { out, seen, who, owner, form, source, at }) {
     const lead = await cadence.getLead(key);
     const c = lead.email_check;
     out.added.push(key);
-    const whose = !owner ? '' : owner.status === 'mine' ? '\nNutshell: assigned to you.' : `\nNutshell: ${esc(owner.why || 'no owner')} after 15 min, so I treated it as yours. Skip the card if it isn't.`;
+    const whose = !owner ? '' : owner.status === 'mine' ? `\n${crmName()}: assigned to you.` : `\n${crmName()}: ${esc(owner.why || 'no owner')} after 15 min, so I treated it as yours. Skip the card if it isn't.`;
     const v = leadForm.view(lead);
-    const details = patch.form ? `\n${[v.timeline && `Timeline: ${v.timeline}`, `Budget: ${v.budget || 'not given'}`, lead.phone && `SMS consent: ${v.consent}`].filter(Boolean).map(esc).join(' · ')}` : '\nNo form details in Nutshell.';
+    const details = patch.form ? `\n${[v.timeline && `Timeline: ${v.timeline}`, `Budget: ${v.budget || 'not given'}`, lead.phone && `SMS consent: ${v.consent}`].filter(Boolean).map(esc).join(' · ')}` : `\nNo form details in ${crmName()}.`;
     await ping(`🆕 New ad lead <b>${who}</b> (${esc(source)}) is in sheet row ${row} and the cadence started.\n${[p.email, p.phone, p.company, p.frustration].filter(Boolean).map(esc).join(' · ')}${details}${c ? `\nClearout: ${esc(c.status)}` : ''}${whose}${odd ? `\nGreeting: "Hello," (name check: ${esc(odd)})` : ''}\nNext: ${esc(lead.next_touch_label || 'see the Ad Leads page')}`);
     // First card now, not on the next tick (speed to lead).
     const q = await cadence.queueDue(key);
@@ -368,7 +379,60 @@ const NUTSHELL_EVERY_MS = 3 * 6e4;
 let _lastNutshell = 0;
 const nutshellMeta = () => db().collection('cadence_meta').doc('nutshell_intake');
 
+/**
+ * The Go High Level version of the check below: open opportunities assigned to
+ * Vincent in the intake pipelines (GHL_INTAKE_PIPELINES), made after the first
+ * check, that no cadence lead is linked to. The contact carries the email and
+ * phone (GHL has no contactless leads), so there is no note to wait for.
+ */
+const ghlMeta = () => db().collection('cadence_meta').doc('ghl_intake');
+async function ghlAssigned(out) {
+  const ghl = require('./ghl');
+  if (Date.now() - _lastNutshell < NUTSHELL_EVERY_MS) return;
+  _lastNutshell = Date.now();
+  const cadence = require('./cadence');
+  const { toE164 } = require('./ringcentral');
+  const meta = await ghlMeta().get();
+  let since = meta.exists ? toDate(meta.data().since) : null;
+  if (!since) {
+    since = new Date();
+    await ghlMeta().set({ since, started_at: new Date() });
+  }
+  const opps = (await ghl.oppsSince(since, { assignedTo: ghl.ME(), pipelineIds: await ghl.intakePipelineIds() }))
+    .filter(o => o.status === 'open' && Date.now() - new Date(o.createdAt) >= NUTSHELL_WAIT_MS);
+  if (!opps.length) return;
+  const all = await cadence.listLeads();
+  const linked = new Set(all.map(l => l.ghl_opp_id).filter(Boolean));
+  let seen = null;
+  for (const o of opps) {
+    if (linked.has(o.id)) continue;
+    const ref = db().collection('lead_intake').doc(`ghl_${o.id}`);
+    if ((await ref.get()).exists) continue;
+    try { await ref.create({ ghl_opp_id: o.id, status: 'claimed', at: new Date() }); } catch { continue; }
+    const contactId = o.contactId || (o.contact && o.contact.id);
+    const k = ghl.contactKeys(contactId ? await ghl.getContact(contactId).catch(() => o.contact) : o.contact);
+    const full = k.name || o.name || '';
+    const p = {
+      full_name: full, first_name: firstName(full), last_name: full.split(/\s+/).slice(1).join(' '),
+      email: k.email, phone_raw: k.phone_raw, phone: toE164(k.phone_raw), role: '', frustration: '', company: (o.contact && o.contact.companyName) || '',
+    };
+    seen = seen || (await known());
+    const d = decide(p, seen);
+    const who = cadence.esc(full || `GHL opportunity ${o.id}`);
+    const owner = { status: 'mine', lead_id: o.id, contact_id: contactId };
+    // Already in the cadence by email or phone: link it so stages land on this opportunity.
+    if (d.action === 'duplicate') {
+      const hit = all.find(x => (p.email && x.email === p.email) || (p.phone && x.phone === p.phone));
+      if (hit && !hit.ghl_opp_id) await cadence.saveLead(hit.email, crmIds(owner));
+    }
+    const form = await require('./leadForm').fromNutshell(o.id).catch(() => null);
+    const r = await addLead(p, d, ref, { out, seen, who, owner, form, source: `Go High Level opportunity assigned to you (${o.source || 'no source'})`, at: o.createdAt });
+    if (r === 'retry') { _lastNutshell = 0; break; }
+  }
+}
+
 async function nutshellAssigned(out) {
+  if (onGhl()) return ghlAssigned(out);
   const nutshell = require('./nutshell');
   if (!nutshell.isConfigured() || Date.now() - _lastNutshell < NUTSHELL_EVERY_MS) return;
   _lastNutshell = Date.now();

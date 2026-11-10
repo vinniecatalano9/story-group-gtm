@@ -195,7 +195,7 @@ export function AdResults({ leads }) {
 function LeadDetails({ lead }) {
   const v = lead.form_view;
   if (!v) return null;
-  if (!v.has_form) return <p className="text-[11px] mt-1 text-muted">No form details from Nutshell{lead.nutshell_lead_id ? ` (lead ${lead.nutshell_lead_id})` : ''}.</p>;
+  if (!v.has_form) return <p className="text-[11px] mt-1 text-muted">No form details from {lead.ghl_opp_id ? 'Go High Level' : 'Nutshell'}{!lead.ghl_opp_id && lead.nutshell_lead_id ? ` (lead ${lead.nutshell_lead_id})` : ''}.</p>;
   const items = [
     ['Company', v.company], ['Situation', v.situation], ['Timeline', v.timeline], ['Team', v.team],
     ['Budget', `${v.budget || 'not given'}${v.fits ? ` · fits ${v.fits}` : ''}`],

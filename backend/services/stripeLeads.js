@@ -96,6 +96,8 @@ let running = false;
  * no Firestore, no Telegram. Returns what it did (or would do).
  */
 async function run({ dryRun = false, limit = 60 } = {}) {
+  // Go High Level makes no opportunity from a Stripe payment, so there is nothing to tidy there (11/9).
+  if (require('./ghl').on('stripe')) return { skipped: 'CRM is Go High Level: no Stripe leads to clean' };
   const nutshell = require('./nutshell');
   if (!nutshell.isConfigured()) return { skipped: 'Nutshell not set up' };
   if (running) return { skipped: 'already running' };

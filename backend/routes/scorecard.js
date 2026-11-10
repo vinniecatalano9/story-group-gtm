@@ -96,6 +96,18 @@ async function toNutshell(p) {
   return { leadId, existing, stage, contactCreated: contact.created };
 }
 
+/** The Go High Level version: contact, their opportunity in the pipeline (new or the one they have), then the note. */
+async function toGhl(p) {
+  const ghl = require('../services/ghl');
+  const paid = /^(fb|facebook|ig|instagram|meta|linkedin|li|tiktok|youtube|yt)$/i.test(p.utm.utm_source || '') || /paid|cpc|social/i.test(p.utm.utm_medium || '');
+  const me = ghl.ME();
+  const contact = await ghl.findOrCreateContact({ name: p.name, email: p.email, phone: p.phone, company: p.company, assignedTo: me, source: paid ? 'Paid Social' : 'Web Signup' });
+  if (!contact) throw new Error('no contact');
+  const made = await ghl.newPipelineOpp({ name: p.name, contactId: contact.id, role: 'new', source: paid ? 'Paid Social' : 'Web Signup', assignedTo: me });
+  await ghl.addNote(contact.id, noteFor(p));
+  return { leadId: made.id, contactId: contact.id, existing: made.existing, stage: made.stage, contactCreated: contact.created, url: ghl.contactUrl(contact.id) };
+}
+
 router.post('/lead', async (req, res) => {
   const b = req.body || {};
   if (b.website) return res.status(202).json({ ok: true }); // honeypot: bots fill every field
@@ -128,20 +140,29 @@ router.post('/lead', async (req, res) => {
   const who = `<b>${esc(p.name)}</b>${p.company ? ` (${esc(p.company)})` : ''}`;
   const summary = `${esc(p.email)}${p.phone ? ` · ${esc(p.phone)}${p.sms_consent ? ' (texts OK)' : ' (no text consent)'}` : ''}\nScore ${p.score}/100, ${esc(p.type)}. Fix first: ${esc(p.fix_first)}.${p.frustration ? `\nFrustration: ${esc(p.frustration)}` : ''}${p.utm.utm_source ? `\nFrom: ${esc([p.utm.utm_source, p.utm.utm_campaign].filter(Boolean).join(' / '))}` : ''}`;
 
-  if (TEST_EMAIL.test(p.email) || !nutshell.isConfigured()) {
-    await save({ status: 'skipped', why: TEST_EMAIL.test(p.email) ? 'test email' : 'Nutshell not configured' });
-    await ping(`🧪 Scorecard test from ${who}: not sent to Nutshell (${TEST_EMAIL.test(p.email) ? 'test email' : 'Nutshell not set up'}).\n${summary}`);
+  const useGhl = require('../services/ghl').on('scorecard');
+  const crm = useGhl ? 'Go High Level' : 'Nutshell';
+  if (TEST_EMAIL.test(p.email) || (!useGhl && !nutshell.isConfigured())) {
+    await save({ status: 'skipped', why: TEST_EMAIL.test(p.email) ? 'test email' : `${crm} not configured` });
+    await ping(`🧪 Scorecard test from ${who}: not sent to ${crm} (${TEST_EMAIL.test(p.email) ? 'test email' : `${crm} not set up`}).\n${summary}`);
     return;
   }
   try {
+    if (useGhl) {
+      const r = await toGhl(p);
+      await save({ status: 'in_ghl', ghl_opp_id: r.leadId, ghl_contact_id: r.contactId, existing_lead: r.existing });
+      const where = r.existing ? 'added to the opportunity they already have in Go High Level' : `new Go High Level opportunity at ${esc(r.stage || 'the first stage')}`;
+      await ping(`📋 Scorecard lead ${who}: ${where}. ${r.existing ? '' : 'The cadence picks it up in about 20 minutes.'}\n${summary}\n${r.url}`);
+      return;
+    }
     const r = await toNutshell(p);
     await save({ status: 'in_nutshell', nutshell_lead_id: r.leadId, existing_lead: r.existing });
     const where = r.existing ? 'added to their open Nutshell lead' : r.stage ? `new Nutshell lead in Kickstart at ${esc(r.stage)}` : 'new Nutshell lead, but not in the Kickstart pipeline (set it by hand)';
     await ping(`📋 Scorecard lead ${who}: ${where}. ${r.existing ? '' : 'The cadence picks it up in about 20 minutes.'}\n${summary}\nhttps://app.nutshell.com/lead/${r.leadId}`);
   } catch (e) {
-    console.error('[scorecard] Nutshell failed:', e.message);
-    await save({ status: 'nutshell_failed', error: e.message });
-    await ping(`⚠️ Scorecard lead ${who} didn't reach Nutshell (${esc(e.message)}). Add it by hand.\n${summary}`);
+    console.error(`[scorecard] ${crm} failed:`, e.message);
+    await save({ status: useGhl ? 'ghl_failed' : 'nutshell_failed', error: e.message });
+    await ping(`⚠️ Scorecard lead ${who} didn't reach ${crm} (${esc(e.message)}). Add it by hand.\n${summary}`);
   }
 });
 

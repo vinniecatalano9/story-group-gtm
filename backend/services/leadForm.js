@@ -51,8 +51,24 @@ function parseNote(text) {
   return out;
 }
 
+/**
+ * The Go High Level version: the form note is on the opportunity's contact
+ * (GHL keeps notes there). Same shape back, plus contact_id.
+ */
+async function fromGhl(oppId) {
+  const ghl = require('./ghl');
+  const o = await ghl.getOpp(oppId);
+  const contactId = o && (o.contactId || (o.contact && o.contact.id));
+  if (!contactId) return { found: false, lead_id: oppId, crm: 'ghl' };
+  const note = (await ghl.notes(contactId)).map(n => n.bodyText || n.body || '').find(t => NOTE_RE.test(t));
+  if (!note) return { found: false, lead_id: oppId, contact_id: contactId, crm: 'ghl' };
+  return { found: true, has_note: true, lead_id: oppId, contact_id: contactId, note: parseNote(note), cf: {}, crm: 'ghl' };
+}
+
 /** Everything Nutshell has from the form for one lead, or { found: false }. */
 async function fromNutshell(leadId) {
+  // A GHL opportunity id is a string; a Nutshell lead id is a number.
+  if (typeof leadId === 'string' && !/^\d+$/.test(leadId) && require('./ghl').on('intake')) return fromGhl(leadId);
   const l = await require('./nutshell').call('getLead', { leadId });
   const note = (l.notes || []).find(n => NOTE_RE.test(n.note || ''));
   const cf = l.customFields || {};
@@ -113,7 +129,7 @@ function leadPatch(found, lead = {}) {
   const n = found.note || {}, cf = found.cf || {};
   const pick = (...vs) => vs.find(v => !blankish(v)) || '';
   const form = {
-    nutshell_lead_id: found.lead_id,
+    [found.crm === 'ghl' ? 'ghl_opp_id' : 'nutshell_lead_id']: found.lead_id,
     company: n.company || '',
     situation: n.situation || '',
     situation_type: cf['Situation Type'] || '',
@@ -127,7 +143,9 @@ function leadPatch(found, lead = {}) {
     submitted_at: n.submitted_at || '',
     fetched_at: new Date(),
   };
-  const patch = { form, nutshell_lead_id: lead.nutshell_lead_id || found.lead_id };
+  const patch = found.crm === 'ghl'
+    ? { form, ghl_opp_id: lead.ghl_opp_id || found.lead_id, ...(found.contact_id ? { ghl_contact_id: found.contact_id } : {}) }
+    : { form, nutshell_lead_id: lead.nutshell_lead_id || found.lead_id };
   if (found.has_note) {
     patch.sms_consent = n.consent; // null when the note has no consent line
     patch.sms_consent_at = n.consent_at || null;
@@ -261,7 +279,7 @@ function cardLines(lead, step) {
   const v = view(lead);
   const textsOff = lead.phone && v.texts_off ? `Texts off: ${v.texts_off}. Email only.` : '';
   if (!['email1', 'text_intro'].includes(step.id)) return textsOff ? [esc(textsOff)] : [];
-  if (!v.has_form) return [esc(`No form details from Nutshell${lead.nutshell_lead_id ? ` (lead ${lead.nutshell_lead_id})` : ''}.`), textsOff && esc(textsOff)].filter(Boolean);
+  if (!v.has_form) return [esc(lead.ghl_opp_id ? 'No form details from Go High Level.' : `No form details from Nutshell${lead.nutshell_lead_id ? ` (lead ${lead.nutshell_lead_id})` : ''}.`), textsOff && esc(textsOff)].filter(Boolean);
   const flat = v.message.replace(/\s+/g, ' ').trim();
   const msg = flat.length > 280 ? `${flat.slice(0, 280)}…` : flat;
   return [
@@ -287,6 +305,11 @@ function sheetCells(lead) {
 
 /** The lead's Nutshell lead id: linked already, else via the contact's email. */
 async function findLeadId(lead) {
+  if (require('./ghl').on('intake')) {
+    if (lead.ghl_opp_id) return lead.ghl_opp_id;
+    const o = await require('./ghl').ownerOf({ email: lead.email, phone: lead.phone });
+    return o.lead_id || null;
+  }
   if (lead.nutshell_lead_id) return lead.nutshell_lead_id;
   if (!/@/.test(lead.email || '')) return null;
   const nutshell = require('./nutshell');

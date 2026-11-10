@@ -29,6 +29,7 @@ app.use('/api/heyreach', require('./routes/heyreach'));
 app.use('/api/instantly', require('./routes/instantly'));
 app.use('/api/calendar', require('./routes/calendar'));
 app.use('/api/nutshell', require('./routes/nutshell'));
+app.use('/api/crm', require('./routes/nutshell')); // same routes; the CRM is Nutshell or Go High Level per CRM_PROVIDER
 app.use('/api/assist', require('./routes/assist'));
 app.use('/api/approve', require('./routes/approve'));
 app.use('/api/cadence', require('./routes/cadence'));

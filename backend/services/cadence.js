@@ -147,6 +147,8 @@ async function importLeads(rows) {
       name_doubt: /belongs to|someone else|not (his|her|their) email/i.test(r.notes || ''),
       // Intake found the lead's Nutshell lead: notes and stages go straight to it.
       ...(r.nutshell_lead_id ? { nutshell_lead_id: r.nutshell_lead_id } : {}),
+      ...(r.ghl_opp_id ? { ghl_opp_id: r.ghl_opp_id } : {}),
+      ...(r.ghl_contact_id ? { ghl_contact_id: r.ghl_contact_id } : {}),
     };
     if (existing) {
       await saveLead(email, base);
@@ -1084,10 +1086,78 @@ async function logToNutshell(lead, text, { outcome = null, contacted = false } =
   }
 }
 
+// ── The same queue, sent to Go High Level (CRM_PROVIDER_CADENCE=ghl, 11/9) ────
+// Notes go on the contact (GHL has no notes on opportunities). One opportunity
+// per contact in the pipeline, so "the lead" is the contact's opportunity there:
+// no name matching, no "two leads with this name" case.
+const GHL_CLOSE = { not_qualified: ['Not a strategic fit', 'unqualified'], not_interested: ['Said no', 'lost'], no_response: ['Never responded', 'lost'] };
+const GHL_ROLE = { contacted: 'contacted', hit_once: 'contacted', talked_yes: 'qualified', meeting: 'meeting' };
+
+async function ghlApplyStage(lead, oppId, outcome) {
+  const ghl = require('./ghl');
+  if (GHL_CLOSE[outcome]) {
+    const [why, role] = GHL_CLOSE[outcome];
+    try {
+      const r = await ghl.closeOpp(oppId, 'lost', { reason: why, role });
+      if (!r.changed) return `GHL opportunity already ${r.status}, left as is (wanted Lost, ${why})`;
+      return `GHL opportunity closed as Lost (${why})${r.reason_set ? '' : ': reason is in this note only, GHL has no lost reason by that name'}`;
+    } catch (e) {
+      await ping(`Go High Level: couldn't close <b>${esc(fullName(lead))}</b> (${esc(e.message)}). Mark it Lost, ${why}: ${ghl.oppUrl(oppId)}`);
+      return 'Asked Vincent to mark Lost in Go High Level';
+    }
+  }
+  const role = GHL_ROLE[outcome];
+  if (!role) return null;
+  return ghl.moveStage(oppId, role, { quiet: outcome === 'contacted' });
+}
+
+async function drainGhlJob(d, job) {
+  const ghl = require('./ghl');
+  const lead = await getLead(job.email);
+  if (!lead) { await d.ref.update({ status: 'dropped' }); return; }
+  let contactId = lead.ghl_contact_id;
+  if (!contactId) {
+    const c = await ghl.findOrCreateContact({ name: fullName(lead), email: realEmail(lead), phone: lead.phone || undefined, company: lead.company || undefined, assignedTo: ghl.ME() });
+    if (!c) throw new Error('no name, email or phone to make the GHL contact');
+    contactId = c.id;
+    await saveLead(lead.email, { ghl_contact_id: contactId });
+    await addTimeline(lead.email, timelineEntry('note', { text: `GHL contact ${c.created ? 'created' : 'found'} (${contactId})` }));
+  }
+  let oppId = lead.ghl_opp_id || null;
+  if (!oppId) {
+    // Any rep's opportunity counts as "there": a teammate's is noted on, never moved.
+    const mine = (await ghl.oppsFor(contactId))[0];
+    if (mine) oppId = mine.id;
+    else if (CREATE_FOR.includes(job.outcome)) {
+      const made = await ghl.newPipelineOpp({ name: fullName(lead), contactId, role: 'new', source: 'Paid Social', assignedTo: ghl.ME() });
+      oppId = made.id;
+      await addTimeline(lead.email, timelineEntry('note', { text: `GHL opportunity ${made.existing ? 'found' : 'created'} (${oppId})${made.stage ? ` at ${made.stage}` : ''}` }));
+    }
+    if (oppId) await saveLead(lead.email, { ghl_opp_id: oppId });
+  }
+  if (job.text && !job.note_done) {
+    await ghl.addNote(contactId, job.text, ghl.ME());
+    await d.ref.update({ note_done: true });
+  }
+  // Stages only move on Vincent's own opportunity.
+  const opp = oppId && (job.outcome || job.contacted) ? await ghl.getOpp(oppId).catch(() => null) : null;
+  const movable = opp && (!opp.assignedTo || opp.assignedTo === ghl.ME());
+  if (job.outcome) {
+    const line = !oppId ? null : movable ? await ghlApplyStage(lead, oppId, job.outcome) : `GHL stage not changed: the opportunity is ${ghl.userName(opp && opp.assignedTo)}'s`;
+    if (line) await addTimeline(lead.email, timelineEntry('note', { text: line }));
+  }
+  if (job.contacted && movable) {
+    const line = await ghlApplyStage(lead, oppId, 'contacted');
+    if (line) await addTimeline(lead.email, timelineEntry('note', { text: line }));
+  }
+  await d.ref.update({ status: 'done', done_at: new Date(), crm: 'ghl', contact_id: contactId, lead_id: oppId || null });
+}
+
 let _draining = false;
 async function drainNutshell({ max = 20 } = {}) {
   const nutshell = require('./nutshell');
-  if (_draining || !nutshell.isConfigured()) return { skipped: true };
+  const useGhl = require('./ghl').on('cadence');
+  if (_draining || (!useGhl && !nutshell.isConfigured())) return { skipped: true };
   _draining = true;
   let done = 0, failed = 0;
   try {
@@ -1096,6 +1166,7 @@ async function drainNutshell({ max = 20 } = {}) {
     for (const d of rows) {
       const job = d.data();
       try {
+        if (useGhl) { await drainGhlJob(d, job); done++; continue; }
         const lead = await getLead(job.email);
         if (!lead) { await d.ref.update({ status: 'dropped' }); continue; }
         let contactId = lead.nutshell_contact_id;
@@ -1130,7 +1201,7 @@ async function drainNutshell({ max = 20 } = {}) {
         done++;
       } catch (e) {
         failed++;
-        console.warn('[cadence] Nutshell log failed (retries next run):', e.message);
+        console.warn(`[cadence] ${useGhl ? 'GHL' : 'Nutshell'} log failed (retries next run):`, e.message);
         await d.ref.update({ attempts: (job.attempts || 0) + 1, last_error: e.message, last_error_at: new Date() }).catch(() => {});
       }
     }
