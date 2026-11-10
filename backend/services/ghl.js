@@ -5,12 +5,18 @@
 //   CRM_PROVIDER_<AREA>=nutshell|ghl     one area: SCORECARD, CADENCE, FEED, INTAKE, STRIPE
 // Nothing here runs until an area is switched to ghl AND the keys are set.
 //
-// The pipeline is config, not code (the API can't create pipelines, and the
-// real one isn't decided yet):
-//   GHL_PIPELINE          pipeline name (default "Story Group Sales Pipeline")
-//   GHL_STAGES            JSON, role -> stage name, merged over STAGE_DEFAULTS
+// The account is "Story Group" (Ruckersville), built by the LMD team from
+// Michelle Brown's 11/6 build doc (Vincent, 11/10). A deal moves through four
+// pipelines in order: LMD_Ads, Sales, Finance, Project Management. The backend
+// only works the first one. The pipeline is config, not code:
+//   GHL_PIPELINE          pipeline the backend creates and moves in (default "LMD_Ads")
+//   GHL_STAGES            JSON, role -> stage name (null = no stage), merged over STAGE_DEFAULTS
+//   GHL_DEAL_PIPELINES    comma list: a contact with an opportunity in any of these already
+//                         has a deal, so no second one is made (default "LMD_Ads,Sales")
 //   GHL_INTAKE_PIPELINES  comma list of pipeline names the intake watches (default: GHL_PIPELINE)
 // A role whose stage doesn't exist is skipped with a line saying so, never guessed.
+// GHL's own workflows own form intake, round robin, the assessment nurture,
+// reminders and no-show follow-up: nothing here sends a message.
 //
 // GHL facts (checked live and against the docs, 11/9): one open-or-closed
 // opportunity per contact per pipeline (a second create returns 400
@@ -29,20 +35,19 @@ function on(area) {
   return /^ghl$/i.test(v.trim()) && isConfigured();
 }
 
-// GHL user ids (GET /users, 2026-11-09), keyed by email like nutshell.USERS.
+// GHL user ids (GET /users on the Story Group account, 2026-11-10), keyed by email like nutshell.USERS.
 const USERS = {
-  'vincent@storygroup.io': '9esmhmQd4qnDiZYD4fgf',
-  'aaron@storygroup.io': '7pQcn0Cg2kN6WXPW8Q18',
-  'mmoonan@storygroup.io': 'C4SvMUYCJ3ysq1bBHQqD',
-  'mckenna@storygroup.io': 'C4SvMUYCJ3ysq1bBHQqD',
-  'michelle@storygroup.io': 'QhaS4saydjNNJDT6OFVY',
-  'annette@storygroup.io': 'UJwbw9ekSLfvSSbl4ydF',
-  'lydia@storygroup.io': 'zZAo293eHB6ebmzYByUY',
-  'amanda@storygroup.io': 'eSDfelL8ohS5XmrEk8uG',
+  'vincent@storygroup.io': '1sYe8kXrHXBXYGZYGJmI',
+  'aaron@storygroup.io': 'lQmi8mfzMkueKcl3JFQt',
+  'mmoonan@storygroup.io': 'Qj7bK42CGJ5DuvMWIgmW',
+  'mckenna@storygroup.io': 'Qj7bK42CGJ5DuvMWIgmW',
+  'michelle@storygroup.io': 'DS5TkMngtPyrC1q8pccO',
+  'annette@storygroup.io': 'aXETpRwnqqUzEEM4CsCL',
+  'schneider@storygroup.io': 'p7OB04RhgmWTmfh05a1C',
 };
 const USER_NAMES = {
-  '9esmhmQd4qnDiZYD4fgf': 'Vincent Catalano', '7pQcn0Cg2kN6WXPW8Q18': 'Aaron Evans', C4SvMUYCJ3ysq1bBHQqD: 'McKenna Moonan',
-  QhaS4saydjNNJDT6OFVY: 'Michelle Brown', UJwbw9ekSLfvSSbl4ydF: 'Annette Fildisis', zZAo293eHB6ebmzYByUY: 'Lydia Fisher', eSDfelL8ohS5XmrEk8uG: 'Amanda Hall',
+  '1sYe8kXrHXBXYGZYGJmI': 'Vincent Catalano', lQmi8mfzMkueKcl3JFQt: 'Aaron Evans', Qj7bK42CGJ5DuvMWIgmW: 'McKenna Moonan',
+  DS5TkMngtPyrC1q8pccO: 'Michelle Brown', aXETpRwnqqUzEEM4CsCL: 'Annette Fildisis', p7OB04RhgmWTmfh05a1C: 'Schneider Jean',
 };
 const ME = () => process.env.GHL_USER_ID || USERS['vincent@storygroup.io'];
 const userName = id => USER_NAMES[id] || 'another rep';
@@ -86,18 +91,24 @@ const qs = o => Object.entries(o).filter(([, v]) => v !== undefined && v !== nul
 // Role -> stage name. Roles are what the automations ask for; names are
 // whatever the pipeline in GHL calls them. Override with GHL_STAGES.
 const STAGE_DEFAULTS = {
-  new: 'New Funnel Lead',          // a fresh ad or scorecard lead
-  contacted: 'Contacted',          // any sent step or a Hit once call
-  qualified: 'Strategy Call Booked', // Talked yes
-  meeting: 'Strategy Call Booked', // meeting booked
-  unqualified: 'Unqualified',      // closed as Not a strategic fit
+  new: 'Inbound Lead',         // a fresh ad or scorecard lead
+  contacted: 'Contact #1',     // any sent step or a Hit once call
+  qualified: 'Contact #1',     // Talked yes: reached, no meeting yet ("Qualified" in LMD_Ads comes after the call, a rep's move)
+  meeting: 'Booked Meeting',   // meeting booked
+  unqualified: 'Closed Lost',  // LMD_Ads has one lost column; the reason says which
   lost: 'Closed Lost',
-  won: 'Closed Won',
+  won: null,                   // won happens in the Sales pipeline, not here
 };
 function stageNames() {
   try { return { ...STAGE_DEFAULTS, ...JSON.parse(process.env.GHL_STAGES || '{}') }; } catch { console.warn('[ghl] GHL_STAGES is not valid JSON, using defaults'); return STAGE_DEFAULTS; }
 }
-const pipelineName = () => process.env.GHL_PIPELINE || 'Story Group Sales Pipeline';
+const pipelineName = () => process.env.GHL_PIPELINE || 'LMD_Ads';
+const dealPipelineNames = () => (process.env.GHL_DEAL_PIPELINES || 'LMD_Ads,Sales').split(',').map(norm).filter(Boolean);
+/** Ids of the pipelines a deal moves through (always includes the configured one). */
+async function dealPipelineIds() {
+  const names = [...new Set([...dealPipelineNames(), norm(pipelineName())])];
+  return (await pipelines()).filter(p => names.includes(norm(p.name))).map(p => p.id);
+}
 
 let _pipes = { at: 0, list: null };
 async function pipelines({ fresh = false } = {}) {
@@ -127,12 +138,16 @@ async function checkConfig() {
   if (!out.configured) return out;
   const p = await pipeline();
   out.pipeline = p.name;
+  out.deal_pipelines = (await pipelines()).filter(x => dealPipelineNames().includes(norm(x.name))).map(x => x.name);
   for (const [role, name] of Object.entries(stageNames())) {
+    if (!name) { out.stages[role] = null; continue; }
     const s = p.stages.find(x => norm(x.name) === norm(name));
     out.stages[role] = s ? s.name : null;
     if (!s) out.missing.push(`${role} -> "${name}"`);
   }
   out.lost_reasons = (await lostReasons()).map(r => r.name);
+  // The feed's task list needs the token's tasks permission (locations/tasks.readonly).
+  out.tasks_scope = await api('POST', `/locations/${LOCATION()}/tasks/search`, { completed: false, limit: 1 }, { attempts: 1 }).then(() => true, e => (e.status === 401 ? false : null));
   return out;
 }
 
@@ -243,11 +258,12 @@ async function getOpp(id) {
   return (await api('GET', `/opportunities/${id}`)).opportunity || null;
 }
 
-/** A contact's opportunities, the configured pipeline's first, open before closed. */
+/** A contact's opportunities: the configured pipeline's first, then the other deal pipelines, open before closed. */
 async function oppsFor(contactId) {
   const p = await pipeline();
+  const deal = await dealPipelineIds();
   const list = await searchOpps({ contact_id: contactId });
-  const rank = o => (o.pipelineId === p.id ? 0 : 2) + (o.status === 'open' ? 0 : 1);
+  const rank = o => (o.pipelineId === p.id ? 0 : deal.includes(o.pipelineId) ? 2 : 4) + (o.status === 'open' ? 0 : 1);
   return list.sort((a, b) => rank(a) - rank(b));
 }
 
@@ -258,6 +274,14 @@ async function oppsFor(contactId) {
  */
 async function newPipelineOpp({ name, contactId, role = 'new', source, assignedTo, value }) {
   const p = await pipeline();
+  // The same deal moves from LMD_Ads to Sales: an open one anywhere on that path is the deal.
+  const deal = await dealPipelineIds();
+  const open = (await searchOpps({ contact_id: contactId })).find(o => o.status === 'open' && deal.includes(o.pipelineId));
+  if (open) {
+    const home = (await pipelines()).find(x => x.id === open.pipelineId);
+    const st = home && (home.stages || []).find(x => x.id === open.pipelineStageId);
+    return { id: open.id, existing: true, stage: st ? `${st.name}${home.id === p.id ? '' : ` (${home.name})`}` : null, status: open.status };
+  }
   const stage = (await stageFor(role)) || p.stages[0];
   const body = { locationId: LOCATION(), pipelineId: p.id, pipelineStageId: stage.id, name, status: 'open', contactId };
   if (source) body.source = source;
@@ -415,7 +439,7 @@ async function ownerOf({ email, phone } = {}) {
 }
 
 module.exports = {
-  isConfigured, on, api, USERS, ME, userName,
+  isConfigured, on, api, USERS, ME, userName, dealPipelineIds,
   pipeline, stageFor, stageNames, checkConfig, intakePipelineIds,
   findContact, findOrCreateContact, getContact, contactKeys, findOrCreateBusiness, addNote, notes,
   searchOpps, getOpp, oppsFor, newPipelineOpp, moveStage, closeOpp, lostReasons,
