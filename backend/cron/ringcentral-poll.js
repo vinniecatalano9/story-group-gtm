@@ -44,7 +44,19 @@ async function matchLeadByPhone(phone) {
  * Fireflies transcribes it, then the Fireflies webhook/poll stores it,
  * matches the prospect, and drafts the follow-up like any other call.
  */
+const STALE_CLAIM_MS = 30 * 60 * 1000;
+let _polling = false;
 async function pollRingCentral() {
+  if (_polling) return { skipped: 'previous poll still running' };
+  _polling = true;
+  try {
+    return await runPoll();
+  } finally {
+    _polling = false;
+  }
+}
+
+async function runPoll() {
   if (!ringcentral.isConfigured()) return { skipped: 'no RINGCENTRAL_CLIENT_ID / SECRET / JWT' };
   if (process.env.RINGCENTRAL_POLL_PAUSED === 'true') return { skipped: 'RINGCENTRAL_POLL_PAUSED' };
   if (!process.env.FIREFLIES_API_KEY) return { skipped: 'no FIREFLIES_API_KEY (needed to transcribe)' };
@@ -56,12 +68,30 @@ async function pollRingCentral() {
   for (const call of calls) {
     const recId = String(call.recording.id);
     const ref = rcCalls.doc(recId);
+    let claimed = false;
     try {
-      if ((await ref.get()).exists) continue;
+      const existing = await ref.get();
+      if (existing.exists) {
+        // A claim left behind by a crash mid-upload: clear it so the next run retries.
+        const x = existing.data();
+        const age = Date.now() - (x.created_at?.toDate?.() || new Date(0)).getTime();
+        if (x.status === 'uploading' && age > STALE_CLAIM_MS) await ref.delete();
+        continue;
+      }
 
       if ((call.duration || 0) < MIN_SECONDS()) {
         await ref.set({ status: 'skipped_short', duration: call.duration, start_time: call.startTime, created_at: new Date() });
         skipped++;
+        continue;
+      }
+
+      // Claim the recording before the upload (Firestore create() fails if the
+      // doc exists). Two runs at the same tick used to both pass the check
+      // above and upload the call twice: two transcripts, two recap emails.
+      try {
+        await ref.create({ status: 'uploading', start_time: call.startTime, created_at: new Date() });
+        claimed = true;
+      } catch {
         continue;
       }
 
@@ -109,7 +139,8 @@ async function pollRingCentral() {
       sent++;
       console.log(`[ringcentral-poll] Sent to Fireflies: ${title}${match?.email ? ` → ${match.email}` : ' (no lead match)'}`);
     } catch (e) {
-      // Not stored, so the next run retries it.
+      // Drop the claim so the next run retries it.
+      if (claimed) await ref.delete().catch(() => {});
       console.error(`[ringcentral-poll] Failed on recording ${recId}:`, e.message);
     }
   }
