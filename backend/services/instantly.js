@@ -193,7 +193,41 @@ async function updateLeadInterestStatus(email, interestStatus, campaignId = null
   return apiCall('PATCH', '/leads', body);
 }
 
+// ----- Cross-channel stop helpers (services/crossChannel.js) -----
+
+// Read only. The lead record for one email inside one campaign, or null.
+async function findLeadInCampaign(email, campaignId) {
+  if (!email || !campaignId) return null;
+  const res = await apiCall('POST', '/leads/list', { campaign: campaignId, contacts: [email], limit: 5 });
+  const want = String(email).toLowerCase();
+  return (res?.items || []).find(l =>
+    String(l.email || '').toLowerCase() === want && String(l.campaign || '').toLowerCase() === String(campaignId).toLowerCase()
+  ) || null;
+}
+
+// The id of the lead list with this exact name; makes it if it does not exist.
+let leadListCache = {};
+async function findOrCreateLeadList(name) {
+  if (leadListCache[name]) return leadListCache[name];
+  const found = await apiCall('GET', `/lead-lists?limit=20&search=${encodeURIComponent(name)}`);
+  let list = (found?.items || []).find(l => l.name === name);
+  if (!list) list = await apiCall('POST', '/lead-lists', { name });
+  if (!list?.id) throw new Error(`Instantly lead list "${name}" has no id`);
+  leadListCache[name] = list.id;
+  return list.id;
+}
+
+// Takes ONE lead out of a campaign and puts it in a lead list. The record and
+// its history are kept (this is a move, not a delete) and it can be moved back.
+// `ids` plus `campaign` picks the lead; `limit: 1` means that even if Instantly
+// ever ignored `ids`, one lead is the most this call could move.
+async function moveLeadToList(leadId, campaignId, listId) {
+  if (!leadId || !campaignId || !listId) throw new Error('moveLeadToList needs a lead id, a campaign id and a list id');
+  return apiCall('POST', '/leads/move', { ids: [leadId], campaign: campaignId, to_list_id: listId, limit: 1 });
+}
+
 module.exports = {
+  findLeadInCampaign, findOrCreateLeadList, moveLeadToList,
   addLeadsToCampaign, removeLeads, getESGFlaggedLeads,
   getCampaigns, getCampaignLeads, getCampaignAnalytics,
   replyToEmail, getLeadLabels, getRepliedLeads, getAllRepliedLeads,

@@ -34,6 +34,7 @@ app.use('/api/assist', require('./routes/assist'));
 app.use('/api/approve', require('./routes/approve'));
 app.use('/api/cadence', require('./routes/cadence'));
 app.use('/api/scorecard', require('./routes/scorecard'));
+app.use('/api/crosschannel', require('./routes/crosschannel')); // LinkedIn reply stops email and the reverse; off unless CROSS_CHANNEL_STOP is set
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -7,6 +7,7 @@ const { syncLead } = require('../services/hubspot');
 const { syncReply: syncCoterie } = require('../services/coteriehq');
 const { notifyNewReply } = require('../services/slack');
 const { getAvailableSlots } = require('../services/calendar');
+const { onEmailReply } = require('../services/crossChannel');
 
 const router = Router();
 
@@ -98,6 +99,23 @@ router.post('/', async (req, res) => {
     else {
       // All others (why_reach_out, more_info, cost_question, etc.)
       if (lead) await updateLead(lead.id, { status: 'replied', last_reply: cls });
+    }
+
+    // Cross-channel stop: a real person replied by email, so stop their
+    // LinkedIn sequence in the paired HeyReach campaign (never for ooo or a
+    // bounce). Off unless CROSS_CHANNEL_STOP is shadow or live, limited to the
+    // CROSS_CHANNEL_PAIRS allowlist, and not awaited: it can never fail or
+    // slow this webhook.
+    try {
+      Promise.resolve(onEmailReply({
+        email,
+        classification: cls,
+        classifierFailed: classification.failed === true,
+        instantlyCampaignId: campaign_id,
+        replyId,
+      })).catch(e => console.warn('[reply] Cross-channel stop failed:', e.message));
+    } catch (e) {
+      console.warn('[reply] Cross-channel stop failed:', e.message);
     }
 
     // Sync to HubSpot

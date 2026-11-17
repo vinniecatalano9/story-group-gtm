@@ -4,6 +4,7 @@ const { evaluateReply, fetchConversation, markSeen } = require('../services/auto
 const { offerReply, paidMisread } = require('../services/replyApprovals');
 const { threadFacts, config: autoReplyConfig } = require('../lib/autoReplyPolicy');
 const { findMeetingSlots, peopleFromNote, holdSlots, releaseHolds, draftOffersSlots } = require('../services/calendar');
+const crossChannel = require('../services/crossChannel');
 const axios = require('axios');
 const router = express.Router();
 
@@ -248,13 +249,32 @@ router.post('/campaign/:id/push', express.json({ limit: '10mb' }), async (req, r
       }
     }
 
+    // Cross-channel link store: a lead pushed with an email is remembered as
+    // "this LinkedIn profile is this email", so a reply on one channel can
+    // stop the other. Only for campaigns on the CROSS_CHANNEL_PAIRS allowlist,
+    // and a failure here never fails the push.
+    let links = null;
+    try {
+      const withEmail = leads.filter(l => l && l.linkedinUrl && l.email);
+      const pair = crossChannel.pairs().find(p => p.heyreach === String(campaignId));
+      const instantlyCampaignId = req.body?.instantlyCampaignId || (pair && pair.instantly);
+      if (withEmail.length && crossChannel.isAllowedPair(instantlyCampaignId, campaignId)) {
+        const out = await crossChannel.upsertLinks(withEmail, { instantlyCampaignId, heyreachCampaignId: campaignId, source: 'push' });
+        links = { saved: out.saved, skipped: out.skipped.length };
+      }
+    } catch (e) {
+      console.warn('[heyreach push] Cross-channel link save failed:', e.message);
+      links = { error: e.message };
+    }
+
     res.json({
       ok: errors.length === 0,
       campaignId,
       totalLeads: leads.length,
       added,
       skipped,
-      errors
+      errors,
+      ...(links ? { crossChannelLinks: links } : {})
     });
   } catch (e) {
     res.status(500).json({ error: e.message, status: e.response?.status, body: e.response?.data });
@@ -561,6 +581,23 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
     const isInterestedTag = tags.some(t => /interested/i.test(t) && !/not.?interested/i.test(t));
     const eventType = (evt.event_type || payload.event_type || '').toLowerCase();
 
+    // Connection request accepted. HeyReach does not send this today (no such
+    // webhook is registered). If one is ever added, the event must not fall
+    // through and save an empty reply card. It only marks the cross-channel
+    // link as accepted, and only when CROSS_CHANNEL_ACCEPT=on. Sends nothing.
+    if (eventType.includes('connection_request_accepted')) {
+      let accept = { tracked: false };
+      try {
+        accept = await crossChannel.onConnectionAccepted({
+          profileUrl, firstName, lastName, company: companyName, memberId: lead.id || null,
+          heyreachCampaignId: evt.campaignId || evt.campaign_id || (evt.campaign && evt.campaign.id) || null,
+        });
+      } catch (e) {
+        console.warn('[heyreach webhook] Accept tracking failed:', e.message);
+      }
+      return res.json({ ok: true, event: 'connection_request_accepted', ...accept });
+    }
+
     // Outbound send webhook (MESSAGE_SENT / INMAIL_SENT): we answered this
     // lead — clear their pending reply card(s) immediately instead of waiting
     // for the 30-min queue sync (HeyReach's chatroom API also lags the UI).
@@ -685,6 +722,25 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
     if (!ref) {
       ref = await db.collection('replies').add(replyDoc);
       console.log(`[heyreach webhook] Saved reply ${ref.id} from ${fullName || profileUrl}`);
+    }
+
+    // Cross-channel stop: they replied on LinkedIn, so stop their email
+    // sequence in the paired Instantly campaign. Off unless CROSS_CHANNEL_STOP
+    // is shadow or live, limited to the CROSS_CHANNEL_PAIRS allowlist, and not
+    // awaited: whatever happens in there, the reply is already saved and this
+    // webhook still answers 200.
+    try {
+      // Only when the prospect actually wrote something.
+      const theyWrote = Array.isArray(evt.recent_messages) ? evt.recent_messages.some(m => m && m.is_reply) : !!replyText;
+      if (theyWrote) Promise.resolve(crossChannel.onLinkedInReply({
+        profileUrl, firstName, lastName, company: companyName,
+        memberId: lead.id || null,
+        heyreachCampaignId: campaignId,
+        replyId: ref.id,
+        conversationId: replyDoc.heyreach_conversation_id,
+      })).catch(e => console.warn('[heyreach webhook] Cross-channel stop failed:', e.message));
+    } catch (e) {
+      console.warn('[heyreach webhook] Cross-channel stop failed:', e.message);
     }
 
     // Fire-and-forget classify-and-draft using the shared playbook
