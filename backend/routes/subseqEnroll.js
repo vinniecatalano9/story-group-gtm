@@ -27,17 +27,19 @@ router.get('/status', async (req, res) => {
 });
 
 /**
- * GET /api/subseq-enroll/log?limit=50
+ * GET /api/subseq-enroll/log?limit=50&outcome=enrolled
  * Newest decisions first ("would enroll X into Y", skips, no action).
  */
 router.get('/log', requireKey, async (req, res) => {
   try {
     const { logs } = require('../services/db');
     const limit = Math.min(Number(req.query.limit) || 50, 500);
+    const outcome = String(req.query.outcome || '').trim(); // e.g. enrolled, would_enroll, skipped
     // No orderBy: avoids a composite index. Sorted here.
     const snap = await logs.where('type', '==', se.LOG_TYPE).limit(2000).get();
     const rows = snap.docs
       .map(d => ({ id: d.id, created_at: d.data().created_at?.toDate?.()?.toISOString?.() || null, ...d.data().data }))
+      .filter(r => !outcome || String(r.outcome || '') === outcome)
       .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')))
       .slice(0, limit);
     res.json({ count: rows.length, rows });

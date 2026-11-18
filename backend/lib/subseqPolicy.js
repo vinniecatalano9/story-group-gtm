@@ -73,6 +73,12 @@ const SKIP_INTEREST_STATUS = {
 // by the class table alone.
 const REFINE_BY_SENT_TEXT = true;
 
+// When true, a lead is enrolled only if the classifier ALSO said a follow-up
+// sequence applies (its own "subsequence" field names one of the two). If the
+// class table says enroll but the classifier left that field empty, the reply
+// is treated as unclear: nobody is enrolled and the row is logged as skipped.
+const REQUIRE_CLASSIFIER_AGREEMENT = true;
+
 const CLOCK_TIME = /\b(1[0-2]|0?[1-9])(:[0-5]\d)?\s?(a\.?m\.?|p\.?m\.?)(?![a-z])|\bnoon\b/i;
 
 function normalizeName(name) {
@@ -93,6 +99,10 @@ function pick(r = {}) {
   if (r.failed) return { subsequence: null, reason: 'The classifier failed on this reply, so nothing is enrolled.' };
   if (!cls) return { subsequence: null, reason: 'No classification.' };
   if (NEVER[cls]) return { subsequence: null, reason: NEVER[cls] };
+  const hinted = [CALL_TIME, OBJECTION].some(name => sameSequence(r.classifierSubsequence, name));
+  if (BY_CLASS[cls] && REQUIRE_CLASSIFIER_AGREEMENT && !hinted) {
+    return { subsequence: null, unclear: true, reason: `Unclear: "${cls}" maps to a follow-up sequence but the classifier did not pick one, so nobody is enrolled.` };
+  }
   if (BY_CLASS[cls]) {
     return {
       subsequence: BY_CLASS[cls],
@@ -134,6 +144,6 @@ function refineBySentText(picked, sentText) {
 }
 
 module.exports = {
-  CALL_TIME, OBJECTION, BY_CLASS, NEVER, AUTO_REPLY, SKIP_INTEREST_STATUS, REFINE_BY_SENT_TEXT,
+  CALL_TIME, OBJECTION, BY_CLASS, NEVER, AUTO_REPLY, SKIP_INTEREST_STATUS, REFINE_BY_SENT_TEXT, REQUIRE_CLASSIFIER_AGREEMENT,
   normalizeName, sameSequence, pick, proposesTimes, refineBySentText,
 };

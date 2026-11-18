@@ -108,19 +108,22 @@ function addAnswer(n, { at = min(5), thread, html = '<div>We start at $10,000 an
 }
 const webhook = (n, classification, extra = {}) => ({
   email: `lead${n}@example.com`, classification, campaignId: extra.campaign || CAMP, campaignName: 'Test campaign',
-  replyId: `reply-${n}`, emailUuid: `in-${n}`, replyAt: min(0).toISOString(), ...extra,
+  replyId: `reply-${n}`, emailUuid: `in-${n}`, replyAt: min(0).toISOString(),
+  classifierSubsequence: classification === 'interested' ? 'Call Time Sent' : 'Objection Follow-Up', ...extra,
 });
 
 async function main() {
   console.log('\n1. Policy table');
-  check('interested', policy.pick({ classification: 'interested' }).subsequence, 'Call Time Sent');
-  check('re_engage', policy.pick({ classification: 're_engage' }).subsequence, 'Call Time Sent');
+  check('interested', policy.pick({ classification: 'interested', classifierSubsequence: 'Call Time Sent' }).subsequence, 'Call Time Sent');
+  check('re_engage', policy.pick({ classification: 're_engage', classifierSubsequence: 'Call Time Sent' }).subsequence, 'Call Time Sent');
   for (const c of ['cost_question', 'cost_question_repeat', 'question_other', 'timing_objection', 'guarantee', 'more_info']) {
-    check(c, policy.pick({ classification: c }).subsequence, 'Objection Followup');
+    check(c, policy.pick({ classification: c, classifierSubsequence: 'Objection Follow-Up' }).subsequence, 'Objection Followup');
   }
   for (const c of ['not_interested', 'ooo', 'bounce', 'referral', 'other', 'ghost_followup']) {
     check(`${c} -> nothing`, policy.pick({ classification: c }).subsequence, null);
   }
+  check('unclear (classifier picked no sequence) -> nothing', policy.pick({ classification: 'cost_question', classifierSubsequence: '' }).subsequence, null);
+  check('unclear is flagged', policy.pick({ classification: 'cost_question' }).unclear, true);
   check('classifier failed -> nothing', policy.pick({ classification: 'interested', failed: true }).subsequence, null);
   check('unknown class, no hint -> nothing', policy.pick({ classification: 'brand_new_class' }).subsequence, null);
   check('unknown class takes the classifier hint', policy.pick({ classification: 'brand_new_class', classifierSubsequence: 'Objection Follow-Up' }).subsequence, 'Objection Followup');
@@ -158,6 +161,7 @@ async function main() {
   check('row has the campaign', t.rows[0].campaign_id, CAMP);
   check('row has the classification', t.rows[0].classification, 'cost_question');
   check('row has a reason', !!t.rows[0].reason, true);
+  check('row has the sent answer it keyed on', t.rows[0].answer_email_id + '|' + /\$10,000/.test(t.rows[0].answer_text), 'ans-1|true');
   check('row says shadow', t.rows[0].mode, 'shadow');
   check('shadow made zero write calls to Instantly', writes().length, 0);
   t.clock.now = min(13);
@@ -191,6 +195,7 @@ async function main() {
   check('ooo -> ignored', (await se.notePending(webhook(7, 'ooo'), t.deps)).outcome, 'ignored_auto_reply');
   check('bounce -> ignored', (await se.notePending(webhook(7, 'bounce'), t.deps)).outcome, 'ignored_auto_reply');
   check('classifier failed -> no_action', (await se.notePending(webhook(7, 'other', { classifierFailed: true }), t.deps)).outcome, 'no_action');
+  check('unclear classification -> skipped, logged', (await se.notePending(webhook(7, 'cost_question', { classifierSubsequence: '' }), t.deps)).outcome + '|' + t.rows[t.rows.length - 1].skip, 'skipped|unclear_classification');
   check('nothing pending', Object.values(t.store.docs).filter(d => d.status === 'pending').length, 0);
   // A question, then "not interested" before we answered: the open decision is cancelled.
   await se.notePending(webhook(5, 'cost_question'), t.deps);
@@ -263,7 +268,7 @@ async function main() {
   check('no answer in 7 days -> expired, nothing enrolled', t.rows[0].outcome, 'expired_no_answer');
   t.clock.now = min(0);
   await se.notePending(webhook(18, 'cost_question'), t.deps);
-  t.store.replies['reply-18'] = { classification: 'not_interested' }; // reclassified after the webhook
+  t.store.replies['reply-18'] = { classification: 'not_interested', subsequence: '' }; // reclassified after the webhook
   addAnswer(18);
   t.clock.now = min(8);
   await se.checkPending({}, t.deps);

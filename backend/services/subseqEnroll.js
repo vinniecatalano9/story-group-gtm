@@ -196,8 +196,9 @@ async function notePending(evt = {}, deps) {
         await d.store.patch(id, { status: 'cancelled', cancelled_reason: picked.reason, cancelled_by_reply_id: evt.replyId || null });
         cancelled = true;
       }
-      await safeLog(d.log, { ...base, outcome: 'no_action', subsequence: null, reason: picked.reason, ...(cancelled ? { cancelled_pending: true } : {}) });
-      return { mode: m, outcome: 'no_action' };
+      const outcome = picked.unclear ? 'skipped' : 'no_action';
+      await safeLog(d.log, { ...base, outcome, ...(picked.unclear ? { skip: 'unclear_classification' } : {}), subsequence: null, reason: picked.reason, ...(cancelled ? { cancelled_pending: true } : {}) });
+      return { mode: m, outcome };
     }
 
     // The same reply delivered twice (a webhook retry) never reopens a decision.
@@ -212,6 +213,7 @@ async function notePending(evt = {}, deps) {
       reply_id: evt.replyId || null, email_uuid: evt.emailUuid || null,
       reply_at: toDate(evt.replyAt) || d.now(),
       classification: cls, policy_pick: picked.subsequence, policy_reason: picked.reason,
+      classifier_subsequence: evt.classifierSubsequence || '',
       checks: 0, created_at: d.now(),
     });
     return { mode: m, outcome: 'pending', subsequence: picked.subsequence };
@@ -275,16 +277,26 @@ async function decideOne(p, d) {
   // The reply may have been reclassified since the webhook.
   let cls = p.classification;
   let failed = false;
-  let hint = '';
+  let hint = p.classifier_subsequence || '';
   try {
     const r = await d.store.replyInfo(p.reply_id);
     if (r && r.classification) { cls = String(r.classification).toLowerCase(); failed = r.failed === true; hint = r.subsequence || ''; }
   } catch (e) { console.warn('[subseq-enroll] reply lookup failed:', e.message); }
 
   let picked = policy.pick({ classification: cls, failed, classifierSubsequence: hint });
-  const common = { classification: cls, answer_email_id: answer.id || null, answer_sent_at: emailTime(answer), thread_id: answer.thread_id };
-  if (!picked.subsequence) return finish('cancelled', { ...common, outcome: 'no_action', subsequence: null, reason: picked.reason });
-  picked = policy.refineBySentText(picked, sentText(answer));
+  // The sent answer this decision keyed on, so a later check can see why.
+  const answerText = sentText(answer);
+  const common = {
+    classification: cls, answer_email_id: answer.id || null, answer_sent_at: emailTime(answer), thread_id: answer.thread_id,
+    answer_from: answer.eaccount || answer.from_address_email || null, answer_text: answerText.slice(0, 300),
+  };
+  if (!picked.subsequence) {
+    return finish(picked.unclear ? 'skipped' : 'cancelled', {
+      ...common, outcome: picked.unclear ? 'skipped' : 'no_action', ...(picked.unclear ? { skip: 'unclear_classification' } : {}),
+      subsequence: null, reason: picked.reason,
+    });
+  }
+  picked = policy.refineBySentText(picked, answerText);
   const row = { ...common, subsequence: picked.subsequence, reason: picked.reason };
 
   if (await d.store.crossChannelStopped(p.email, p.campaign_id)) {

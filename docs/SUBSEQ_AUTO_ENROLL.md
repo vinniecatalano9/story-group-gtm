@@ -30,6 +30,8 @@ Plain tables. Edit the file to change them.
 - **Nothing**: `not_interested`, `referral`, `ooo`, `bounce`, `ghost_followup`, `other`, and any reply the classifier failed on.
 - **The sent text gets the last word** (`REFINE_BY_SENT_TEXT`, on): if the answer we really sent has a clock time in it ("2pm", "10:30 am", "noon") the pick is Call Time Sent, otherwise Objection Followup. So a cost answer that also pitched times goes to Call Time Sent, and an "interested" answer edited into a question goes to Objection Followup. Quoted earlier emails are cut off before the check.
 
+- **Unclear replies enroll nobody** (`REQUIRE_CLASSIFIER_AGREEMENT`, on): the classifier has its own "subsequence" answer. If the table says enroll but the classifier left that empty, the row is logged as `skipped` with `skip: unclear_classification` and nothing happens.
+
 It works for any campaign that has subsequences with those two names (case, spaces and hyphens ignored, so "Objection Follow-Up" matches). A campaign with neither is logged as `no_subsequence` and left alone.
 
 ## What is skipped
@@ -44,11 +46,19 @@ Each skip is a log row with the reason.
 
 ## Seeing what it did
 
-Rows are in the `logs` collection, type `subseq_enroll`: `mode`, `outcome` (`would_enroll`, `enrolled`, `no_action`, `skipped`, `no_subsequence`, `already_enrolled`, `expired_no_answer`, `failed`), `lead_email`, `campaign_id`, `campaign_name`, `classification`, `subsequence`, `subsequence_id`, `reason`, and `would` or `did`.
+Rows are in the `logs` collection, type `subseq_enroll`: `mode`, `outcome` (`would_enroll`, `enrolled`, `no_action`, `skipped`, `no_subsequence`, `already_enrolled`, `expired_no_answer`, `failed`), `lead_email`, `campaign_id`, `campaign_name`, `classification`, `subsequence`, `subsequence_id`, `reason`, `answer_email_id`, `answer_sent_at`, `answer_from`, `answer_text` (first 300 characters of what we sent), and `would` or `did`.
+
+**One command to list recent enrollments** (from the Mac; every row has the lead email, campaign, classification, subsequence, and the answer we sent that it keyed on: `answer_text`, `answer_sent_at`, `answer_from`):
+
+```bash
+ssh root@187.77.19.152 'cd /root/story-group-gtm/backend && curl -s -H "x-cross-channel-key: $(grep ^CROSS_CHANNEL_KEY= .env | cut -d= -f2-)" "localhost:3001/api/subseq-enroll/log?limit=50&outcome=enrolled"'
+```
+
+Drop `&outcome=enrolled` to see everything (skips, no action, shadow rows), or use `outcome=would_enroll`, `outcome=skipped`, `outcome=failed`.
 
 - `GET /api/subseq-enroll/status`: mode, live method, and how many decisions are pending, logged, skipped.
 - `GET /api/subseq-enroll/log?limit=50`: newest rows (needs the `x-cross-channel-key` header, same key as the cross-channel routes).
-- `node scripts/test-subseq-enroll.js`: 84 checks against a fake Firestore and a fake Instantly. Run it after any change to these files.
+- `node scripts/test-subseq-enroll.js`: 88 checks against a fake Firestore and a fake Instantly. Run it after any change to these files.
 
 ## Go live
 
