@@ -8,6 +8,7 @@ const { syncReply: syncCoterie } = require('../services/coteriehq');
 const { notifyNewReply } = require('../services/slack');
 const { getAvailableSlots } = require('../services/calendar');
 const { onEmailReply } = require('../services/crossChannel');
+const { offerEmailReply } = require('../services/replyApprovals');
 
 const router = Router();
 
@@ -67,6 +68,13 @@ router.post('/', async (req, res) => {
       campaign_id,
       email_uuid: email_uuid || null,
       eaccount: eaccount || null,
+      reply_subject: raw.reply_subject || '',
+      first_name: first_name || raw.firstName || lead?.first_name || '',
+      full_name: [first_name || raw.firstName || lead?.first_name, last_name || raw.lastName || lead?.last_name].filter(Boolean).join(' '),
+      company_name: company_name || raw.companyName || lead?.company_name || '',
+      campaign_name: raw.campaign_name || '',
+      unibox_url: raw.unibox_url || '',
+      message_date: raw.timestamp || new Date().toISOString(),
       source: 'instantly',
       ...classification,
       handled: false,
@@ -116,6 +124,17 @@ router.post('/', async (req, res) => {
       })).catch(e => console.warn('[reply] Cross-channel stop failed:', e.message));
     } catch (e) {
       console.warn('[reply] Cross-channel stop failed:', e.message);
+    }
+
+    // Reply Bot card (Send / Edit / Skip on Vincent's phone), any sending inbox.
+    // Not awaited past a failure: a card problem never fails the webhook.
+    try {
+      const { db } = require('../services/db');
+      const ref = db.collection('replies').doc(replyId);
+      Promise.resolve(offerEmailReply({ ref, reply: (await ref.get()).data() }))
+        .catch(e => console.warn('[reply] Reply Bot card failed:', e.message));
+    } catch (e) {
+      console.warn('[reply] Reply Bot card failed:', e.message);
     }
 
     // Sync to HubSpot

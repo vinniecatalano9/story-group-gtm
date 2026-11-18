@@ -13,6 +13,7 @@ const router = express.Router();
 const { verifyInitData, markCard, cleanDraft, isOn, snoozeReply } = require('../services/replyApprovals');
 const { fetchConversation, markSeen } = require('../services/autoReply');
 const { releaseHolds } = require('../services/calendar');
+const { replyToEmail } = require('../services/instantly');
 
 const LOCAL = () => `http://127.0.0.1:${process.env.PORT || 3001}`;
 
@@ -62,6 +63,14 @@ router.get('/:id', auth, async (req, res) => {
     // The whole thread, live from HeyReach, so Vincent can read it all here.
     const rdoc = await db.collection('replies').doc(a.reply_id).get().catch(() => null);
     const r = rdoc && rdoc.exists ? rdoc.data() : {};
+    if (a.channel === 'email') {
+      return res.json({
+        full_name: a.full_name, company_name: a.company_name, account_name: a.account_name,
+        their_text: a.their_text, draft: a.draft, kind: a.kind, status: a.status, enabled: isOn(),
+        headline: `Email to ${a.eaccount}${a.reply_subject ? ` · ${a.reply_subject}` : ''}`, profile_url: '', channel: 'email',
+        thread: [{ from: 'them', text: a.their_text, at: r.message_date || null }],
+      });
+    }
     const convo = await fetchConversation({ conversationId: a.conversation_id, name: a.full_name, accountId: a.heyreach_account_id });
     const thread = (convo && convo.messages || [])
       .filter(m => (m.body || '').trim())
@@ -94,6 +103,23 @@ router.post('/:id/send', express.json(), auth, async (req, res) => {
     });
   } catch (e) {
     return res.status(e.code || 500).json({ error: e.message });
+  }
+
+  if (a.channel === 'email') {
+    try {
+      const subj = String(a.reply_subject || '').trim();
+      const subject = /^re:/i.test(subj) ? subj : `Re: ${subj || 'your note'}`;
+      await replyToEmail(a.email_uuid, a.eaccount, text, subject);
+      await ref.update({ status: 'sent', sent_text: text, sent_at: new Date(), edited_before_send: text !== a.draft });
+      await db.collection('replies').doc(a.reply_id).update({ handled: true, handled_reason: 'sent_from_phone', handled_at: new Date() }).catch(() => {});
+      await markCard(a, `✅ Sent by email${text !== a.draft ? ' (edited)' : ''}`);
+      console.log(`[replyPhone] Emailed ${a.email} from ${a.eaccount} via phone`);
+      return res.json({ ok: true });
+    } catch (e) {
+      await ref.update({ status: 'pending', last_error: e.message }).catch(() => {});
+      console.error('[replyPhone] email send failed:', e.message);
+      return res.status(502).json({ error: `Not sent: ${e.message}` });
+    }
   }
 
   try {

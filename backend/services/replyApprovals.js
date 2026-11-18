@@ -82,17 +82,18 @@ function lastMessageLine(when) {
 }
 
 /** The card's text and its one button. */
-function buildCard({ id, reply, kind, draft, emailTo = '' }) {
+function buildCard({ id, reply, kind, draft, emailTo = '', channel = 'linkedin' }) {
   const isNo = kind === 'close_no';
-  const name = reply.full_name || 'Someone';
-  const account = reply.heyreach_account_name || 'LinkedIn';
+  const isEmail = channel === 'email';
+  const name = reply.full_name || (isEmail ? reply.email : '') || 'Someone';
+  const account = isEmail ? (reply.eaccount || 'our inbox') : (reply.heyreach_account_name || 'LinkedIn');
   const their = String(reply.reply_text || '').trim();
   const shown = their.length > 600 ? their.slice(0, 600) + '…' : their;
   const when = lastMessageLine(reply.message_date);
   const text = [
     ...(when ? [when] : []),
-    `💬 <b>${escapeHtml(name)}</b>${reply.company_name ? `, ${escapeHtml(reply.company_name)}` : ''}`,
-    `<i>to ${escapeHtml(account)} on LinkedIn${isNo ? ' · a no' : ''}</i>`,
+    `${isEmail ? '📧' : '💬'} <b>${escapeHtml(name)}</b>${reply.company_name ? `, ${escapeHtml(reply.company_name)}` : ''}`,
+    `<i>to ${escapeHtml(account)} ${isEmail ? 'by email (Instantly)' : 'on LinkedIn'}${isNo ? ' · a no' : ''}</i>`,
     '',
     `“${escapeHtml(shown)}”`,
     '',
@@ -237,6 +238,56 @@ async function offerReply({ ref, reply, shadow = null, force = false }) {
     return msg.message_id;
   } catch (e) {
     console.warn('[replyPhone] offer failed:', e.message);
+    return null;
+  }
+}
+
+// ── Instantly email replies ─────────────────────────────────────────────────
+//
+// Every Instantly reply (the webhook is workspace wide, so every sending
+// inbox) gets the same kind of card. Send goes back through Instantly on the
+// inbox that got the reply (routes/approve.js). Out of office, bounces and
+// flat no's get no card, same as LinkedIn.
+async function offerEmailReply({ ref, reply }) {
+  if (!isOn() || !reply) return null;
+  try {
+    const cls = String(reply.classification || '');
+    if (/^(ooo|out_of_office|bounce|not_interested|unsubscribe)$/i.test(cls)) return null;
+    if (!reply.email_uuid || !reply.eaccount) {
+      console.warn(`[replyPhone] Email reply ${ref.id} has no email id or inbox, so no card`);
+      return null;
+    }
+    const { db } = require('./db');
+    const existing = await db.collection('reply_approvals').doc(ref.id).get();
+    if (existing.exists) return null;
+    const draft = cleanDraft(reply.draft_response);
+    const { text, reply_markup } = buildCard({ id: ref.id, reply, kind: 'draft', draft, channel: 'email' });
+    const msg = await tg('sendMessage', { chat_id: CHAT_ID(), text, parse_mode: 'HTML', disable_web_page_preview: true, reply_markup });
+    const name = reply.full_name || reply.email;
+    await db.collection('reply_approvals').doc(ref.id).set({
+      reply_id: ref.id,
+      channel: 'email',
+      kind: 'draft',
+      draft,
+      their_text: String(reply.reply_text || '').trim().slice(0, 4000),
+      full_name: name,
+      company_name: reply.company_name || '',
+      account_name: reply.eaccount,
+      email: reply.email,
+      email_uuid: reply.email_uuid,
+      eaccount: reply.eaccount,
+      reply_subject: reply.reply_subject || '',
+      campaign_id: reply.campaign_id || null,
+      status: 'pending',
+      tg_message_id: msg.message_id,
+      tg_text: text,
+      created_at: new Date(),
+    });
+    noteForWorkBot(`Email reply from ${name} (to ${reply.eaccount}) went to Reply Bot with a draft and Send/Edit/Skip.`);
+    console.log(`[replyPhone] Email card sent for ${name}`);
+    return msg.message_id;
+  } catch (e) {
+    console.warn('[replyPhone] email offer failed:', e.message);
     return null;
   }
 }
@@ -390,4 +441,4 @@ async function reviveDue() {
   return n;
 }
 
-module.exports = { snoozeReply, reviveDue, parseReturnDate, offerReply, verifyInitData, markCard, cleanDraft, isOn, tg, buildCard, paidMisread };
+module.exports = { offerEmailReply, snoozeReply, reviveDue, parseReturnDate, offerReply, verifyInitData, markCard, cleanDraft, isOn, tg, buildCard, paidMisread };

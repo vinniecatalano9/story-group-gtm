@@ -269,8 +269,8 @@ async function replyToEmail(replyToUuid, eaccount, body, subject = 'Re:') {
     reply_to_uuid: replyToUuid,
     eaccount,
     subject,
-    body: { text: body },
-  });
+    body: { text: body, html: String(body).split(/\n{2,}/).map(par => `<p>${par.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}</p>`).join('') },
+  }, 1); // one try only: a retried send could email the prospect twice
 }
 
 // Get all lead labels (interest statuses) defined in Instantly
