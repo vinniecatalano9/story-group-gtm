@@ -1,6 +1,7 @@
 const API_BASE = 'https://api.instantly.ai/api/v2';
 const API_KEY = () => process.env.INSTANTLY_API_KEY;
 const mxProvider = require('../lib/mxProvider');
+const clearout = require('./clearout');
 
 const CAMPAIGN_MAP = {
   priority: () => process.env.INSTANTLY_CAMPAIGN_PRIORITY,
@@ -37,30 +38,85 @@ async function apiCall(method, path, body = null, retries = 3) {
   }
 }
 
+// How long a saved Clearout result on the lead doc stays good (same as the ad lead cadence).
+const CLEAROUT_RECHECK_DAYS = () => parseFloat(process.env.CLEAROUT_RECHECK_DAYS) || 30;
+const CLEAROUT_CONCURRENCY = () => parseInt(process.env.CLEAROUT_GATE_CONCURRENCY) || 3;
+
+function freshEmailCheck(lead) {
+  const c = lead && lead.email_check;
+  if (!c || !c.status || !c.at) return null;
+  const at = typeof c.at.toDate === 'function' ? c.at.toDate() : new Date(c.at);
+  if (isNaN(at) || Date.now() - at.getTime() > CLEAROUT_RECHECK_DAYS() * 86400000) return null;
+  return c;
+}
+
 /**
- * Cold email gate (Vincent, 2026-11-17): a lead goes into a cold email campaign only if its
- * email domain is hosted on Google or Microsoft. Everything else (Proofpoint, Mimecast,
- * Barracuda, Sophos, small hosts, no MX, failed lookup) is LinkedIn only.
+ * Cold email gate. A lead goes into a cold email campaign only if it passes both checks:
  *
- * Returns { allowed, blocked }. Every lead passed in gets email_provider, email_mx and
- * cold_email_blocked written to its Firestore doc. Fails closed: if the check itself breaks,
- * nothing is allowed through.
+ * 1. Mail provider (Vincent, 2026-11-17): the email domain is hosted on Google or Microsoft.
+ *    Everything else (Proofpoint, Mimecast, Barracuda, Sophos, small hosts, no MX, failed
+ *    lookup) is LinkedIn only.
+ * 2. Clearout (Vincent, 2026-10-22): the address is Clearout "valid". Invalid, catch-all,
+ *    unknown, or a Clearout failure (down, no key, out of credits) means no cold email.
+ *    Only leads that pass check 1 are sent to Clearout. A result saved on the lead doc
+ *    (email_check) in the last 30 days is reused.
+ *
+ * Returns { allowed, blocked, checked }. Every lead passed in gets email_provider, email_mx,
+ * cold_email_blocked and (when Clearout ran) email_check written to its Firestore doc.
+ * Fails closed: if a check breaks, the lead is not allowed through.
  */
 async function coldEmailGate(leads) {
-  const allowed = [];
-  const blocked = [];
+  const rows = leads.map(lead => ({ lead, ok: false, provider: '', mx: '', reason: '', reason_key: '' }));
+
+  // 1. Mail provider
   let checks = new Map();
   try {
     checks = await mxProvider.checkEmails(leads.map(l => l.email));
   } catch (e) {
     console.warn('[instantly] Mail provider check failed, blocking the whole batch:', e.message);
   }
-
-  for (const lead of leads) {
-    const key = String(lead.email || '').trim().toLowerCase();
+  for (const row of rows) {
+    const key = String(row.lead.email || '').trim().toLowerCase();
     const check = checks.get(key) || { provider: mxProvider.LOOKUP_FAILED, mx: '', ok: false };
-    (check.ok ? allowed : blocked).push({ lead, check });
+    row.provider = check.provider;
+    row.mx = check.mx || '';
+    row.ok = check.ok;
+    if (!check.ok) {
+      row.reason_key = check.provider;
+      row.reason = `Mail provider is ${check.provider}. Cold email goes to Google or Microsoft only. LinkedIn only.`;
+    }
   }
+
+  // 2. Clearout, only for leads that passed the provider check
+  const toVerify = rows.filter(r => r.ok);
+  let next = 0;
+  const worker = async () => {
+    while (next < toVerify.length) {
+      const row = toVerify[next++];
+      let check = freshEmailCheck(row.lead);
+      if (!check) {
+        try {
+          check = await clearout.verifyEmail(String(row.lead.email).trim().toLowerCase(), 'cold_email_gate');
+          row.email_check = check;
+        } catch (e) {
+          row.ok = false;
+          row.email_check_error = e.message;
+          row.reason_key = 'Clearout check failed';
+          row.reason = `Clearout check failed (${e.message}). No cold email until the address is verified.`;
+          console.warn(`[instantly] Clearout failed for ${row.lead.email}:`, e.message);
+          continue;
+        }
+      }
+      if (check.status !== 'valid') {
+        row.ok = false;
+        row.reason_key = `Clearout ${check.status}`;
+        row.reason = `Clearout says ${check.status}${check.desc ? ` (${check.desc})` : ''}. Cold email goes to valid addresses only.`;
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(CLEAROUT_CONCURRENCY(), toVerify.length) }, worker));
+
+  const blocked = rows.filter(r => !r.ok);
 
   // Mark the Firestore lead docs. A failed write warns and does not change the decision.
   let updateLead = null;
@@ -68,43 +124,51 @@ async function coldEmailGate(leads) {
   try {
     ({ updateLead, addLog } = require('./db'));
   } catch (e) {
-    console.warn('[instantly] Could not load db to mark the mail provider:', e.message);
+    console.warn('[instantly] Could not load db to mark the cold email gate result:', e.message);
   }
   if (updateLead) {
-    for (const { lead, check } of [...allowed, ...blocked]) {
-      const id = lead.id || lead.lead_id;
+    for (const row of rows) {
+      const id = row.lead.id || row.lead.lead_id;
       if (!id) continue;
-      const data = { email_provider: check.provider, email_mx: check.mx || '', cold_email_blocked: !check.ok };
-      if (!check.ok) {
-        data.cold_email_blocked_reason = `Mail provider is ${check.provider}. Cold email goes to Google or Microsoft only. LinkedIn only.`;
+      const data = { email_provider: row.provider, email_mx: row.mx, cold_email_blocked: !row.ok };
+      if (row.email_check) {
+        data.email_check = row.email_check;
+        data.email_check_error = null;
+      }
+      if (row.email_check_error) data.email_check_error = row.email_check_error;
+      if (!row.ok) {
+        data.cold_email_blocked_reason = row.reason;
         data.cold_email_blocked_at = new Date().toISOString();
       }
       try {
         await updateLead(id, data);
       } catch (e) {
-        console.warn(`[instantly] Could not mark mail provider on lead ${id}:`, e.message);
+        console.warn(`[instantly] Could not mark the cold email gate result on lead ${id}:`, e.message);
       }
     }
   }
 
+  const summary = r => ({
+    lead_id: r.lead.id || r.lead.lead_id || null,
+    email: r.lead.email || '',
+    email_provider: r.provider,
+    email_mx: r.mx,
+    clearout_status: (r.email_check || freshEmailCheck(r.lead) || {}).status || null,
+    cold_email_blocked: !r.ok,
+    reason: r.reason,
+  });
+
   if (blocked.length) {
-    const byProvider = {};
-    for (const { check } of blocked) byProvider[check.provider] = (byProvider[check.provider] || 0) + 1;
-    console.warn(
-      `[instantly] Cold email gate blocked ${blocked.length} of ${leads.length} lead(s), not on Google or Microsoft: ${JSON.stringify(byProvider)}`
-    );
+    const byReason = {};
+    for (const r of blocked) byReason[r.reason_key] = (byReason[r.reason_key] || 0) + 1;
+    console.warn(`[instantly] Cold email gate blocked ${blocked.length} of ${leads.length} lead(s): ${JSON.stringify(byReason)}`);
     if (addLog) {
       try {
         await addLog('cold_email_blocked', {
           count: blocked.length,
           checked: leads.length,
-          by_provider: byProvider,
-          leads: blocked.map(({ lead, check }) => ({
-            lead_id: lead.id || lead.lead_id || null,
-            email: lead.email || '',
-            email_provider: check.provider,
-            email_mx: check.mx || '',
-          })),
+          by_reason: byReason,
+          leads: blocked.map(summary),
         });
       } catch (e) {
         console.warn('[instantly] Could not log blocked leads:', e.message);
@@ -112,22 +176,29 @@ async function coldEmailGate(leads) {
     }
   }
 
-  return { allowed: allowed.map(x => x.lead), blocked };
+  return {
+    allowed: rows.filter(r => r.ok).map(r => r.lead),
+    blocked: blocked.map(summary),
+    checked: rows.map(summary),
+  };
 }
 
 /**
  * Add leads to a tier's cold email campaign. Every lead goes through coldEmailGate first.
  * Returns the upload results, or null when nothing was uploaded (no campaign for the tier,
- * or every lead was blocked by the gate).
+ * or every lead was blocked by the gate). Pass an object as `report` to get the gate's
+ * { blocked, checked } lists back.
  */
-async function addLeadsToCampaign(tier, leads) {
+async function addLeadsToCampaign(tier, leads, report = null) {
   const campaignId = CAMPAIGN_MAP[tier]?.();
   if (!campaignId || campaignId === 'CAMPAIGN_ID_HERE') {
     console.warn(`[instantly] No campaign ID for tier: ${tier}, skipping upload`);
     return null;
   }
 
-  ({ allowed: leads } = await coldEmailGate(leads || []));
+  const gate = await coldEmailGate(leads || []);
+  if (report) Object.assign(report, { blocked: gate.blocked, checked: gate.checked });
+  leads = gate.allowed;
   if (!leads.length) return null;
 
   // Batch in groups of 100

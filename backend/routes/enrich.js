@@ -5,7 +5,6 @@ const { getLeadsByStatus, updateLead, addLog } = require('../services/db');
 const { generateEmailPatterns } = require('../lib/email-patterns');
 const { scoreLead } = require('../lib/scoring');
 const instantly = require('../services/instantly');
-const mxProvider = require('../lib/mxProvider');
 const hubspot = require('../services/hubspot');
 const coteriehq = require('../services/coteriehq');
 const slack = require('../services/slack');
@@ -254,21 +253,25 @@ router.post('/', async (req, res) => {
         await updateLead(lead.id, enrichedData);
 
         // Push to Instantly (only if campaign IDs are configured).
-        // addLeadsToCampaign runs the cold email gate: only Google or Microsoft hosted
-        // addresses are uploaded. A blocked lead stays 'scored' and is LinkedIn only.
+        // addLeadsToCampaign runs the cold email gate: only Clearout-valid addresses hosted
+        // on Google or Microsoft are uploaded. A blocked lead stays 'scored'.
         let coldEmailBlocked = false;
+        let coldEmailBlockedReason = '';
         let emailProvider = '';
         if (tier !== 'manual_review') {
           try {
-            const instantlyResult = await instantly.addLeadsToCampaign(tier, [{ ...lead, ...enrichedData }]);
+            const gate = {};
+            const instantlyResult = await instantly.addLeadsToCampaign(tier, [{ ...lead, ...enrichedData }], gate);
             if (instantlyResult) {
               await updateLead(lead.id, { status: 'emailed' });
               enrichedData.status = 'emailed';
             }
-            // Cached by the gate, so this is not a second DNS lookup.
-            const check = await mxProvider.checkEmail(enrichedData.email);
-            emailProvider = check.provider;
-            coldEmailBlocked = !check.ok;
+            const checked = (gate.checked || [])[0];
+            if (checked) {
+              emailProvider = checked.email_provider;
+              coldEmailBlocked = checked.cold_email_blocked;
+              coldEmailBlockedReason = checked.reason;
+            }
           } catch (e) {
             console.warn(`[enrich] Instantly upload failed for ${lead.email}:`, e.message);
           }
@@ -303,9 +306,10 @@ router.post('/', async (req, res) => {
           tier,
           email_provider: emailProvider,
           cold_email_blocked: coldEmailBlocked,
+          cold_email_blocked_reason: coldEmailBlockedReason,
         });
 
-        console.log(`[enrich] ${lead.email || lead.first_name}: ${signals.intent_signal_type} (${score}pts → ${tier})${coldEmailBlocked ? ` [cold email blocked: ${emailProvider}]` : ''}`);
+        console.log(`[enrich] ${lead.email || lead.first_name}: ${signals.intent_signal_type} (${score}pts → ${tier})${coldEmailBlocked ? ` [cold email blocked: ${coldEmailBlockedReason}]` : ''}`);
       } catch (e) {
         console.error(`[enrich] Failed to process lead ${lead.id}:`, e.message);
         await updateLead(lead.id, { status: 'enrichment_failed', error: e.message });
@@ -314,7 +318,7 @@ router.post('/', async (req, res) => {
 
     const coldEmailBlockedCount = results.filter(r => r.cold_email_blocked).length;
     if (coldEmailBlockedCount) {
-      console.warn(`[enrich] ${coldEmailBlockedCount} of ${results.length} lead(s) kept out of cold email (not on Google or Microsoft)`);
+      console.warn(`[enrich] ${coldEmailBlockedCount} of ${results.length} lead(s) kept out of cold email (mail provider or Clearout)`);
     }
 
     await addLog('enrichment', { processed: results.length, cold_email_blocked: coldEmailBlockedCount, results });

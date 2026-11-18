@@ -1,12 +1,13 @@
 /**
  * Test for the cold email mail provider gate. Safe to run anywhere:
- * Firestore and the Instantly API are both stubbed, so nothing is written or uploaded.
+ * Firestore, Clearout and the Instantly API are all stubbed, so nothing is written or uploaded.
  *
  *   node scripts/test-mx-provider.js
  *
  * Part 1: the rule table on fixed MX hostnames (no network).
  * Part 2: live MX lookups on real domains.
  * Part 3: the gate inside addLeadsToCampaign, with a fake fetch that records what would be uploaded.
+ * Part 4: the Clearout half of the gate, with Clearout stubbed (no real checks are spent).
  */
 const path = require('path');
 const mx = require('../lib/mxProvider');
@@ -65,6 +66,21 @@ async function main() {
       addLog: async (type, data) => { logs.push({ type, ...data }); },
     },
   };
+  // Clearout stub: canned answers by address, and a count of calls made.
+  const clearoutCalls = [];
+  const canned = { 'e@storygroup.io': 'invalid', 'f@storygroup.io': 'catch_all', 'g@storygroup.io': 'ERROR' };
+  const clearoutPath = require.resolve(path.join(__dirname, '..', 'services', 'clearout.js'));
+  require.cache[clearoutPath] = {
+    id: clearoutPath, filename: clearoutPath, loaded: true,
+    exports: {
+      verifyEmail: async (email, source) => {
+        clearoutCalls.push(`${email}|${source}`);
+        const status = canned[email] || 'valid';
+        if (status === 'ERROR') throw new Error('Clearout 402: out of credits');
+        return { status, sub_status: null, desc: '', safe_to_send: status === 'valid' ? 'yes' : 'no', at: new Date() };
+      },
+    },
+  };
   const uploaded = [];
   global.fetch = async (url, opts) => {
     const body = JSON.parse(opts.body || '{}');
@@ -90,6 +106,31 @@ async function main() {
   check('L4 cold_email_blocked', marks.L4.cold_email_blocked, true);
   check('L4 email_provider', marks.L4.email_provider, mx.NO_MX);
   check('blocked count logged', logs[0] && logs[0].count, 2);
+  check('Clearout ran only on leads that passed the provider check', clearoutCalls.join(','), 'a@storygroup.io|cold_email_gate,b@microsoft.com|cold_email_gate');
+  check('L1 email_check saved', marks.L1.email_check && marks.L1.email_check.status, 'valid');
+
+  console.log('\n4. Clearout part of the gate (stubbed)');
+  uploaded.length = 0;
+  clearoutCalls.length = 0;
+  const report = {};
+  await instantly.addLeadsToCampaign('standard', [
+    { id: 'L5', email: 'e@storygroup.io' }, // Clearout invalid
+    { id: 'L6', email: 'f@storygroup.io' }, // Clearout catch_all
+    { id: 'L7', email: 'g@storygroup.io' }, // Clearout down or out of credits
+    { id: 'L8', email: 'h@storygroup.io', email_check: { status: 'valid', at: new Date(Date.now() - 5 * 86400000) } }, // fresh saved check
+    { id: 'L9', email: 'i@storygroup.io', email_check: { status: 'valid', at: new Date(Date.now() - 60 * 86400000) } }, // stale saved check
+    { id: 'L10', email: 'j@storygroup.io', email_check: { status: 'invalid', at: new Date() } }, // fresh saved invalid
+  ], report);
+  check('only Clearout-valid leads uploaded', uploaded.join(','), 'h@storygroup.io,i@storygroup.io');
+  check('L5 blocked (invalid)', marks.L5.cold_email_blocked, true);
+  check('L6 blocked (catch_all)', marks.L6.cold_email_blocked, true);
+  check('L7 blocked (Clearout failed)', marks.L7.cold_email_blocked, true);
+  check('L7 error saved', marks.L7.email_check_error, 'Clearout 402: out of credits');
+  check('L8 fresh saved check reused, no Clearout call', clearoutCalls.some(c => c.startsWith('h@')), false);
+  check('L9 stale saved check re-verified', clearoutCalls.some(c => c.startsWith('i@')), true);
+  check('L10 saved invalid blocks without a call', marks.L10.cold_email_blocked && !clearoutCalls.some(c => c.startsWith('j@')), true);
+  check('report lists the blocked leads', report.blocked.map(b => b.lead_id).join(','), 'L5,L6,L7,L10');
+  check('by_reason logged', JSON.stringify(logs[logs.length - 1].by_reason), '{"Clearout invalid":2,"Clearout catch_all":1,"Clearout check failed":1}');
 
   uploaded.length = 0;
   const none = await instantly.addLeadsToCampaign('standard', [leads[2], leads[3]]);

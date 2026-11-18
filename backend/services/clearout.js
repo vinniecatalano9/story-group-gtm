@@ -44,8 +44,9 @@ async function checkUsageAlert() {
  * Verify one address. Returns { status, sub_status, desc, safe_to_send, at }
  * where status is valid | invalid | catch_all | unknown | ... (Clearout's).
  * Throws on an API failure or no credits (err.credits = true), never guesses.
+ * `source` labels the call in the daily usage count (cadence, cold_email_gate).
  */
-async function verifyEmail(email) {
+async function verifyEmail(email, source = 'cadence') {
   if (!isConfigured()) throw new Error('CLEAROUT_API_KEY is not set on the server');
   const res = await fetch(`${BASE}/email_verify/instant`, {
     method: 'POST',
@@ -60,7 +61,7 @@ async function verifyEmail(email) {
     err.credits = res.status === 402 || /credit/i.test(err.message);
     throw err;
   }
-  await recordUsage(1, 'cadence');
+  await recordUsage(1, source);
   const d = body.data;
   return {
     status: String(d.status || 'unknown').toLowerCase(),
