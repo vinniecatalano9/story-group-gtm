@@ -11,7 +11,7 @@ Code: `backend/services/crossChannel.js`, `backend/routes/crosschannel.js`, hook
 
 | Variable | Values | Now |
 | --- | --- | --- |
-| `CROSS_CHANNEL_STOP` | `off` (default), `shadow` (logs what it would stop, changes nothing), `live` | `shadow` |
+| `CROSS_CHANNEL_STOP` | `off` (default), `shadow` (logs what it would stop, changes nothing), `live` | `live` since 2026-11-17 night, on Vincent's yes |
 | `CROSS_CHANNEL_PAIRS` | `instantlyCampaignId:heyreachCampaignId`, comma separated. Nothing outside a listed pair is ever touched. | the three video email campaigns (A, B1, B2), each paired with HeyReach 741119 |
 | `CROSS_CHANNEL_ACCEPT` | `off` (default), `on`. Only records "connection accepted" on the link. Sends nothing. | `off` |
 | `CROSS_CHANNEL_KEY` | Shared key the write routes need in the `x-cross-channel-key` header. | set |
@@ -25,7 +25,13 @@ Only on Vincent's yes. On the VPS:
 ssh root@187.77.19.152 "cd /root/story-group-gtm/backend && sed -i 's/^CROSS_CHANNEL_STOP=.*/CROSS_CHANNEL_STOP=live/' .env && pm2 restart gtm-engine"
 ```
 
-Back to shadow: same command with `shadow`. Never `pm2 restart --update-env`.
+Back to shadow (the off switch if anything looks wrong):
+
+```bash
+ssh root@187.77.19.152 "cd /root/story-group-gtm/backend && sed -i 's/^CROSS_CHANNEL_STOP=.*/CROSS_CHANNEL_STOP=shadow/' .env && pm2 restart gtm-engine"
+```
+
+Never `pm2 restart --update-env`.
 
 Before going live, test one real stop in each direction with a lead you own (see "Not yet proven" below).
 
