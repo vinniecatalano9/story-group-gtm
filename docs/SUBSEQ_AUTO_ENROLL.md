@@ -8,7 +8,7 @@ Code: `backend/lib/subseqPolicy.js` (the mapping), `backend/services/subseqEnrol
 
 | Variable | Values | Now |
 | --- | --- | --- |
-| `SUBSEQ_AUTO_ENROLL` | `off` (default), `shadow` (logs "would enroll", changes nothing), `live` | `shadow` since 2026-11-18 |
+| `SUBSEQ_AUTO_ENROLL` | `off` (default), `shadow` (logs "would enroll", changes nothing), `live` | `live` since 2026-11-18 about 10:48am Central (Vincent: "I'd rather just make it live and then us check on it later"). `.env` backup: `.env.bak-2026-11-18-presubseqlive` |
 | `SUBSEQ_ENROLL_METHOD` | `move` (default), `label`. Only read in live mode. | not set (`move`) |
 | `SUBSEQ_PENDING_DAYS` | Days to wait for our answer before giving up. | not set (7) |
 | `SUBSEQ_CHECKS_PER_RUN` | Leads checked per 5 minute run. Instantly's email list allows 20 calls a minute. | not set (6) |
@@ -94,5 +94,5 @@ One try per enroll, never retried. A failed call is logged with `manual_check` a
 - **Sent-answer detection: proven on real threads, read only, 2026-11-18.** A reply in video campaign A arrived at 14:54 UTC, the answer went out from the phone card at 15:07, and `GET /emails?lead=` showed both in the same `thread_id`: the reply as `ue_type` 2 with the same id as the webhook's `email_id`, the answer as `ue_type` 3. Answers typed in the Instantly inbox back in July show up as `ue_type` 3 with a thread id too.
 - **Instantly's `email_sent` webhook is not used.** It exists (`GET /webhooks/event-types`), but only `reply_received` is registered, and whether it fires for a hand-typed inbox reply could not be checked without registering a new webhook. The email list is the source of truth instead.
 - **Subsequence lookup by name: proven, read only.** Campaign A returns both subsequences with their trigger labels.
-- **Neither enroll call has run against Instantly.** The test covers the request shape only. Before going live: a scratch draft campaign with a scratch subsequence and one fake lead, run the move call on it, confirm the lead lands in the subsequence, then delete the scratch campaign. That test needs Vincent's yes.
+- **The move call: proven 2026-11-18** on a scratch draft campaign with a scratch subsequence and a fake lead. `POST /leads/subsequence/move` with `{ id, subsequence_id }` set the lead's `subsequence_id`, kept it in its campaign, and left the label alone. `POST /leads/subsequence/remove` with `{ id }` cleared it. Scratch campaign, subsequence and lead were deleted after. The label method has still never run.
 - **Not known yet:** whether Instantly drops a lead out of a subsequence when they reply again. If it does not, a lead who answers a follow-up keeps getting the rest of them until someone removes them (`POST /leads/subsequence/remove`). Check it in the same scratch test.
