@@ -16,7 +16,7 @@ const DISCOVERY_TITLES = /discovery|intro|solutions call|strategy call|story ?gr
 const MCKENNA = (process.env.MCKENNA_EMAILS || 'mmoonan@storygroup.io,mckenna@storygroup.io').split(',').map(s => s.trim().toLowerCase());
 const RECIPIENTS = () => (process.env.BRIEF_RECIPIENTS || 'vincent@storygroup.io,mmoonan@storygroup.io').split(',').map(s => s.trim());
 // Where the call scorecard lives. Each brief links there with the booking + research pre-filled.
-const SCORECARD_URL = () => process.env.SCORECARD_URL || 'https://story-group-gtm.web.app/call-scorecard/';
+const SCORECARD_URL = () => process.env.SCORECARD_URL || 'https://story-group-gtm.web.app/strategy-scorecard/';
 
 // Which calls have already been briefed today, by calendar event id.
 //
