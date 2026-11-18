@@ -9,6 +9,7 @@ const { notifyNewReply } = require('../services/slack');
 const { getAvailableSlots } = require('../services/calendar');
 const { onEmailReply } = require('../services/crossChannel');
 const { offerEmailReply } = require('../services/replyApprovals');
+const { notePending } = require('../services/subseqEnroll');
 
 const router = Router();
 
@@ -124,6 +125,26 @@ router.post('/', async (req, res) => {
       })).catch(e => console.warn('[reply] Cross-channel stop failed:', e.message));
     } catch (e) {
       console.warn('[reply] Cross-channel stop failed:', e.message);
+    }
+
+    // Reply follow-up auto-enroll: save which Instantly subsequence this lead
+    // belongs in. Nothing is enrolled here. A cron acts only after it sees OUR
+    // answer go out in the thread. Off unless SUBSEQ_AUTO_ENROLL is shadow or
+    // live, and not awaited: it can never fail or slow this webhook.
+    try {
+      Promise.resolve(notePending({
+        email,
+        classification: cls,
+        classifierFailed: classification.failed === true,
+        classifierSubsequence: classification.subsequence,
+        campaignId: campaign_id,
+        campaignName: raw.campaign_name || '',
+        replyId,
+        emailUuid: email_uuid,
+        replyAt: raw.timestamp,
+      })).catch(e => console.warn('[reply] Subsequence auto-enroll failed:', e.message));
+    } catch (e) {
+      console.warn('[reply] Subsequence auto-enroll failed:', e.message);
     }
 
     // Reply Bot card (Send / Edit / Skip on Vincent's phone), any sending inbox.

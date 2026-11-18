@@ -35,6 +35,7 @@ app.use('/api/approve', require('./routes/approve'));
 app.use('/api/cadence', require('./routes/cadence'));
 app.use('/api/scorecard', require('./routes/scorecard'));
 app.use('/api/crosschannel', require('./routes/crosschannel')); // LinkedIn reply stops email and the reverse; off unless CROSS_CHANNEL_STOP is set
+app.use('/api/subseq-enroll', require('./routes/subseqEnroll')); // reply follow-up auto-enroll; off unless SUBSEQ_AUTO_ENROLL is set
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -919,6 +920,19 @@ cron.schedule('*/10 * * * *', async () => {
     console.error('[cron] cadence error:', e.message);
   }
 }, { timezone: 'America/Chicago', recoverMissedExecutions: true });
+
+// Reply follow-up auto-enroll: every 5 min, look for our sent answer to each
+// replied lead and decide its Instantly subsequence. Does nothing unless
+// SUBSEQ_AUTO_ENROLL is shadow or live (services/subseqEnroll.js).
+cron.schedule('2-59/5 * * * *', async () => {
+  try {
+    const { checkPending } = require('./services/subseqEnroll');
+    const r = await checkPending();
+    if (r.checked) console.log('[cron] subseq auto-enroll:', JSON.stringify({ mode: r.mode, results: r.results.map(x => `${x.email}:${x.outcome}`) }));
+  } catch (e) {
+    console.error('[cron] subseq auto-enroll error:', e.message);
+  }
+}, { timezone: 'America/Chicago' });
 
 // Ad lead cadence dispatcher: every minute, approved cards only, so Email 1's
 // random 8 to 13 minute gaps land on time.

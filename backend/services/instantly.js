@@ -384,7 +384,45 @@ async function moveLeadToList(leadId, campaignId, listId) {
   return apiCall('POST', '/leads/move', { ids: [leadId], campaign: campaignId, to_list_id: listId, limit: 1 });
 }
 
+// ----- Reply follow-up auto-enroll helpers (services/subseqEnroll.js) -----
+// Checked against the API v2 spec on 2026-11-18. The older addLeadToSubsequence
+// and updateLeadInterestStatus above use paths that are not in the spec.
+
+// Read only. The emails Instantly holds for one lead, newest first. This
+// endpoint is limited to 20 requests a minute, so one try and no retry loop.
+// ue_type: 1 campaign email, 2 received, 3 sent by a person or the API, 4 scheduled.
+async function listLeadEmails(leadEmail, limit = 50) {
+  if (!leadEmail) return [];
+  const res = await apiCall('GET', `/emails?lead=${encodeURIComponent(leadEmail)}&limit=${limit}&sort_order=desc`, null, 1);
+  return res?.items || [];
+}
+
+// Read only. Every subsequence on one campaign. Throws on failure (unlike
+// getSubsequences), so "the lookup failed" is never mistaken for "it has none".
+async function listSubsequences(campaignId) {
+  if (!campaignId) throw new Error('listSubsequences needs a campaign id');
+  const res = await apiCall('GET', `/subsequences?parent_campaign=${encodeURIComponent(campaignId)}&limit=100`);
+  return res?.items || [];
+}
+
+// Puts ONE lead (by its Instantly lead id) into one subsequence. One try only:
+// a retried enroll could start the follow-ups twice.
+async function moveLeadToSubsequence(leadId, subsequenceId) {
+  if (!leadId || !subsequenceId) throw new Error('moveLeadToSubsequence needs a lead id and a subsequence id');
+  return apiCall('POST', '/leads/subsequence/move', { id: leadId, subsequence_id: subsequenceId }, 1);
+}
+
+// Sets ONE lead's label (interest status) inside one campaign. A subsequence
+// triggered by that label then starts on Instantly's side. One try only.
+async function setLeadInterestStatus(leadEmail, interestValue, campaignId) {
+  if (!leadEmail || !campaignId || typeof interestValue !== 'number') {
+    throw new Error('setLeadInterestStatus needs a lead email, a numeric label value and a campaign id');
+  }
+  return apiCall('POST', '/leads/update-interest-status', { lead_email: leadEmail, interest_value: interestValue, campaign_id: campaignId }, 1);
+}
+
 module.exports = {
+  listLeadEmails, listSubsequences, moveLeadToSubsequence, setLeadInterestStatus,
   findLeadInCampaign, findOrCreateLeadList, moveLeadToList,
   addLeadsToCampaign, coldEmailGate, removeLeads, getESGFlaggedLeads,
   getCampaigns, getCampaignLeads, getCampaignAnalytics,
