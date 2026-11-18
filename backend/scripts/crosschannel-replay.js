@@ -96,6 +96,7 @@ class FakeQuery {
   constructor(col, filters, lim) { this.col = col; this.filters = filters; this.lim = lim; }
   where(f, op, v) { return new FakeQuery(this.col, [...this.filters, [f, op, v]], this.lim); }
   orderBy() { return this; }
+  select() { return this; }
   limit(n) { return new FakeQuery(this.col, this.filters, n); }
   _run() {
     let out = [...this.col.docs.entries()].filter(([, d]) => this.filters.every(([f, , v]) => d[f] === v));
