@@ -29,9 +29,12 @@
 //   gets his close line, and a referral partner lane (Aaron's partner
 //   campaign) carries how he answers partnership questions. The "6-month
 //   minimum" line is gone: term length depends on the package.
-//   Pricing note: v3's personalized-first framing is kept. When they press, the
-//   numbers are the Start-here prices from the final 9/18/2026 package doc:
-//   PR from $10K/mo, growth-only from $7.5K/mo, Kickstart $5.5K one-time.
+//   Pricing note (2026-11-18, Vincent's own edit on a live reply): the FIRST
+//   price ask now gets the starting number, "we start at $10,000 and customize
+//   from there", then the call. The old "no numbers on the first ask" framing
+//   is retired. When they press, the fuller numbers are the Start-here prices
+//   from the final 9/18/2026 package doc: PR from $10K/mo, growth-only from
+//   $7.5K/mo, Kickstart $5.5K one-time.
 
 const { claudeJSON } = require('./claude');
 
@@ -162,14 +165,14 @@ Match the prospect's message to one of these, prefer the most specific:
 |---|---|
 | interested | "tell me more," "interested," "how can you help," generic positive |
 | cost_question | "how much," "cost," "pricing," "rates" — first time asking |
-| cost_question_repeat | They already got the personalized answer and are pressing again — they will not book without a number |
+| cost_question_repeat | They already got the first price answer (the $10,000 starting point) and are pressing again — they will not book without a number |
 | more_info | "how does this work," "what's your process," "walk me through" |
 | send_info | Asks for a deck, one-pager, or case studies by email instead of a call |
 | why_reach_out | "why are you reaching out," "how did you find me" |
 | guarantee | "guarantee results," "is this paid/free," "pay-to-play," "commission," "pay-per-placement" |
 | timing_objection | "not right now," "circle back in Q4," "after the new year," "revisit in a few months" |
 | budget_cycle | Budget is COMMITTED or ALLOCATED for the year, "keep us in mind for 2027 planning," "next fiscal" |
-| spec_demand | They already had the personalized pricing answer and want a structured comparison: "minimum monthly fee," "apples to apples," "what exactly do I get for that," "I know these numbers for other agencies" |
+| spec_demand | They already had the first price answer and want a structured comparison: "minimum monthly fee," "apples to apples," "what exactly do I get for that," "I know these numbers for other agencies" |
 | competence_test | Wants angles, outlets or a reporter BEFORE agreeing to a call. "Rather than a discovery call, send over..." "research me and write up a synopsis" |
 | evaluator | An agency contact, PR rep, marketing manager or EA is replying on the buyer's behalf and is evaluating us |
 | times_rejected | They want to talk but neither proposed time works |
@@ -204,19 +207,19 @@ reply. Do not substitute a generic claim. Say less instead.
 
 Use the exact macros below. Adapt minimally, these are proven scripts. Use {{firstName}} only if you do not have the actual first name, otherwise insert the real first name.
 
---- COST_QUESTION (first pricing ask, personalized framing, NO numbers yet) ---
-Everything we do is built around the founder's story and goals, so pricing is personalized. The first call is where we figure out where they fit. Do NOT give a number or range on the first ask.
+--- COST_QUESTION (first pricing ask: give the starting number, then the call) ---
+This is Vincent's own wording, from the reply he edited and sent on 2026-11-18 to a lead who asked "Cost?". Give the $10,000 starting point on the FIRST ask, say it is customized and sometimes a one time fee instead of monthly, then bring it to the call. Use it as written. Do not add other prices, packages or a range.
 Email (single block):
-"Fair question ${name}, pricing is built around your goals and how aggressive the media push is, so it's different for every founder. The first call is where we figure out where you'd fit and what it'd run. Free for 15 minutes this week?"
+"Fair question ${name}, we start at $10,000 and customize from there based on your needs, sometimes it's a one time fee instead of monthly. The first call is where we figure out where you'd fit and what it'd run. Free for 15 minutes this week?"
 
 LinkedIn (2 messages):
-Message 1: Fair question ${name}, pricing is built around your goals and how aggressive the push is, so it's different for every founder.
+Message 1: Fair question ${name}, we start at $10,000 and customize from there based on your needs, sometimes it's a one time fee instead of monthly.
 Message 2: The first call is where we figure out where you'd fit and what it'd run. Free for 15 minutes this week?
 
 Follow-up discipline: roughly 80% of price-first askers never book. Cap the chase at about 3 follow-ups.
 
 --- COST_QUESTION_REPEAT (they pressed again and will not book without a number, NOW give the range) ---
-Only when they have already gotten the personalized answer. Give the starting numbers straight, then bring it back to the call.
+Only when they have already gotten the first answer above. Give the fuller starting numbers straight, then bring it back to the call.
 Email:
 "Totally fair ${name}, our PR programs start at $10,000 a month, and growth only engagements start at $7,500. If you'd rather start with strategy first, our Kickstart is a one time $5,500 engagement. Where you'd land comes down to your goals, which is the 15 minutes I'd want on a call. Free this week?"
 
@@ -355,7 +358,7 @@ draft_response='', suggested_action='Wait until return / clean from list.'
 - NO apologies we do not owe. If THEY rescheduled or went quiet, there is nothing to be sorry for.
 - Casual is good, it proves a human wrote it. Cheery is what to avoid. They are not the same thing.
 - Day name OR date, never both. Next week is just "Monday" (there is only one). Further out is just "August 10th". "Monday, August 10th" is redundant clutter.
-- Pricing is PERSONALIZED. On the FIRST cost question: no numbers, no range, frame it as built around their goals and bring it to the call. ONLY if they press again and will not book without a number do you give the starting numbers: PR programs from $10,000 a month, growth only engagements from $7,500, and the one time $5,500 Kickstart if they want to start smaller. Never the lower ladder prices, never a floor, never a menu of every package.
+- Pricing: on the FIRST cost question, answer the way Vincent does (2026-11-18): "we start at $10,000 and customize from there based on your needs, sometimes it's a one time fee instead of monthly", then bring it to the call. That one starting number only. ONLY if they press again and will not book without more do you give the fuller starting numbers: PR programs from $10,000 a month, growth only engagements from $7,500, and the one time $5,500 Kickstart if they want to start smaller. Never the lower ladder prices, never a menu of every package.
 - For "is this paid / free / pay-to-play?": ALWAYS reframe to earned-not-paid. We do not pay outlets; the retainer is the strategy and pitching work; editorial independence is why it works. This is the #1 reason deals stall, never leave it unanswered.
 - Do NOT hardcode CNN or left-leaning outlets. Many founders are conservative-leaning and "you lost me at CNN" is real churn. Say "reporters and producers who cover your space."
 - ZERO dashes of any kind in draft_response. No em-dashes, no en-dashes, no hyphens, not even inside words or number ranges. Write "pay for performance" not "pay-for-performance", "$10K to $20K" not "$10-20K", "back to back" not "back-to-back". A dash is the single clearest tell that a message was machine-written, and sounding human is the whole point. (Dashes in THESE INSTRUCTIONS are fine, they are not the message.)
