@@ -12,7 +12,7 @@ Code: `backend/services/crossChannel.js`, `backend/routes/crosschannel.js`, hook
 | Variable | Values | Now |
 | --- | --- | --- |
 | `CROSS_CHANNEL_STOP` | `off` (default), `shadow` (logs what it would stop, changes nothing), `live` | `shadow` |
-| `CROSS_CHANNEL_PAIRS` | `instantlyCampaignId:heyreachCampaignId`, comma separated. Nothing outside a listed pair is ever touched. | the video test pair |
+| `CROSS_CHANNEL_PAIRS` | `instantlyCampaignId:heyreachCampaignId`, comma separated. Nothing outside a listed pair is ever touched. | the three video email campaigns (A, B1, B2), each paired with HeyReach 741119 |
 | `CROSS_CHANNEL_ACCEPT` | `off` (default), `on`. Only records "connection accepted" on the link. Sends nothing. | `off` |
 | `CROSS_CHANNEL_KEY` | Shared key the write routes need in the `x-cross-channel-key` header. | set |
 | `CROSS_CHANNEL_HOLD_LIST_ID` | Optional Instantly lead list for stopped leads. Empty means live mode finds or makes "Cross-channel stop \| replied on LinkedIn". | empty |
@@ -42,6 +42,14 @@ Firestore collection `channel_links`: one doc per person per pair (email, Linked
 - By API: `POST /api/crosschannel/links` with `{ rows: [{ email, linkedinUrl, firstName, lastName, company }] }`.
 - Automatically: `POST /api/heyreach/campaign/:id/push` saves a link for every lead that carries an `email`, when the campaign is in a pair.
 
+**After the lead list or the campaign split changes, rebuild from the live lists** (run on the VPS, it needs both API keys; report only unless `--apply`):
+
+```bash
+node scripts/crosschannel-sync.js <leads.csv> --heyreach-campaign 741119 --apply
+```
+
+It reads who is really in each paired Instantly campaign and on the HeyReach campaign's list, points each link at the Instantly campaign that person is in, deletes links that no longer belong (after saving a backup in `/root/backups`), and marks `on_linkedin: false` for people who get the email but are not on that HeyReach list. For those people an email reply stops nothing and logs a `manual_check` row; a LinkedIn reply still stops their email. One HeyReach campaign can be paired with several Instantly campaigns: list each as its own pair.
+
 Matching a LinkedIn reply to a link: profile URL first (lowercased, query and trailing slash stripped). If the URL misses (member-id export vs HeyReach's vanity URL), first plus last name plus company, and only when that points at exactly one person. Two candidates or a company mismatch means no action and a log row marked `manual_check`.
 
 ## Seeing what it did
@@ -51,7 +59,7 @@ Every decision is a row in the `logs` collection, type `cross_channel` (`mode`, 
 - `GET /api/crosschannel/status`: mode, pairs, link counts.
 - `GET /api/crosschannel/log?limit=50`: newest rows (needs the key).
 - `POST /api/crosschannel/simulate`: one shadow decision for a profile URL or an email. Never stops anything.
-- `node scripts/crosschannel-replay.js`: runs both real webhook routes against an in-memory database and fake vendors and checks 21 cases. Run it after any change to these files.
+- `node scripts/crosschannel-replay.js`: runs both real webhook routes against an in-memory database and fake vendors and checks 22 cases. Run it after any change to these files.
 
 ## Not yet proven
 

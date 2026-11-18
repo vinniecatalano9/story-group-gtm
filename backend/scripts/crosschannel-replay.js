@@ -368,6 +368,15 @@ async function run(title, fn) {
   check('reply saved; no row; cross-channel touched nothing', r.savedReplies === 1 && r.rows.length === 0 && r.writes.length === 0);
   nextClassification = 'interested';
 
+  // A person who gets the email but is not in the paired LinkedIn campaign.
+  mute();
+  await crossChannel.upsertLinks([{ email: 'replay.g@example.com', linkedinUrl: 'https://www.linkedin.com/in/replay-other-campaign', firstName: 'Gail', lastName: 'Elsewhere', company: 'Elsewhere Co' }],
+    { instantlyCampaignId: INSTANTLY_CAMPAIGN, heyreachCampaignId: HEYREACH_CAMPAIGN, source: 'replay' });
+  for (const l of fakeDb.collection('channel_links').docs.values()) if (l.email === 'replay.g@example.com') l.on_linkedin = false;
+  unmute();
+  r = await run('11b. Email reply from someone who is not in the paired LinkedIn campaign (shadow)', () => post('/api/reply', instantlyBody('replay.g@example.com', 'Interested, tell me more.')));
+  check('reply saved; skipped with a manual check, no HeyReach call', r.savedReplies === 1 && r.rows.length === 1 && r.rows[0].outcome === 'skipped' && r.rows[0].manual_check === true && r.calls.length === 0);
+
   // --- Failure isolation ---
   vendorsDown = true;
   const pA2 = JSON.parse(JSON.stringify(twin));

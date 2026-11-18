@@ -287,7 +287,7 @@ async function matchLinkedIn({ profileUrl, firstName, lastName, company }, store
   if (!nk) return { links: [], match: 'none' };
   const sameName = allowed(await store.byNameKey(nk));
   if (!sameName.length) return { links: [], match: 'none' };
-  const sameCo = sameName.filter(l => sameCompany(l.company, company));
+  const sameCo = sameName.filter(l => sameCompany(l.company, company) || sameCompany(l.company_alt, company));
   // The same person can sit in two pairs; that is still one person.
   const people = new Set(sameCo.map(l => l.email));
   if (people.size === 1) return { links: sameCo, match: 'name_company' };
@@ -489,6 +489,13 @@ async function onEmailReply(evt = {}, deps) {
           continue;
         }
         if (!evt.simulated) await d.store.patch(link.id, { email_replied_at: new Date() }).catch(() => {});
+        // Set by scripts/crosschannel-sync.js: this person gets the email but is
+        // not in the paired LinkedIn campaign (usually because another HeyReach
+        // campaign already has them), so there is nothing here to stop.
+        if (link.on_linkedin === false) {
+          results.push(await safeLog(d.log, { ...row, outcome: 'skipped', reason: 'This person is not in the paired LinkedIn campaign. If another HeyReach campaign is messaging them, stop them there by hand.', manual_check: true }));
+          continue;
+        }
         if (m === 'live' && link.linkedin_stopped_at) { results.push({ ...row, outcome: 'already_stopped' }); continue; }
         if (m === 'shadow' && link.shadow_linkedin_stop_at && !evt.simulated) { results.push({ ...row, outcome: 'already_recorded' }); continue; }
 
@@ -569,7 +576,7 @@ async function onConnectionAccepted(evt = {}, deps) {
 module.exports = {
   mode, pairs, isAllowedPair, acceptTracking,
   linkedinKey, nameKey, companyKey, sameCompany, cleanEmail,
-  upsertLinks, matchLinkedIn,
+  upsertLinks, matchLinkedIn, linkId,
   onLinkedInReply, onEmailReply, onConnectionAccepted,
   firestoreStore, LINKS, HOLD_LIST_NAME,
 };
