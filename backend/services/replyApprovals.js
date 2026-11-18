@@ -260,7 +260,11 @@ async function offerEmailReply({ ref, reply }) {
     const { db } = require('./db');
     const existing = await db.collection('reply_approvals').doc(ref.id).get();
     if (existing.exists) return null;
-    const draft = cleanDraft(reply.draft_response);
+    // Email macros can carry Instantly-style {{firstName}}; fill it or drop it.
+    const first = String(reply.first_name || '').trim().split(/\s+/)[0];
+    const draft = cleanDraft(reply.draft_response)
+      .replace(/,?\s*\{\{\s*first_?name\s*\}\}/gi, first ? ` ${first}` : '')
+      .replace(/\{\{[^}]*\}\}/g, '[placeholder]');
     const { text, reply_markup } = buildCard({ id: ref.id, reply, kind: 'draft', draft, channel: 'email' });
     const msg = await tg('sendMessage', { chat_id: CHAT_ID(), text, parse_mode: 'HTML', disable_web_page_preview: true, reply_markup });
     const name = reply.full_name || reply.email;
