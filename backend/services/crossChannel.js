@@ -173,9 +173,11 @@ function firestoreStore() {
       }
     },
     async patch(id, data) { await col().doc(id).set({ ...data, updated_at: new Date() }, { merge: true }); },
+    // Single-field query (no composite index), then filtered here: several
+    // Instantly campaigns can share one HeyReach campaign.
     async countForPair(instantlyId, heyreachId) {
-      const snap = await col().where('heyreach_campaign_id', '==', String(heyreachId)).count().get();
-      return snap.data().count;
+      const snap = await col().where('instantly_campaign_id', '==', String(instantlyId).toLowerCase()).select('heyreach_campaign_id').get();
+      return snap.docs.filter(d => d.data().heyreach_campaign_id === String(heyreachId)).length;
     },
   };
 }
@@ -356,7 +358,9 @@ async function onLinkedInReply(evt = {}, deps) {
       } else if (found.match === 'name_only') {
         results.push(await safeLog(d.log, { ...base, outcome: 'no_action', reason: 'URL did not match. The name matches a link but the company does not, so nothing was stopped.', who: { ...fromEvt, email: null }, manual_check: true }));
       } else if (inPair) {
-        results.push(await safeLog(d.log, { ...base, outcome: 'no_link', reason: 'Reply came from a paired LinkedIn campaign but this person has no email link on file.', who: { ...fromEvt, email: null }, manual_check: true }));
+        // Normal for people who are LinkedIn only (no usable email). Logged so
+        // the count is visible, not flagged for a manual check.
+        results.push(await safeLog(d.log, { ...base, outcome: 'no_link', reason: 'Reply came from a paired LinkedIn campaign and this person is not in a paired email campaign, so there is no email to stop.', who: { ...fromEvt, email: null } }));
       }
       return { mode: m, results };
     }
