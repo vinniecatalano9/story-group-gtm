@@ -218,7 +218,14 @@ function resolveDeps(deps = {}) {
   return {
     store: deps.store || firestoreStore(),
     api: deps.api || realApi(),
-    log: deps.log || (async (row) => { const { addLog } = require('./db'); await addLog('cross_channel', row); }),
+    log: deps.log || (async (row) => {
+      const { addLog } = require('./db');
+      await addLog('cross_channel', row);
+      // Work Bot reads these notes, so it can answer "what did the cross-channel stop do".
+      if (row && row.outcome && !row.simulated && /stop/.test(String(row.outcome))) {
+        try { require('./telegram').noteForWorkBot(`Cross-channel stop (${row.mode || 'shadow'}): ${row.outcome}. ${row.would || row.did || ''}`.trim()); } catch { /* never block */ }
+      }
+    }),
   };
 }
 
@@ -530,7 +537,19 @@ async function onEmailReply(evt = {}, deps) {
           results.push(await safeLog(d.log, { ...row, outcome: 'manual_stop_needed', reason: `HeyReach has no member id for this profile${lookupError ? ` (${lookupError})` : ''}. Stop this lead in the HeyReach campaign by hand.`, heyreach_lead: hrInfo, manual_check: true }));
           continue;
         }
-        await d.api.stopHeyreachLead({ campaignId: link.heyreach_campaign_id, memberId, profileUrl: link.linkedin_url });
+        try {
+          await d.api.stopHeyreachLead({ campaignId: link.heyreach_campaign_id, memberId, profileUrl: link.linkedin_url });
+        } catch (e) {
+          // HeyReach answers 400 "workflow is already finished" for a lead who
+          // has already completed or left the sequence (seen for real on
+          // 2026-11-17). Nothing is left to stop, so this is not a failure.
+          if (/already finished/i.test(errText(e))) {
+            await d.store.patch(link.id, { linkedin_stopped_at: new Date(), linkedin_stopped_by: 'already_finished', linkedin_member_id: memberId });
+            results.push(await safeLog(d.log, { ...row, outcome: 'not_needed', reason: 'HeyReach says this person already finished the LinkedIn sequence, so there was nothing to stop.', heyreach_lead: hrInfo }));
+            continue;
+          }
+          throw e;
+        }
         await d.store.patch(link.id, { linkedin_stopped_at: new Date(), linkedin_stopped_by: 'email_reply', linkedin_member_id: memberId });
         results.push(await safeLog(d.log, {
           ...row,

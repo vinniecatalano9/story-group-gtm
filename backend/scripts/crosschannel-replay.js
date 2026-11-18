@@ -151,6 +151,12 @@ const axiosStub = {
     const call = url.replace('https://api.heyreach.io/api/public', '');
     vendorCalls.push({ vendor: 'heyreach', call: `POST ${call}${call.includes('GetLead') ? ' (read only)' : ''}`, body });
     if (call === '/lead/GetLead') return { status: 200, data: { linkedin_id: '70000001', profileUrl: body.profileUrl } };
+    if (call === '/campaign/StopLeadInCampaign' && /already-finished/.test(body.leadUrl || '')) {
+      // The real answer HeyReach gives for a lead whose sequence is over.
+      const e = new Error('Request failed with status code 400');
+      e.response = { status: 400, data: { errorMessage: 'Cannot perform the action because the workflow is already finished.' } };
+      throw e;
+    }
     return { status: 200, data: {} };
   },
   async get() { return { status: 200, data: {} }; },
@@ -432,6 +438,15 @@ async function run(title, fn) {
 
   r = await run('20. LIVE mode: the same person replies by email again', () => post('/api/reply', instantlyBody('replay.e@example.com', 'Following up on my note.')));
   check('not stopped twice', r.writes.length === 0 && r.rows.length === 0);
+
+  mute();
+  await crossChannel.upsertLinks([{ email: 'replay.h@example.com', linkedinUrl: 'https://www.linkedin.com/in/replay-already-finished', firstName: 'Hal', lastName: 'Done', company: 'Done Co' }],
+    { instantlyCampaignId: INSTANTLY_CAMPAIGN, heyreachCampaignId: HEYREACH_CAMPAIGN, source: 'replay' });
+  unmute();
+  r = await run('20b. LIVE mode: email reply from someone whose LinkedIn sequence already finished', () => post('/api/reply', instantlyBody('replay.h@example.com', 'Sure, tell me more.')));
+  check('logged as not needed, not as an error, and no manual check', r.rows.length === 1 && r.rows[0].outcome === 'not_needed' && !r.rows[0].manual_check);
+  r = await run('20c. LIVE mode: that person replies again', () => post('/api/reply', instantlyBody('replay.h@example.com', 'Following up.')));
+  check('HeyReach is not called a second time', r.calls.length === 0 && r.rows.length === 0);
 
   // A link whose pair is no longer on the allowlist is inert, even in live mode.
   process.env.CROSS_CHANNEL_PAIRS = `${OTHER_PAIR.instantly}:${OTHER_PAIR.heyreach}`;

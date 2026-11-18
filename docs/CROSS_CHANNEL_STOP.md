@@ -59,9 +59,10 @@ Every decision is a row in the `logs` collection, type `cross_channel` (`mode`, 
 - `GET /api/crosschannel/status`: mode, pairs, link counts.
 - `GET /api/crosschannel/log?limit=50`: newest rows (needs the key).
 - `POST /api/crosschannel/simulate`: one shadow decision for a profile URL or an email. Never stops anything.
-- `node scripts/crosschannel-replay.js`: runs both real webhook routes against an in-memory database and fake vendors and checks 22 cases. Run it after any change to these files.
+- `node scripts/crosschannel-replay.js`: runs both real webhook routes against an in-memory database and fake vendors and checks 24 cases. Run it after any change to these files.
 
 ## Not yet proven
 
-- The Instantly move and the HeyReach stop are built from both vendors' current API docs and checked against fake vendors. Neither has run against the real services, because both campaigns are empty drafts. Prove each once with a lead you own before `live`.
+- **Instantly move: proven for real on 2026-11-17.** A scratch draft campaign with 2 fake leads; the live code moved exactly the one that "replied" into the holding list (same lead id, fields intact, copy saved first), the other stayed, a second reply did nothing, and the three real campaigns were unchanged. Scratch campaign and fake leads deleted after. The holding list "Cross-channel stop | replied on LinkedIn" now exists in Instantly.
+- **HeyReach stop: call shape proven, a successful stop not yet seen.** Run for real on 2026-11-17 against a lead who had already finished and replied in a campaign paused since May. HeyReach found the lead and answered 400 "workflow is already finished", and changed nothing. The code now logs that as `not_needed`. A 200 on a lead who is mid-sequence has not been observed: the first real email reply from a paired person will show it, and a failure there is logged with `manual_check`.
 - The connection-accepted handler exists but HeyReach is not sending that event (no `CONNECTION_REQUEST_ACCEPTED` webhook is registered) and nothing emails on accept.
