@@ -5,6 +5,7 @@ const { getLeadsByStatus, updateLead, addLog } = require('../services/db');
 const { generateEmailPatterns } = require('../lib/email-patterns');
 const { scoreLead } = require('../lib/scoring');
 const instantly = require('../services/instantly');
+const mxProvider = require('../lib/mxProvider');
 const hubspot = require('../services/hubspot');
 const coteriehq = require('../services/coteriehq');
 const slack = require('../services/slack');
@@ -252,7 +253,11 @@ router.post('/', async (req, res) => {
 
         await updateLead(lead.id, enrichedData);
 
-        // Push to Instantly (only if campaign IDs are configured)
+        // Push to Instantly (only if campaign IDs are configured).
+        // addLeadsToCampaign runs the cold email gate: only Google or Microsoft hosted
+        // addresses are uploaded. A blocked lead stays 'scored' and is LinkedIn only.
+        let coldEmailBlocked = false;
+        let emailProvider = '';
         if (tier !== 'manual_review') {
           try {
             const instantlyResult = await instantly.addLeadsToCampaign(tier, [{ ...lead, ...enrichedData }]);
@@ -260,6 +265,10 @@ router.post('/', async (req, res) => {
               await updateLead(lead.id, { status: 'emailed' });
               enrichedData.status = 'emailed';
             }
+            // Cached by the gate, so this is not a second DNS lookup.
+            const check = await mxProvider.checkEmail(enrichedData.email);
+            emailProvider = check.provider;
+            coldEmailBlocked = !check.ok;
           } catch (e) {
             console.warn(`[enrich] Instantly upload failed for ${lead.email}:`, e.message);
           }
@@ -292,18 +301,25 @@ router.post('/', async (req, res) => {
           strength: signals.signal_strength,
           score,
           tier,
+          email_provider: emailProvider,
+          cold_email_blocked: coldEmailBlocked,
         });
 
-        console.log(`[enrich] ${lead.email || lead.first_name}: ${signals.intent_signal_type} (${score}pts → ${tier})`);
+        console.log(`[enrich] ${lead.email || lead.first_name}: ${signals.intent_signal_type} (${score}pts → ${tier})${coldEmailBlocked ? ` [cold email blocked: ${emailProvider}]` : ''}`);
       } catch (e) {
         console.error(`[enrich] Failed to process lead ${lead.id}:`, e.message);
         await updateLead(lead.id, { status: 'enrichment_failed', error: e.message });
       }
     }
 
-    await addLog('enrichment', { processed: results.length, results });
+    const coldEmailBlockedCount = results.filter(r => r.cold_email_blocked).length;
+    if (coldEmailBlockedCount) {
+      console.warn(`[enrich] ${coldEmailBlockedCount} of ${results.length} lead(s) kept out of cold email (not on Google or Microsoft)`);
+    }
 
-    res.json({ success: true, processed: results.length, results });
+    await addLog('enrichment', { processed: results.length, cold_email_blocked: coldEmailBlockedCount, results });
+
+    res.json({ success: true, processed: results.length, cold_email_blocked: coldEmailBlockedCount, results });
   } catch (e) {
     console.error('[enrich] Error:', e);
     res.status(500).json({ error: e.message });

@@ -1,5 +1,6 @@
 const API_BASE = 'https://api.instantly.ai/api/v2';
 const API_KEY = () => process.env.INSTANTLY_API_KEY;
+const mxProvider = require('../lib/mxProvider');
 
 const CAMPAIGN_MAP = {
   priority: () => process.env.INSTANTLY_CAMPAIGN_PRIORITY,
@@ -36,12 +37,98 @@ async function apiCall(method, path, body = null, retries = 3) {
   }
 }
 
+/**
+ * Cold email gate (Vincent, 2026-11-17): a lead goes into a cold email campaign only if its
+ * email domain is hosted on Google or Microsoft. Everything else (Proofpoint, Mimecast,
+ * Barracuda, Sophos, small hosts, no MX, failed lookup) is LinkedIn only.
+ *
+ * Returns { allowed, blocked }. Every lead passed in gets email_provider, email_mx and
+ * cold_email_blocked written to its Firestore doc. Fails closed: if the check itself breaks,
+ * nothing is allowed through.
+ */
+async function coldEmailGate(leads) {
+  const allowed = [];
+  const blocked = [];
+  let checks = new Map();
+  try {
+    checks = await mxProvider.checkEmails(leads.map(l => l.email));
+  } catch (e) {
+    console.warn('[instantly] Mail provider check failed, blocking the whole batch:', e.message);
+  }
+
+  for (const lead of leads) {
+    const key = String(lead.email || '').trim().toLowerCase();
+    const check = checks.get(key) || { provider: mxProvider.LOOKUP_FAILED, mx: '', ok: false };
+    (check.ok ? allowed : blocked).push({ lead, check });
+  }
+
+  // Mark the Firestore lead docs. A failed write warns and does not change the decision.
+  let updateLead = null;
+  let addLog = null;
+  try {
+    ({ updateLead, addLog } = require('./db'));
+  } catch (e) {
+    console.warn('[instantly] Could not load db to mark the mail provider:', e.message);
+  }
+  if (updateLead) {
+    for (const { lead, check } of [...allowed, ...blocked]) {
+      const id = lead.id || lead.lead_id;
+      if (!id) continue;
+      const data = { email_provider: check.provider, email_mx: check.mx || '', cold_email_blocked: !check.ok };
+      if (!check.ok) {
+        data.cold_email_blocked_reason = `Mail provider is ${check.provider}. Cold email goes to Google or Microsoft only. LinkedIn only.`;
+        data.cold_email_blocked_at = new Date().toISOString();
+      }
+      try {
+        await updateLead(id, data);
+      } catch (e) {
+        console.warn(`[instantly] Could not mark mail provider on lead ${id}:`, e.message);
+      }
+    }
+  }
+
+  if (blocked.length) {
+    const byProvider = {};
+    for (const { check } of blocked) byProvider[check.provider] = (byProvider[check.provider] || 0) + 1;
+    console.warn(
+      `[instantly] Cold email gate blocked ${blocked.length} of ${leads.length} lead(s), not on Google or Microsoft: ${JSON.stringify(byProvider)}`
+    );
+    if (addLog) {
+      try {
+        await addLog('cold_email_blocked', {
+          count: blocked.length,
+          checked: leads.length,
+          by_provider: byProvider,
+          leads: blocked.map(({ lead, check }) => ({
+            lead_id: lead.id || lead.lead_id || null,
+            email: lead.email || '',
+            email_provider: check.provider,
+            email_mx: check.mx || '',
+          })),
+        });
+      } catch (e) {
+        console.warn('[instantly] Could not log blocked leads:', e.message);
+      }
+    }
+  }
+
+  return { allowed: allowed.map(x => x.lead), blocked };
+}
+
+/**
+ * Add leads to a tier's cold email campaign. Every lead goes through coldEmailGate first.
+ * Returns the upload results, or null when nothing was uploaded (no campaign for the tier,
+ * or every lead was blocked by the gate).
+ */
 async function addLeadsToCampaign(tier, leads) {
   const campaignId = CAMPAIGN_MAP[tier]?.();
   if (!campaignId || campaignId === 'CAMPAIGN_ID_HERE') {
     console.warn(`[instantly] No campaign ID for tier: ${tier}, skipping upload`);
     return null;
   }
+
+  ({ allowed: leads } = await coldEmailGate(leads || []));
+  if (!leads.length) return null;
 
   // Batch in groups of 100
   const batchSize = parseInt(process.env.MAX_INSTANTLY_BATCH_SIZE) || 100;
@@ -228,7 +315,7 @@ async function moveLeadToList(leadId, campaignId, listId) {
 
 module.exports = {
   findLeadInCampaign, findOrCreateLeadList, moveLeadToList,
-  addLeadsToCampaign, removeLeads, getESGFlaggedLeads,
+  addLeadsToCampaign, coldEmailGate, removeLeads, getESGFlaggedLeads,
   getCampaigns, getCampaignLeads, getCampaignAnalytics,
   replyToEmail, getLeadLabels, getRepliedLeads, getAllRepliedLeads,
   getSubsequences, addLeadToSubsequence, updateLeadInterestStatus,
