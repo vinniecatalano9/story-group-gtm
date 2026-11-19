@@ -303,6 +303,20 @@ async function addOtherRow(p, d, ref, { out, seen, owner, form }) {
  * `d` is decide()'s answer; skips and duplicates get their ping here too.
  * Returns 'retry' when the sheet was down (the claim is released).
  */
+/** True when the person's GHL contact carries an assessment tag (GHL's nurture is on them). */
+const ASSESSMENT_TAG = /^(assessment:|nurture:assessment|src-website-assessment)/i;
+async function isGhlAssessment(p, owner) {
+  try {
+    const ghl = require('./ghl');
+    const id = (owner && owner.contact_id) || ((await ghl.findContact({ email: p.email, phone: p.phone })) || {}).id;
+    const c = id ? await ghl.getContact(id) : null;
+    return !!(c && (c.tags || []).some(t => ASSESSMENT_TAG.test(t)));
+  } catch (e) {
+    console.warn('[intake] assessment tag check failed:', e.message);
+    return false;
+  }
+}
+
 async function addLead(p, d, ref, { out, seen, who, owner, form, source, at }) {
   const cadence = require('./cadence');
   const { esc, ping } = cadence;
@@ -313,6 +327,12 @@ async function addLead(p, d, ref, { out, seen, who, owner, form, source, at }) {
     const cells = leadForm.sheetCells(patch);
     p = { ...p, company: p.company || patch.form.company, role: p.role || cells.role, frustration: p.frustration || cells.frustration };
     if (d.action === 'add') d = { ...d, cells: rowCells(p) };
+  }
+  // GHL's own assessment nurture (3 emails + a text over 7 days) already works
+  // assessment leads, so the cadence stays off them (Vincent, 11/18: no double sends).
+  if (d.action === 'add' && onGhl() && await isGhlAssessment(p, owner)) {
+    d = { action: 'assessment', why: "assessment lead: GHL's 7-day assessment nurture handles it" };
+    await ping(`📝 Assessment lead <b>${who}</b> (${esc(source)}). GHL's assessment nurture is emailing them, so no cadence and no cards. Call them if you want a personal touch.\n${[p.email, p.phone].filter(Boolean).map(esc).join(' · ')}`);
   }
   if (d.action !== 'add') {
     await ref.update({ status: d.action, why: d.why, parsed: p });

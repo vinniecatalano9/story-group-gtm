@@ -87,18 +87,18 @@ const TRACKS = {
   ],
   // Meeting yes: booked.
   meeting: [
-    { id: 'meet_confirm', channel: 'sms', immediate: true, label: 'Booked: confirm text', approved: true,
+    { id: 'meet_confirm', ghlCalendarCovers: true, channel: 'sms', immediate: true, label: 'Booked: confirm text', approved: true,
       template: "Hey {first}, it's Vincent from Story Group. See you {meeting_day}." },
     // The follow-up question text 2 to 3 minutes later was dropped (Vincent, 10/22).
     // Reminders (approved 10/22).
-    { id: 'remind24_email', channel: 'email', beforeMeetingMinutes: 24 * 60, label: '24h reminder (email)', approved: true,
+    { id: 'remind24_email', ghlCalendarCovers: true, channel: 'email', beforeMeetingMinutes: 24 * 60, label: '24h reminder (email)', approved: true,
       subject: 'Tomorrow at {meeting_time} ET',
       template: 'Hey {first},\n\nLooking forward to our call tomorrow at {meeting_time} ET. Still good for you?\n\nBest,\nVincent' },
-    { id: 'remind24_text', channel: 'sms', beforeMeetingMinutes: 24 * 60 - 5, label: '24h reminder (text)', approved: true,
+    { id: 'remind24_text', ghlCalendarCovers: true, channel: 'sms', beforeMeetingMinutes: 24 * 60 - 5, label: '24h reminder (text)', approved: true,
       template: "Hey {first}, it's Vincent from Story Group. Still good for tomorrow at {meeting_time} ET?" },
-    { id: 'remind1_email', channel: 'email', beforeMeetingMinutes: 60, label: '1h reminder (email)', approved: true,
+    { id: 'remind1_email', ghlCalendarCovers: true, channel: 'email', beforeMeetingMinutes: 60, label: '1h reminder (email)', approved: true,
       template: 'Hey {first}, talking at {meeting_time} ET. Still good?\n\nBest,\nVincent' },
-    { id: 'remind1_text', channel: 'sms', beforeMeetingMinutes: 55, label: '1h reminder (text)', approved: true,
+    { id: 'remind1_text', ghlCalendarCovers: true, channel: 'sms', beforeMeetingMinutes: 55, label: '1h reminder (text)', approved: true,
       template: 'Hey {first}, talking at {meeting_time} ET. Still good?' },
     // No call 15 minutes after the start (or Vincent marks a no-show). Always a
     // Telegram card, even in live mode, until Vincent says how calls happen.

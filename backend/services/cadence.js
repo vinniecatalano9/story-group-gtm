@@ -256,7 +256,7 @@ async function setOutcome(email, outcome, { meeting_at, source = '', note = '' }
     track_started_at: new Date(), day1: o.track ? z.dayKey(z.parts(new Date(), lead.tz)) : null,
     blocked_reason: null, pending_approval: null, sheet_dirty: true, manual: !!manual,
     next_step: null, next_due_at: null, next_touch_label: manual ? 'Manual (Vincent)' : '',
-    no_show_marked: false, meeting_at: meetingAt, meeting_label: meetingAt ? slots.slotLabel(meetingAt) + ' ET' : null,
+    no_show_marked: false, meeting_source: meetingAt ? source || null : null, meeting_at: meetingAt, meeting_label: meetingAt ? slots.slotLabel(meetingAt) + ' ET' : null,
   };
   // The intro steps stay in steps_done; a new track's steps are fresh.
   if (o.track) {
@@ -288,6 +288,9 @@ function nextStep(lead) {
     // Text intro replaces Text 1 when there's no email to refer back to.
     if (step.onlyWithoutEmail && canEmail(lead)) return { step, skip: 'has email' };
     if (step.skipWithoutEmail && !canEmail(lead)) return { step, skip: lead.email_bounced ? 'email bounced' : lead.email_bad ? 'email invalid' : emailHeld(lead) ? 'email held' : 'no email' };
+    // GHL's calendar sends booking confirmations and reminders (11/18), so ours
+    // only run for meetings we booked ourselves (autoBook's Google invite).
+    if (step.ghlCalendarCovers && !/^auto-booked/i.test(lead.meeting_source || '')) return { step, skip: 'GHL calendar sends this' };
     const setAt = lead.send_at && toDate(lead.send_at[step.id]);
     if (setAt) return { step, due: setAt, ignoreWindow: true };
     let due;
