@@ -129,7 +129,12 @@ async function checkCalls() {
         out.asked++;
         continue;
       }
-      await cadence.setOutcome(lead.email, r.outcome, { meeting_at: r.outcome === 'meeting' ? r.meeting_at : undefined, source: 'set from call transcript', note: callNote(r, t.transcript_url) });
+      // On GHL, Fireflies' own integration already puts the call notes on the
+      // contact (11/10), so our note carries only the outcome (plus a revisit
+      // date if one was given). Vincent: never do what GHL already does.
+      const onGhl = require('./ghl').on('cadence');
+      const note = onGhl ? (clean(r.revisit) ? `Revisit: ${clean(r.revisit)}` : '') : callNote(r, t.transcript_url);
+      await cadence.setOutcome(lead.email, r.outcome, { meeting_at: r.outcome === 'meeting' ? r.meeting_at : undefined, source: 'set from call transcript', note });
       await cadence.ping(`📞 Call with <b>${cadence.esc(cadence.fullName(lead))}</b>: set to <b>${LABEL[r.outcome]}</b>${r.outcome === 'meeting' ? ` (${cadence.esc(new Date(r.meeting_at).toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }))} ET)` : ''}. ${cadence.esc(r.reason || '')}\nWrong? Change it on the Ad Leads page: ${cadence.DASHBOARD_URL()}${link}`);
       await markCallOnSheet(lead, t, doc.id, r).catch(e => console.warn(`[cadenceCalls] sheet for ${lead.email}:`, e.message));
       out.set++;
