@@ -229,10 +229,20 @@ async function addLeadsToCampaign(tier, leads, report = null) {
   return results;
 }
 
-async function removeLeads(emails, campaignId = null) {
-  const body = { delete_list: emails };
-  if (campaignId) body.campaign_id = campaignId;
-  return apiCall('DELETE', '/leads', body);
+// Deletes only the named leads from one campaign. DANGER: Instantly's DELETE
+// /leads deletes EVERY lead in the campaign when it gets a campaign id without
+// ids (API v2 spec, checked 2026-11-23). So this looks up each lead's id first,
+// sends nothing when none are found, and caps the call with limit as a second
+// guard. The old version sent `delete_list`, which v2 rejected every time.
+async function removeLeads(emails, campaignId) {
+  if (!campaignId) throw new Error('removeLeads needs a campaign id');
+  const ids = [];
+  for (const email of emails || []) {
+    const lead = await findLeadInCampaign(email, campaignId);
+    if (lead && lead.id) ids.push(lead.id);
+  }
+  if (!ids.length) return { deleted: 0 };
+  return apiCall('DELETE', '/leads', { campaign_id: campaignId, ids, limit: ids.length }, 1);
 }
 
 async function getESGFlaggedLeads(campaignId) {

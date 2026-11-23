@@ -2,7 +2,7 @@ const { Router } = require('express');
 const { claudeJSON } = require('../services/claude');
 const { classifyReply } = require('../services/replyClassifier');
 const { getLeadByEmail, updateLead, addReply, getRepliesByEmail, addLog } = require('../services/db');
-const { removeLeads } = require('../services/instantly');
+const { setLeadInterestStatus } = require('../services/instantly');
 const { syncLead } = require('../services/hubspot');
 const { syncReply: syncCoterie } = require('../services/coteriehq');
 const { notifyNewReply } = require('../services/slack');
@@ -90,16 +90,19 @@ router.post('/', async (req, res) => {
       if (lead) await updateLead(lead.id, { status: 'replied', last_reply: cls });
     }
     else if (cls === 'not_interested') {
-      // Remove from Instantly
-      try { await removeLeads([email]); } catch (e) {
-        console.warn('[reply] Failed to remove from Instantly:', e.message);
+      // Label the lead Not Interested (-1) in its campaign. Never delete it: the
+      // campaigns already stop on reply, and a deleted lead drops out of the
+      // Instantly dedupe that keeps the next list build from emailing them again.
+      // (The old delete sent `delete_list`, which API v2 rejected every time.)
+      if (campaign_id) {
+        try { await setLeadInterestStatus(email, -1, campaign_id); } catch (e) {
+          console.warn('[reply] Failed to label Not Interested in Instantly:', e.message);
+        }
       }
       if (lead) await updateLead(lead.id, { status: 'dead', last_reply: cls });
     }
     else if (cls === 'bounce') {
-      try { await removeLeads([email]); } catch (e) {
-        console.warn('[reply] Failed to remove bounced lead:', e.message);
-      }
+      // Instantly marks a bounced lead and stops sending on its own. Nothing to delete.
       if (lead) await updateLead(lead.id, { status: 'dead', last_reply: 'bounce' });
     }
     else if (cls === 'ooo') {
