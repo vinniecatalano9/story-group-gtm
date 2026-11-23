@@ -53,7 +53,11 @@ const KEEP = ' HY '; // sentinel for the one hyphen we're allowed to keep
 
 function stripDashes(text) {
   if (!text) return text;
+  // Links must come through untouched (a hyphen in a URL is not a dash), so
+  // park them first and put them back at the end.
+  const urls = [];
   return String(text)
+    .replace(/https?:\/\/\S+/g, u => { urls.push(u); return `\u0000${urls.length - 1}\u0000`; })
     // Hyphenated proper nouns are the single legitimate use and must survive the
     // rules below, including the catch-all: a prospect called Luis-Alejandro or
     // Jean-Pierre must not be renamed. Park them behind a sentinel first.
@@ -72,10 +76,18 @@ function stripDashes(text) {
     .replace(/,\s*,/g, ',')
     .replace(/[ \t]+$/gm, '')
     // Restore the protected names.
-    .split(KEEP).join('-');
+    .split(KEEP).join('-')
+    .replace(/\u0000(\d+)\u0000/g, (_, i) => urls[Number(i)]);
 }
 
-function buildPrompt({ channel, email, company, replyText, firstName, slots, todayDow, caseBlock, feedback, previousDraft, lane }) {
+// Video outbound (Instantly and HeyReach campaigns named "Video Outbound | ...")
+// sells video, not PR. Its replies get the video offer and the example clip link
+// instead of the PR macros. Override the link with VIDEO_EXAMPLE_URL in .env.
+const VIDEO_CAMPAIGN = /video outbound/i;
+const VIDEO_EXAMPLE_URL = () => process.env.VIDEO_EXAMPLE_URL || 'https://storygroup.wistia.com/folders/3k8j9ulubk';
+const offerFor = campaignName => (VIDEO_CAMPAIGN.test(campaignName || '') ? 'video' : '');
+
+function buildPrompt({ channel, email, company, replyText, firstName, slots, todayDow, caseBlock, feedback, previousDraft, lane, offer }) {
   const isLinkedIn = channel === 'linkedin';
 
   const channelGuidance = isLinkedIn
@@ -123,6 +135,25 @@ This thread is Aaron's referral partner campaign: we asked consultants, fraction
 - They push back on being handed to McKenna: Aaron takes the call himself.
 ` : '';
 
+  const videoUrl = VIDEO_EXAMPLE_URL();
+  const videoBlock = offer === 'video' ? `
+=== VIDEO OFFER (this thread is our video outreach, not PR) ===
+This prospect got our video outreach, not a PR pitch. What we offered them: we're a strategy firm that also makes video. We fly our crew out to them, and before the shoot we work out what the video has to say to bring in new business. The client pays for the crew's travel as part of the package, so never call the trip free. We offered to share an example of one we just did, a 30 second clip from a recent shoot.
+Talk about video that brings in new business. No press, journalists, outlets, podcasts, placements or PR case studies. The PR macros below are for shape only: use these video facts, never their PR wording.
+
+--- SEND_VIDEO (they want the example: "send it", "share the video first", "sure", "yes please", "show me") ---
+This overrides SEND_INFO. The example clip is the one thing we send before a call. Put the link in exactly as written, on its own line, with nothing after it on that line. Never name the person in the clip.
+Email:
+"Here you go ${name}, the 30 second clip from a recent shoot:
+${videoUrl}
+I'd like to walk you through how video could bring in new business for ${company || 'your company'}. Are you free ${'[day]'} at ${'[time]'} or ${'[time]'} EST?"
+
+LinkedIn (2 messages):
+Message 1: Here you go ${name}, the 30 second clip from a recent shoot:
+${videoUrl}
+Message 2: Would like to walk you through how video could bring in new business for ${company || 'you'}. Free ${'[day]'} at ${'[time]'} or ${'[time]'} EST?
+` : '';
+
   return `You are a sales reply drafter for Story Group, a PR/media services company that places founders and CEOs on top-tier outlets and podcasts.
 
 You follow the Reply Handling SOP v2 exactly. Your job: classify the prospect's reply, pick the right macro, and draft ONE reply that moves toward a booked call.
@@ -157,7 +188,7 @@ rest alone — do not rewrite lines they did not comment on, and do not lose the
 booking ask. Every rule below still applies: no dashes, no exclamation points,
 day name or date but never both, and no calendar link on LinkedIn.
 ` : ''}
-${referralBlock}
+${referralBlock}${videoBlock}
 === STEP 1 — CLASSIFY ===
 Match the prospect's message to one of these, prefer the most specific:
 
@@ -387,7 +418,7 @@ Return ONE JSON object only, no other text:
   "classification": "<one of the labels in Step 1>",
   "sentiment": "positive" | "neutral" | "negative",
   "summary": "<1 sentence summary of the prospect's reply>",
-  "suggested_macro": "<COST_QUESTION | COST_QUESTION_REPEAT | SPEC_DEMAND | MORE_INFO | SEND_INFO | WHY_REACH_OUT | GUARANTEE | COMPETENCE_TEST | EVALUATOR | TIMING_OBJECTION | BUDGET_CYCLE | TIMES_REJECTED | INTERESTED_SOFT_ASK | GHOST_FOLLOWUP | RE_ENGAGE | REFERRAL | NOT_INTERESTED | NONE>",
+  "suggested_macro": "<COST_QUESTION | COST_QUESTION_REPEAT | SPEC_DEMAND | MORE_INFO | SEND_INFO | SEND_VIDEO | WHY_REACH_OUT | GUARANTEE | COMPETENCE_TEST | EVALUATOR | TIMING_OBJECTION | BUDGET_CYCLE | TIMES_REJECTED | INTERESTED_SOFT_ASK | GHOST_FOLLOWUP | RE_ENGAGE | REFERRAL | NOT_INTERESTED | NONE>",
   "suggested_action": "<brief 1-line action, e.g. 'Reply with soft ask, no link.' or 'Tag as Not Interested.'>",
   "tag": "<Interested | Meeting Booked | Not Interested | Wrong Person | Out of Office | >",
   "subsequence": "<Call Time Sent | Objection Follow-Up | >",
@@ -398,14 +429,15 @@ Return ONE JSON object only, no other text:
 Return ONLY the JSON object. No preamble, no markdown fences.`;
 }
 
-async function classifyReply({ channel, email, company, replyText, firstName, slots, headline, feedback, previousDraft, lane = '' }) {
+async function classifyReply({ channel, email, company, replyText, firstName, slots, headline, feedback, previousDraft, lane = '', campaignName = '' }) {
   // Weekday plus the full date in Eastern, so drafts can pin "Thursday, October 22".
   const todayDow = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  const offer = offerFor(campaignName);
 
   // Sector-matched proof. No match means no proof point rather than a generic
-  // one — the prompt is explicit about that.
+  // one — the prompt is explicit about that. The PR cases never fit a video thread.
   let caseBlock = '';
-  try {
+  if (offer !== 'video') try {
     const { matchCases, formatForPrompt } = require('../lib/caseStudies');
     caseBlock = formatForPrompt(matchCases({ company, headline, replyText }).cases);
   } catch (e) {
@@ -414,7 +446,7 @@ async function classifyReply({ channel, email, company, replyText, firstName, sl
 
   try {
     const result = await claudeJSON(
-      buildPrompt({ channel, email, company, replyText, firstName, slots, todayDow, caseBlock, feedback, previousDraft, lane }),
+      buildPrompt({ channel, email, company, replyText, firstName, slots, todayDow, caseBlock, feedback, previousDraft, lane, offer }),
       { timeout: 120000 }
     );
     // Belt and braces: the prompt bans dashes, this makes it true.
@@ -441,4 +473,4 @@ async function classifyReply({ channel, email, company, replyText, firstName, sl
   }
 }
 
-module.exports = { classifyReply };
+module.exports = { classifyReply, offerFor, stripDashes };

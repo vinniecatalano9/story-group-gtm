@@ -396,6 +396,7 @@ router.post('/redraft', express.json(), async (req, res) => {
       firstName: d.first_name || (d.full_name || '').split(' ')[0] || '',
       slots: toDraftSlots(open),
       lane: d.lane || '',
+      campaignName: d.campaign_name || d.heyreach_campaign_name || '',
       feedback: String(feedback).trim(),
       previousDraft: d.draft_response || '',
     });
@@ -760,6 +761,7 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
           firstName,
           slots: draftSlots,
           lane,
+          campaignName,
         });
         const update = {
           classification: cls.classification || 'other',

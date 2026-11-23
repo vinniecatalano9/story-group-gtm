@@ -35,6 +35,7 @@ async function reclassifyBacklog({ limit = 25 } = {}) {
         replyText: d.reply_text || '',
         firstName: d.first_name || (d.full_name || '').split(' ')[0] || '',
         slots: null,
+        campaignName: d.campaign_name || d.heyreach_campaign_name || '',
       });
       // A fallback result is not a classification. Leave reclassified_at unset so
       // the next run picks the row up again instead of stranding it.

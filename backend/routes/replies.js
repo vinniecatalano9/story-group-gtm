@@ -59,6 +59,7 @@ router.post('/', async (req, res) => {
       replyText: reply_text,
       firstName: first_name || lead?.first_name,
       slots,
+      campaignName: raw.campaign_name || '',
     });
 
     // Store reply (include Instantly email UUID + sending account for reply-back)
