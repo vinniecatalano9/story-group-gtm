@@ -921,6 +921,17 @@ cron.schedule('*/10 * * * *', async () => {
   }
 }, { timezone: 'America/Chicago', recoverMissedExecutions: true });
 
+// Daily auto-send checker (Vincent, 11/23): looks back 24h at the live cadence
+// and pending replies; messages Vincent in Reply Bot only when something's off.
+cron.schedule('0 8 * * *', async () => {
+  try {
+    const r = await require('./cron/autoSendCheck').run();
+    console.log('[cron] auto-send check:', JSON.stringify({ sent: r.sent, issues: (r.issues || []).length, skipped: r.skipped }));
+  } catch (e) {
+    console.error('[cron] auto-send check error:', e.message);
+  }
+}, { timezone: 'America/Chicago' });
+
 // Reply follow-up auto-enroll: every 5 min, look for our sent answer to each
 // replied lead and decide its Instantly subsequence. Does nothing unless
 // SUBSEQ_AUTO_ENROLL is shadow or live (services/subseqEnroll.js).
