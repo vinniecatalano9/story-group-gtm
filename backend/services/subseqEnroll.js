@@ -135,6 +135,7 @@ function realApi() {
     findLead: (email, campaignId) => instantly.findLeadInCampaign(email, campaignId), // read only
     moveLeadToSubsequence: (leadId, subId) => instantly.moveLeadToSubsequence(leadId, subId),
     setLeadInterestStatus: (email, value, campaignId) => instantly.setLeadInterestStatus(email, value, campaignId),
+    resumeSubsequence: (subId) => instantly.resumeSubsequence(subId),
   };
 }
 
@@ -309,7 +310,11 @@ async function decideOne(p, d) {
     return finish('skipped', { ...row, outcome: 'no_subsequence', reason: `This campaign has no subsequence named "${picked.subsequence}" (it has ${subs.length}). Nothing to enroll into.` });
   }
   row.subsequence_id = target.id;
-  if (target.status !== 1) {
+  // Instantly marks a subsequence Completed (status 3) once nobody is left in it, so an idle one is
+  // turned back on just before a lead goes in (all six video ones were 3 on 11/23/2026 and Maude was
+  // skipped). Paused (2) or draft (0) is a person's choice and stays a skip.
+  const completed = target.status === 3;
+  if (target.status !== 1 && !completed) {
     return finish('skipped', { ...row, outcome: 'skipped', skip: 'subsequence_not_active', reason: `"${target.name}" is not active (status ${target.status}).` });
   }
 
@@ -328,7 +333,7 @@ async function decideOne(p, d) {
 
   const where = `"${target.name}" on ${p.campaign_name || p.campaign_id}`;
   if (m !== 'live') {
-    return finish('shadow_logged', { ...row, outcome: 'would_enroll', would: `Would enroll ${p.email} into ${where}. ${picked.reason}` });
+    return finish('shadow_logged', { ...row, outcome: 'would_enroll', would: `Would ${completed ? 'turn the subsequence back on (it was Completed) and ' : ''}enroll ${p.email} into ${where}. ${picked.reason}` });
   }
 
   // ---- LIVE ONLY below this line. Unreachable unless SUBSEQ_AUTO_ENROLL=live. ----
@@ -337,6 +342,10 @@ async function decideOne(p, d) {
   // Mark it before the call, so a crash or a second cron run can never enroll twice.
   await d.store.patch(p.id, { status: 'enrolling', decided_at: now });
   try {
+    if (completed) {
+      await d.api.resumeSubsequence(target.id);
+      row.resumed_subsequence = true;
+    }
     if (how === 'label') {
       const value = (target.conditions && Array.isArray(target.conditions.crm_status)) ? target.conditions.crm_status[0] : undefined;
       if (typeof value !== 'number') throw new Error(`"${target.name}" has no label trigger, so the label method cannot start it`);

@@ -42,7 +42,8 @@ Each skip is a log row with the reason.
 - The lead is no longer in the campaign.
 - The lead is labeled Meeting Booked, Meeting Completed, Won, Not Interested, Wrong Person, Lost or No Show.
 - The lead is already in the target subsequence.
-- The subsequence is not active (paused or draft).
+- The subsequence is paused or a draft (a person's choice).
+- A subsequence Instantly marked Completed (status 3) is NOT skipped. Instantly does that to a subsequence once nobody is left in it, and then it sends nothing: on 11/23/2026 all six video subsequences were Completed and Maude (A Total Approach) was skipped. Live mode now turns it back on (`POST /subsequences/{id}/resume`) right before the move, and the log row gets `resumed_subsequence: true`. If the resume fails, nothing is moved and the row is `failed` with `manual_check`.
 
 ## Seeing what it did
 

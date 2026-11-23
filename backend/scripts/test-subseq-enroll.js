@@ -58,6 +58,12 @@ global.fetch = async (url, opts = {}) => {
   }
   if (opts.method === 'POST' && p === '/leads/subsequence/move') return world.failMove ? bad(400, 'nope') : ok({ ok: true });
   if (opts.method === 'POST' && p === '/leads/update-interest-status') return ok({ ok: true });
+  const resume = opts.method === 'POST' && p.match(/^\/subsequences\/([^/]+)\/resume$/);
+  if (resume) {
+    if (world.failResume) return bad(400, 'nope');
+    for (const list of Object.values(world.subs)) for (const s of list) if (s.id === decodeURIComponent(resume[1])) s.status = 1;
+    return ok({ status: 1 });
+  }
   return bad(404, `unexpected call ${opts.method} ${p}`);
 };
 const writes = () => world.calls.filter(c => !(c.method === 'GET' || c.path === '/leads/list'));
@@ -331,6 +337,41 @@ async function main() {
   t.clock.now = min(13);
   await se.checkPending({}, t.deps);
   check('live: a failed enroll is not retried', writes().length, 1);
+
+  // Instantly marks an idle subsequence Completed (3). Seen live 11/23/2026.
+  t = setup();
+  seedLead(23);
+  await se.notePending(webhook(23, 'cost_question'), t.deps);
+  addAnswer(23);
+  world.subs[CAMP][1].status = 3;
+  t.clock.now = min(8);
+  await se.checkPending({}, t.deps);
+  check('live, Completed subsequence: enrolled', t.rows[0].outcome, 'enrolled');
+  check('live, Completed subsequence: resume call then move call', writes().map(c => c.path).join(','), `/subsequences/${SUB_OBJ}/resume,/leads/subsequence/move`);
+  check('live, Completed subsequence: row says it was turned back on', t.rows[0].resumed_subsequence, true);
+  check('live, Completed subsequence: it is active again', world.subs[CAMP][1].status, 1);
+
+  t = setup();
+  seedLead(24);
+  await se.notePending(webhook(24, 'cost_question'), t.deps);
+  addAnswer(24);
+  world.subs[CAMP][1].status = 3;
+  world.failResume = true;
+  t.clock.now = min(8);
+  await se.checkPending({}, t.deps);
+  check('live, resume fails: logged for a manual check', t.rows[0].outcome + '|' + t.rows[0].manual_check, 'failed|true');
+  check('live, resume fails: no move call', writes().filter(c => c.path === '/leads/subsequence/move').length, 0);
+  world.failResume = false;
+
+  t = setup();
+  seedLead(25);
+  await se.notePending(webhook(25, 'cost_question'), t.deps);
+  addAnswer(25);
+  world.subs[CAMP][1].status = 2;
+  t.clock.now = min(8);
+  await se.checkPending({}, t.deps);
+  check('live, Paused subsequence: still skipped, nothing turned on', t.rows[0].skip + '|' + writes().length, 'subsequence_not_active|0');
+  world.subs[CAMP][1].status = 1;
 
   console.log('\n10. Unknown switch value means off');
   process.env.SUBSEQ_AUTO_ENROLL = 'yes';

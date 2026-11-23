@@ -412,6 +412,13 @@ async function moveLeadToSubsequence(leadId, subsequenceId) {
   return apiCall('POST', '/leads/subsequence/move', { id: leadId, subsequence_id: subsequenceId }, 1);
 }
 
+// Turns one subsequence back on. Instantly marks a subsequence Completed (status 3)
+// once nobody is left in it, and then it sends nothing. One try only.
+async function resumeSubsequence(subsequenceId) {
+  if (!subsequenceId) throw new Error('resumeSubsequence needs a subsequence id');
+  return apiCall('POST', `/subsequences/${encodeURIComponent(subsequenceId)}/resume`, {}, 1);
+}
+
 // Sets ONE lead's label (interest status) inside one campaign. A subsequence
 // triggered by that label then starts on Instantly's side. One try only.
 async function setLeadInterestStatus(leadEmail, interestValue, campaignId) {
@@ -422,7 +429,7 @@ async function setLeadInterestStatus(leadEmail, interestValue, campaignId) {
 }
 
 module.exports = {
-  listLeadEmails, listSubsequences, moveLeadToSubsequence, setLeadInterestStatus,
+  listLeadEmails, listSubsequences, moveLeadToSubsequence, setLeadInterestStatus, resumeSubsequence,
   findLeadInCampaign, findOrCreateLeadList, moveLeadToList,
   addLeadsToCampaign, coldEmailGate, removeLeads, getESGFlaggedLeads,
   getCampaigns, getCampaignLeads, getCampaignAnalytics,
