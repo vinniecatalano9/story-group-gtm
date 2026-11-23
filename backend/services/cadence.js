@@ -236,7 +236,75 @@ const OUTCOMES = {
   not_interested: { state: 'not_interested', track: null, label: 'Not interested' },
   not_qualified: { state: 'not_qualified', track: null, label: 'Not qualified' },
   stop: { state: 'stopped', track: null, label: 'Stopped by Vincent' },
+  // Booked a GHL calendar slot with another rep (11/23): their meeting, so our touches stop.
+  booked_other: { state: 'booked_other', track: null, label: 'Booked with another rep (GHL calendar)' },
 };
+
+// ── GHL bookings ─────────────────────────────────────────────────────────────
+// The intro track doesn't know about GHL calendar bookings (11/19 re-check:
+// Leonard Pender and Whitney Vance booked and still had Email 1 waiting). Before
+// an intro step is queued or sent, look up the lead's GHL appointments. A live
+// one (any status but cancelled/invalid, starting from 60 days back) ends the
+// intro: Vincent's meeting moves to the meeting track (GHL's calendar sends the
+// reminders), another rep's stops our touches. Vincent, 11/23, with CADENCE_MODE=live.
+const GHL_TZ = () => process.env.GHL_TIMEZONE || 'America/New_York';
+const DEAD_APPT = /^(cancelled|canceled|invalid)$/i;
+
+function ghlApptTime(s) {
+  const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+  if (!m) return null;
+  if (/[zZ]|[+-]\d{2}:?\d{2}$/.test(String(s))) return new Date(s);
+  return z.instant(GHL_TZ(), +m[1], +m[2], +m[3], +m[4], +m[5]);
+}
+
+/** A live GHL appointment for this lead, or null. Errors return null (send goes on, as before). */
+async function ghlBooking(lead) {
+  const ghl = require('./ghl');
+  if (!ghl.on('cadence')) return null;
+  try {
+    let contactId = lead.ghl_contact_id;
+    if (!contactId) {
+      const c = await ghl.findContact({ email: realEmail(lead), phone: lead.phone || undefined });
+      if (!c) return null;
+      contactId = c.id;
+      await saveLead(lead.email, { ghl_contact_id: contactId });
+    }
+    const r = await ghl.api('GET', `/contacts/${contactId}/appointments`);
+    const since = Date.now() - 60 * 864e5;
+    const live = (r.events || [])
+      .filter(e => !e.deleted && !DEAD_APPT.test(e.appointmentStatus || e.appoinmentStatus || ''))
+      .map(e => ({ e, at: ghlApptTime(e.startTime) }))
+      .filter(x => x.at && x.at.getTime() >= since)
+      .sort((a, b) => b.at - a.at);
+    if (!live.length) return null;
+    const { e, at } = live[0];
+    return { at, userId: e.assignedUserId || null, id: e.id, status: e.appointmentStatus || e.appoinmentStatus || '' };
+  } catch (err) {
+    console.warn(`[cadence] GHL booking check for ${lead.email}:`, err.message);
+    return null;
+  }
+}
+
+/** If the lead booked in GHL, end the intro. True when it did. */
+// "No booking" is cached 5 minutes so cards waiting on a window or the Email 1
+// gap don't hit GHL every minute.
+const _noBooking = new Map();
+async function applyGhlBooking(lead) {
+  if (!lead || lead.track !== 'intro') return false;
+  const seen = _noBooking.get(lead.email);
+  if (seen && Date.now() - seen < 5 * 6e4) return false;
+  const b = await ghlBooking(lead);
+  if (!b) _noBooking.set(lead.email, Date.now());
+  if (!b) return false;
+  const ghl = require('./ghl');
+  const mine = !b.userId || b.userId === ghl.ME();
+  const when = slots.slotLabel(b.at) + ' ET';
+  await addTimeline(lead.email, timelineEntry('note', { text: `GHL calendar booking found (${when}, with ${mine ? 'Vincent' : ghl.userName(b.userId)}): intro stopped` }));
+  if (mine) await setOutcome(lead.email, 'meeting', { meeting_at: b.at, source: 'GHL calendar' });
+  else await setOutcome(lead.email, 'booked_other', { note: `Booked with ${ghl.userName(b.userId)} for ${when}.` });
+  console.log(`[cadence] ${lead.email}: GHL booking ${when} with ${mine ? 'Vincent' : ghl.userName(b.userId)}, intro stopped`);
+  return true;
+}
 
 async function setOutcome(email, outcome, { meeting_at, source = '', note = '' } = {}) {
   const base = OUTCOMES[outcome];
@@ -826,6 +894,11 @@ async function dispatch(id) {
     await markCard(a, 'Cancelled: lead no longer in a cadence');
     return { status: 'cancelled' };
   }
+  if (await applyGhlBooking(lead)) {
+    // setOutcome already cancelled this card; say why on it.
+    await markCard(a, 'Not sent: they booked on the GHL calendar');
+    return { status: 'cancelled' };
+  }
   const step = copy.stepById(a.step);
   const now = new Date();
   const setAt = lead.send_at && toDate(lead.send_at[a.step]);
@@ -1310,7 +1383,7 @@ async function applyStage(lead, leadId, outcome) {
  * Column M "Touches So Far": what really happened, in order. Sent steps,
  * replies, calls (services/cadenceCalls.js) and outcomes; skipped, queued or unapproved steps don't count.
  */
-const OUTCOME_SHORT = { hit_once: 'Hit once', talked_yes: 'Talked yes', meeting: 'Meeting yes', not_interested: 'Not interested', not_qualified: 'Not qualified', stop: 'Stopped', no_show: 'No-show' };
+const OUTCOME_SHORT = { hit_once: 'Hit once', talked_yes: 'Talked yes', meeting: 'Meeting yes', not_interested: 'Not interested', not_qualified: 'Not qualified', stop: 'Stopped', no_show: 'No-show', booked_other: 'Booked (other rep)' };
 function touchesSoFar(lead) {
   const rc = require('./ringcentral');
   return [...(lead.timeline || [])]
@@ -1418,6 +1491,7 @@ async function queueDue(email, out = { queued: [], sent: [], blocked: [] }) {
       ? "Couldn't check RingCentral for the call. Send only if it really was a no-show."
       : 'No RingCentral call with this number since the start. Send only if it really was a no-show (a Meet or cell call would not show).';
   }
+  if (await applyGhlBooking(fresh)) { (out.booked = out.booked || []).push(fresh.email); return out; }
   if (n.step.channel === 'email') {
     const g = await emailGate(fresh.email);
     if (g.block) { await block(fresh, g.block); out.blocked.push(fresh.email); return out; }
@@ -1558,5 +1632,5 @@ async function status() {
 module.exports = {
   MODE, importLeads, updateLead, startLead, setOutcome, markNoShow, listLeads, getLead, refreshNext, nextStep,
   listCopy, saveCopy, approve, skip, dispatch, tick, checkReplies, syncSheet, dryRun, status, inWindow, intoWindow,
-  approvalsCol, queueStep, drainNutshell, touchesSoFar, dispatchApproved, rebuildPending, markChannelDead, realEmail, verifyLeadEmail, setEmailDecision, emailGate, emailHeld, pendingCards, approveMany, checkBatchToken, refreshBatchCard, cardTimes, ping, fullName, esc, DASHBOARD_URL, gmailInbox, queueDue, runIntake, saveLead, canEmail,
+  approvalsCol, queueStep, drainNutshell, touchesSoFar, dispatchApproved, rebuildPending, markChannelDead, realEmail, verifyLeadEmail, setEmailDecision, emailGate, emailHeld, pendingCards, approveMany, checkBatchToken, refreshBatchCard, cardTimes, ping, fullName, esc, DASHBOARD_URL, gmailInbox, queueDue, runIntake, saveLead, canEmail, ghlBooking, applyGhlBooking,
 };
