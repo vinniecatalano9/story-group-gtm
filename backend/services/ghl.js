@@ -376,8 +376,11 @@ async function pushScorecard(p, progress = () => {}) {
     if (biz) { out.accountId = biz.id; if (biz.created) out.created.push('company'); }
 
     progress('Finding the contact');
+    // A GHL contact link pasted on the scorecard wins over matching by email; a bad id falls back to matching.
+    const linked = out.contactId ? await getContact(out.contactId).catch(() => null) : null;
     // A company with no person still needs a contact to hang the opportunity on.
-    const contact = await findOrCreateContact({ name: p.name || (!p.email ? p.company : ''), email: p.email, title: p.title, company: p.company, businessId: out.accountId, assignedTo: owner });
+    const contact = linked ? { id: linked.id || out.contactId, created: false }
+      : await findOrCreateContact({ name: p.name || (!p.email ? p.company : ''), email: p.email, title: p.title, company: p.company, businessId: out.accountId, assignedTo: owner });
     if (!contact) throw new Error('Need a name, email, or company to make the contact');
     out.contactId = contact.id;
     if (contact.created) out.created.push('contact');

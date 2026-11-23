@@ -314,7 +314,7 @@
       <label class="f"><span>Email</span><input type="email" data-field="email" autocomplete="off" /></label>
       <label class="f"><span>Title <em>(optional)</em></span><input type="text" data-field="title" autocomplete="off" /></label>
       <label class="f"><span>Website <em>(optional)</em></span><input type="text" data-field="website" autocomplete="off" /></label>
-      <label class="f"><span>Nutshell lead link <em>(notes land on it)</em></span><input type="url" data-field="lead" autocomplete="off" placeholder="https://app.nutshell.com/lead/..." /></label>
+      <label class="f"><span id="crmLinkLabel">Nutshell lead link <em>(notes land on it)</em></span><input type="url" data-field="lead" autocomplete="off" placeholder="https://app.nutshell.com/lead/..." /></label>
       <label class="f"><span>Monthly budget <em>(picks the package)</em></span><select data-budget aria-label="Monthly budget"></select></label>
     </div>
     <div class="row-btns"><button type="button" class="btn ghost sm" id="pasteBtn">Paste booking info</button><button type="button" class="link" data-reset>Reset for a new call</button></div>
@@ -1036,14 +1036,27 @@
 
   /* ---------- Nutshell: same endpoint and job polling as the Call Scorecard ---------- */
   const leadIdFrom = s => { const m = String(s || '').match(/lead\/(\d+)/i) || String(s || '').trim().match(/^(\d+)$/); return m ? Number(m[1]) : null; };
+  // A pasted GHL contact link: .../contacts/detail/<id>
+  const ghlContactFrom = s => { const m = String(s || '').match(/contacts\/detail\/([A-Za-z0-9]{8,40})/); return m ? m[1] : null; };
   // Which CRM the server sends to (Nutshell until the Go High Level switch): labels follow it.
   let CRM = { crm: 'nutshell', name: 'Nutshell' };
   const crmLink = n => (n && n.url) || (n && n.leadId && /^\d+$/.test(String(n.leadId)) ? `https://app.nutshell.com/lead/${encodeURIComponent(n.leadId)}` : '');
   function nsStatus(html) { const el = $('#nsStatus'); if (el) el.innerHTML = html || ''; }
-  function crmLabels() { const b = $('#sendNs'); if (b) b.textContent = `Send to ${CRM.name}`; const r = $('#rep'); if (r) r.title = `Who the lead is assigned to in ${CRM.name}, and who signs the recap`; }
+  function crmLabels() {
+    const b = $('#sendNs'); if (b) b.textContent = `Send to ${CRM.name}`;
+    const r = $('#rep'); if (r) r.title = `Who the lead is assigned to in ${CRM.name}, and who signs the recap`;
+    if (CRM.crm !== 'ghl') return;
+    const l = $('#crmLinkLabel'); if (l) l.innerHTML = 'GHL contact link <em>(optional, notes land on it)</em>';
+    const i = $('[data-field="lead"]'); if (i) i.placeholder = 'Leave blank to match by email, or paste their GHL contact link';
+  }
   fetch(`${API}/api/crm/provider`).then(r => r.json()).then(j => { if (j && j.name) { CRM = j; crmLabels(); showNutshellState(); } }).catch(() => {});
   function showNutshellState() {
     crmLabels();
+    const pasted = ghlContactFrom(S.fields.lead);
+    if (pasted && !(S.nutshell && S.nutshell.contactId === pasted)) {
+      const href = String(S.fields.lead).trim();
+      return nsStatus(/^https:\/\/[^\s"'<>]+$/.test(href) ? `Go High Level: <a href="${esc(href)}" target="_blank" rel="noopener">open contact</a> (notes will land here)` : 'Go High Level: notes will land on the pasted contact');
+    }
     if (S.nutshell && S.nutshell.url) return nsStatus(`${S.nutshell.crmName || CRM.name}: <a href="${S.nutshell.url}" target="_blank" rel="noopener">open contact</a> (last sent ${new Date(S.nutshell.sentAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })})`);
     const id = leadIdFrom(S.fields.lead) || (S.nutshell && S.nutshell.leadId);
     if (!id) return nsStatus('');
@@ -1056,7 +1069,10 @@
     const f = S.fields;
     if (!f.name && !f.email && !f.company) { toast('Add their name, email, or company in Call details first'); $('#callinfo').open = true; return; }
     if (!repEmail) { toast('Pick your name next to the button first'); $('#rep').focus(); return; }
-    const leadId = leadIdFrom(f.lead) || (S.nutshell && S.nutshell.leadId) || null;
+    // A pasted GHL contact link that isn't the one we last sent to starts fresh on that contact.
+    const pasted = ghlContactFrom(f.lead), prior = S.nutshell || {};
+    const samePerson = !pasted || pasted === prior.contactId;
+    const leadId = leadIdFrom(f.lead) || (samePerson ? prior.leadId : null) || null;
     // Go High Level finds the person by email and keeps one opportunity each, so a new one can't double up.
     if (!leadId && !newLeadOk && CRM.crm !== 'ghl') {
       nsStatus('No Nutshell lead link, so this would make a new lead. If they took the website scorecard or booked through Nutshell, they likely have one: paste its link in Call details first. <button type="button" class="link" id="sendNsNew">Make a new lead anyway</button>');
@@ -1066,7 +1082,7 @@
     btn.disabled = true;
     const body = {
       name: f.name, email: f.email, title: f.title, company: f.company, website: f.website,
-      source: 'Website: strategy call', repEmail, packageLine: PACKAGES[recommend(result()).key].ns, note: crmNote(), leadId, contactId: (S.nutshell && S.nutshell.contactId) || null,
+      source: 'Website: strategy call', repEmail, packageLine: PACKAGES[recommend(result()).key].ns, note: crmNote(), leadId, contactId: pasted || prior.contactId || null,
     };
     try {
       nsStatus(`Sending to ${CRM.name}…`);
