@@ -29,7 +29,25 @@ function addDays({ y, m, d }, n) {
   return { y: t.getUTCFullYear(), m: t.getUTCMonth() + 1, d: t.getUTCDate(), dow: t.getUTCDay() };
 }
 
-const isWeekday = day => day.dow >= 1 && day.dow <= 5;
+// Office holidays (11/23/2026, after the slot finder offered Thanksgiving):
+// no sends and no offered meeting times on these. Fixed dates plus Memorial
+// Day, Labor Day, and Thanksgiving with the Friday after.
+function nthDow(y, m, dow, n) { // n-th (1-based) weekday `dow` of month m; n = -1 for the last
+  if (n > 0) { const f = new Date(Date.UTC(y, m - 1, 1)).getUTCDay(); return 1 + ((dow - f + 7) % 7) + (n - 1) * 7; }
+  const lastD = new Date(Date.UTC(y, m, 0)).getUTCDate(); const l = new Date(Date.UTC(y, m - 1, lastD)).getUTCDay();
+  return lastD - ((l - dow + 7) % 7);
+}
+function isHoliday(day) {
+  const { y, m, d } = day;
+  const md = `${m}-${d}`;
+  if (['1-1', '7-4', '12-24', '12-25', '12-31'].includes(md)) return true;
+  if (m === 5 && d === nthDow(y, 5, 1, -1)) return true; // Memorial Day
+  if (m === 9 && d === nthDow(y, 9, 1, 1)) return true; // Labor Day
+  const tg = nthDow(y, 11, 4, 4); // Thanksgiving
+  if (m === 11 && (d === tg || d === tg + 1)) return true;
+  return false;
+}
+const isWeekday = day => day.dow >= 1 && day.dow <= 5 && !isHoliday(day);
 const dayKey = ({ y, m, d }) => `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
 /** First weekday on or after `day`. */
@@ -46,4 +64,4 @@ function clock(date, tz) {
   return `${h}:${String(p.min).padStart(2, '0')}${p.h < 12 ? 'am' : 'pm'}`;
 }
 
-module.exports = { DOW, parts, instant, addDays, isWeekday, dayKey, weekdayOnOrAfter, clock };
+module.exports = { DOW, parts, instant, addDays, isWeekday, isHoliday, dayKey, weekdayOnOrAfter, clock };

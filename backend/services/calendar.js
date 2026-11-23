@@ -274,6 +274,7 @@ function etBusinessDays(now, startInDays, count) {
     const noon = new Date(Date.UTC(t.y, t.m - 1, t.d + i, 12));
     const dow = noon.getUTCDay();
     if (dow === 0 || dow === 6) continue;
+    if (require('../lib/zoned').isHoliday({ y: noon.getUTCFullYear(), m: noon.getUTCMonth() + 1, d: noon.getUTCDate() })) continue;
     out.push({ y: noon.getUTCFullYear(), m: noon.getUTCMonth() + 1, d: noon.getUTCDate(), dow });
   }
   return out;
