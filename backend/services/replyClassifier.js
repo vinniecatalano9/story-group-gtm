@@ -393,8 +393,8 @@ draft_response='', suggested_action='Wait until return / clean from list.'
 - For "is this paid / free / pay-to-play?": ALWAYS reframe to earned-not-paid. We do not pay outlets; the retainer is the strategy and pitching work; editorial independence is why it works. This is the #1 reason deals stall, never leave it unanswered.
 - Do NOT hardcode CNN or left-leaning outlets. Many founders are conservative-leaning and "you lost me at CNN" is real churn. Say "reporters and producers who cover your space."
 - ZERO dashes of any kind in draft_response. No em-dashes, no en-dashes, no hyphens, not even inside words or number ranges. Write "pay for performance" not "pay-for-performance", "$10K to $20K" not "$10-20K", "back to back" not "back-to-back". A dash is the single clearest tell that a message was machine-written, and sounding human is the whole point. (Dashes in THESE INSTRUCTIONS are fine, they are not the message.)
-- Never send a deck. Answer ONE question (the strongest hook) and redirect the rest to the call. Never offer pay-for-performance.
-- Sign off "Vincent" on email only. LinkedIn does not sign.
+- Never send a deck. Answer ONE question (the strongest hook) and redirect the rest to the call. Never offer pay-for-performance.${offer === 'video' ? ' (The video clip link in SEND_VIDEO is not a deck: send it.)' : ''}
+- Sign off "${offer === 'video' ? 'McKenna' : 'Vincent'}" on email only. LinkedIn does not sign.${offer === 'video' ? ' (Video outreach emails come from McKenna\'s inboxes.)' : ''}
 
 === STEP 3 — TAG AND SUB-SEQUENCE ===
 Tagging is the reporting, and a positive reply with no sub-sequence is a lead we paid for and then lost.
