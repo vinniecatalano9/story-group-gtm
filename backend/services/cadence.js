@@ -1033,6 +1033,16 @@ async function block(lead, reason) {
 
 async function onReply(lead, channel, text, at) {
   const stop = channel === 'sms' && require('./ringcentral').isStop(text);
+  // A lead with a call booked: a confirm or question leaves the call and its
+  // reminders alone; a reschedule to a good time moves it (autoBook.js).
+  const hasCall = lead.state === 'meeting' && lead.meeting_at && toDate(lead.meeting_at) > new Date();
+  const booked = !stop && hasCall ? await require('./autoBook').handleBookedReply(lead, text) : null;
+  if (booked && (booked.keep || booked.done)) {
+    await addTimeline(lead.email, timelineEntry('reply', { channel, text: String(text).slice(0, 1500), reply_at: toDate(at) || null }));
+    await logToNutshell(lead, `${shortDate(toDate(at) || new Date(), lead.tz)} Replied by ${channel === 'sms' ? 'text' : 'email'} (call booked)\n\n${String(text).slice(0, 1500)}`);
+    await ping(`💬 <b>${esc(fullName(lead))}</b> replied by ${channel === 'sms' ? 'text' : 'email'}.\n\n${esc(String(text).slice(0, 1200))}\n\n${booked.line}`);
+    return;
+  }
   await cancelPending(lead.email, stop ? 'texted STOP' : `replied by ${channel}`);
   if (stop) {
     await saveLead(lead.email, { state: 'opted_out', running: false, track: null, next_step: null, next_due_at: null, next_touch_label: '', sheet_dirty: true, opted_out_at: new Date() });
@@ -1043,7 +1053,7 @@ async function onReply(lead, channel, text, at) {
   await addTimeline(lead.email, timelineEntry('reply', { channel, text: String(text).slice(0, 1500), reply_at: toDate(at) || null }));
   await logToNutshell(lead, `${shortDate(toDate(at) || new Date(), lead.tz)} ${stop ? 'Texted STOP (opted out of texts)' : `Replied by ${channel === 'sms' ? 'text' : 'email'}`}\n\n${String(text).slice(0, 1500)}`);
   // A clean yes to an offered time books the call (or puts a Book button on this card).
-  const booking = stop ? null : await require('./autoBook').handleReply(lead, text);
+  const booking = stop ? null : booked || (hasCall ? null : await require('./autoBook').handleReply(lead, text));
   await ping([
     stop ? `🛑 <b>${esc(fullName(lead))}</b> texted STOP. Cadence ended for good.` : `💬 <b>${esc(fullName(lead))}</b> replied by ${channel === 'sms' ? 'text' : 'email'}. Cadence paused.`,
     `\n${esc(String(text).slice(0, 1200))}`,
@@ -1065,8 +1075,11 @@ async function checkReplies() {
     const r = await gmailInbox({ op: 'replies', emails: emailLeads.map(l => l.email), since: since.toISOString().slice(0, 10) })
       .catch(e => ({ ok: false, error: e.message }));
     if (!r.ok) console.warn('[cadence] IMAP reply check failed:', r.error);
-    for (const m of (r.ok ? r.messages : [])) {
-      const lead = emailLeads.find(l => l.email === m.from);
+    // Oldest first, and a fresh read of the lead each time: a yes and a
+    // reschedule can land in one check, and the second must see the booking.
+    const msgs = (r.ok ? r.messages : []).slice().sort((a, b) => (new Date(a.date) || 0) - (new Date(b.date) || 0));
+    for (const m of msgs) {
+      const lead = emailLeads.some(l => l.email === m.from) ? await getLead(m.from) : null;
       const id = (m.message_id || '').trim() || `${m.from}|${m.date}|${m.subject}`;
       if (!lead || (lead.seen_email_ids || []).includes(id)) continue;
       if (m.date && new Date(m.date) < toDate(lead.email1_sent_at)) continue;
