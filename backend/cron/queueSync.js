@@ -93,6 +93,34 @@ function convoTags(c) {
 
 const isInterested = (tags) => tags.some(t => /interested/i.test(t) && !/not.?interested/i.test(t));
 
+// HeyReach conversations carry no campaign, and the campaign name is what tells
+// the drafter a thread is video outreach (replyClassifier.offerFor). Cards this
+// job creates were drafted as PR because of that (Michael Markowitz got a PR case
+// study in a video thread, 2026-11-24). Resolve the campaign from the lead lists
+// of every campaign whose name the drafter keys on. Built once per run, only
+// when a doc needs it.
+const CAMPAIGN_NAME_MATTERS = /video outbound/i;
+const normUrl = (u) => String(u || '').trim().toLowerCase().replace(/\/+$/, '');
+async function campaignByProfileUrl() {
+  const map = new Map();
+  const c = await axios.post(`${HR_BASE}/campaign/GetAll`, { offset: 0, limit: 100 }, { headers: hrHeaders() });
+  const camps = (c.data?.items || []).filter(x => CAMPAIGN_NAME_MATTERS.test(x.name || ''));
+  for (const camp of camps) {
+    for (let offset = 0; offset < 20000; offset += 1000) {
+      const r = await axios.post(`${HR_BASE}/campaign/GetLeadsFromCampaign`,
+        { campaignId: camp.id, offset, limit: 1000 }, { headers: hrHeaders() });
+      const items = r.data?.items || [];
+      for (const it of items) {
+        const url = normUrl(it.linkedInUserProfile?.profileUrl);
+        if (url && !map.has(url)) map.set(url, { id: camp.id, name: camp.name });
+      }
+      if (items.length < 1000) break;
+      await sleep(300);
+    }
+  }
+  return map;
+}
+
 /**
  * @param {object} [opts]
  * @param {number} [opts.createWindowDays] widen the backfill for a one-off catch-up
@@ -116,8 +144,17 @@ async function syncQueue(opts = {}) {
   const snap = await db.collection('replies').where('source', '==', 'heyreach').get();
   const docsByConvo = new Set();
   const docsByUrl = new Set();
-  let cleared = 0, refreshed = 0, tagged = 0, created = 0, orphaned = 0;
+  let cleared = 0, refreshed = 0, tagged = 0, created = 0, orphaned = 0, campaigned = 0;
   const orphanCutoff = Date.now() - ORPHAN_GRACE_DAYS * 24 * 60 * 60 * 1000;
+  let campaignMap = null;
+  const campaignFor = async (url) => {
+    if (!url) return null;
+    if (!campaignMap) {
+      try { campaignMap = await campaignByProfileUrl(); }
+      catch (e) { console.warn('[queueSync] campaign lookup failed:', e.message); campaignMap = new Map(); }
+    }
+    return campaignMap.get(normUrl(url)) || null;
+  };
 
   for (const doc of snap.docs) {
     const d = doc.data();
@@ -147,6 +184,17 @@ async function syncQueue(opts = {}) {
     const update = {};
     const tags = convoTags(c);
     if (isInterested(tags) && !d.auto_tag_interested) { update.auto_tag_interested = true; tagged++; }
+    // Open card with no campaign: fill it in and redraft, so a video thread
+    // stops being answered as PR.
+    if (!d.heyreach_campaign_name) {
+      const camp = await campaignFor(d.profile_url || c.correspondentProfile?.profileUrl);
+      if (camp) {
+        update.heyreach_campaign_id = camp.id;
+        update.heyreach_campaign_name = camp.name;
+        update.reclassified_at = null;
+        campaigned++;
+      }
+    }
     if (tags.length && JSON.stringify(tags) !== JSON.stringify(d.heyreach_tags || [])) update.heyreach_tags = tags;
 
     // Dead conversation: they said no, or said they won't pay. Only when the
@@ -201,6 +249,8 @@ async function syncQueue(opts = {}) {
     const tags = convoTags(c);
     created++;
     if (dryRun) continue;
+    const camp = await campaignFor(url);
+    if (camp) campaigned++;
     await db.collection('replies').add({
       source: 'heyreach',
       email: null,
@@ -216,8 +266,8 @@ async function syncQueue(opts = {}) {
       message_date: c.lastMessageAt || new Date().toISOString(),
       heyreach_account_id: c.linkedInAccountId || acct.id || null,
       heyreach_account_name: [acct.firstName || acct.first_name, acct.lastName || acct.last_name].filter(Boolean).join(' ') || '',
-      heyreach_campaign_id: null,
-      heyreach_campaign_name: '',
+      heyreach_campaign_id: camp ? camp.id : null,
+      heyreach_campaign_name: camp ? camp.name : '',
       heyreach_conversation_id: c.id,
       heyreach_tags: tags,
       auto_tag_interested: isInterested(tags),
@@ -230,7 +280,7 @@ async function syncQueue(opts = {}) {
 
   // Give refreshed/created docs their drafts (bounded — rest caught next run)
   let reclassify = null;
-  if (!dryRun && refreshed + created > 0) {
+  if (!dryRun && refreshed + created + campaigned > 0) {
     try {
       const { reclassifyBacklog } = require('./reclassify');
       reclassify = await reclassifyBacklog({ limit: 10 });
@@ -240,7 +290,7 @@ async function syncQueue(opts = {}) {
   }
 
   const result = { conversations: convos.length, complete, createWindowDays, dryRun,
-    cleared, refreshed, created, tagged, orphaned, reclassify };
+    cleared, refreshed, created, tagged, orphaned, campaigned, reclassify };
   console.log('[queueSync]', JSON.stringify(result));
   return result;
 }

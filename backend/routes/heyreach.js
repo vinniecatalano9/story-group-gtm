@@ -1,5 +1,5 @@
 const express = require('express');
-const { classifyReply } = require('../services/replyClassifier');
+const { classifyReply, offerFor, videoSendDraft } = require('../services/replyClassifier');
 const { evaluateReply, fetchConversation, markSeen } = require('../services/autoReply');
 const { offerReply, paidMisread } = require('../services/replyApprovals');
 const { threadFacts, config: autoReplyConfig } = require('../lib/autoReplyPolicy');
@@ -21,7 +21,7 @@ function todayISO() { return new Date().toISOString().slice(0, 10); }
 // findMeetingSlots() result -> the {amSlot, pmSlot} shape the drafter reads.
 function toDraftSlots(open) {
   if (!open || !open.day) return null;
-  return { amSlot: `${open.day} at ${open.time1} EST`, pmSlot: `${open.day} at ${open.time2} EST` };
+  return { amSlot: `${open.day} at ${open.time1} EST`, pmSlot: `${open.day} at ${open.time2} EST`, day: open.day, time1: open.time1, time2: open.time2 };
 }
 
 function isoDate(d) {
@@ -716,6 +716,10 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
           auto_tag_interested: isInterestedTag,
           raw_payload: payload,
           reclassified_at: null,   // their newest message needs a fresh draft
+          // A card queueSync created has no campaign; the webhook knows it, and
+          // the campaign name is what tells the drafter this is a video thread.
+          ...(campaignId ? { heyreach_campaign_id: campaignId } : {}),
+          ...(campaignName ? { heyreach_campaign_name: campaignName } : {}),
         });
         console.log(`[heyreach webhook] Updated existing card ${ref.id} for ${fullName || profileUrl}`);
       }
@@ -789,10 +793,19 @@ router.post('/webhook', express.json({ limit: '2mb' }), async (req, res) => {
           update.tag = 'Interested';
           update.subsequence = 'Call Time Sent';
           // Vincent's own line, one message, real times when the calendar answered.
-          update.draft_response = open && open.day
-            ? `Message 1: Great. Are you free ${open.day} at ${open.time1} or ${open.time2} EST?`
-            : `Message 1: Great. Are you free [day] at [time] or [time] EST?`;
+          // A video thread sends the example clip first (that is what they said yes to).
+          update.draft_response = offerFor(campaignName) === 'video'
+            ? videoSendDraft({ channel: 'linkedin', firstName, company: companyName, slots: draftSlots })
+            : open && open.day
+              ? `Message 1: Great. Are you free ${open.day} at ${open.time1} or ${open.time2} EST?`
+              : `Message 1: Great. Are you free [day] at [time] or [time] EST?`;
+          if (offerFor(campaignName) === 'video') { update.suggested_macro = 'SEND_VIDEO'; update.suggested_action = 'Send the example clip, then two times.'; }
         }
+        // This draft is current. Without the stamp cron/reclassify redrafted every
+        // webhook reply minutes later and the Reply Bot card (sent from this draft)
+        // and the doc went separate ways. A failed classification stays unstamped
+        // so the cron retries it.
+        if (!cls.failed) update.reclassified_at = new Date();
         // A no never reaches the board. Classified, tagged and closed in one
         // step, so nobody spends attention on a conversation that is over.
         // Rejecting PAID placement is exempt — that is the earned-not-paid

@@ -87,6 +87,61 @@ const VIDEO_CAMPAIGN = /video outbound/i;
 const VIDEO_EXAMPLE_URL = () => process.env.VIDEO_EXAMPLE_URL || 'https://storygroup.wistia.com/folders/3k8j9ulubk';
 const offerFor = campaignName => (VIDEO_CAMPAIGN.test(campaignName || '') ? 'video' : '');
 
+// A bare yes in a video thread answers our offer to share the example clip, so
+// it is SEND_VIDEO every time. Left to the model alone, "Absolutely" came back
+// as SEND_VIDEO on one run and as a times-only INTERESTED_SOFT_ASK on the next
+// (Ali Fadavi and Jason Walder, 2026-11-24): same reply, two different drafts,
+// and the Reply Bot card got whichever ran first. The code decides now.
+const YES_START_RE = /^[\s\W]*(?:yes|yeah|yep|yup|sure|absolutely|definitely|of course|ok|okay|100%|sounds good|sounds great|go for it|please do|send it|share it|show me|let'?s see it|i'?d (?:love|like) to|would love to|happy to|please send|love to|interested)(?=$|[^a-z0-9])/i;
+const NOT_A_YES_RE = /\b(?:no|not|don'?t|can'?t|won'?t|never|pass|busy|unsubscribe|remove|cost|price|pricing|how much|already|in[- ]house|we have|our team|email|call)\b|\?/i;
+function isBareYes(text) {
+  const t = String(text || '').trim();
+  return t.length > 0 && t.length <= 80 && YES_START_RE.test(t) && !NOT_A_YES_RE.test(t);
+}
+
+// The SEND_VIDEO draft, written by code so the link is always in it. `slots`
+// carries day/time1/time2 from calendar.findMeetingSlots when the caller has them.
+function videoSendDraft({ channel, firstName, company, slots }) {
+  const isLinkedIn = channel === 'linkedin';
+  const name = firstName || (isLinkedIn ? 'there' : '{{firstName}}');
+  let co = company || '';
+  try { co = require('../lib/normalize').cleanCompanyName(co) || co; } catch (e) { /* keep raw */ }
+  co = co || (isLinkedIn ? 'you' : 'your company');
+  const url = VIDEO_EXAMPLE_URL();
+  const when = slots && slots.day && slots.time1 && slots.time2
+    ? `${slots.day} at ${slots.time1} or ${slots.time2} EST`
+    : '[day] at [time] or [time] EST';
+  if (isLinkedIn) {
+    return `Message 1: Here you go ${name}, the 30 second clip from a recent shoot:\n${url}\n\nMessage 2: Would like to walk you through how video could bring in new business for ${co}. Free ${when}?`;
+  }
+  return `Here you go ${name}, the 30 second clip from a recent shoot:\n${url}\nI'd like to walk you through how video could bring in new business for ${co}. Are you free ${when}?`;
+}
+
+// Runs on every video-thread classification (not on a human's redraft note).
+// A bare yes becomes SEND_VIDEO whatever the model said, and a SEND_VIDEO draft
+// that lost the link gets the template back.
+function enforceVideoYes(result, { channel, replyText, firstName, company, slots }) {
+  const bareYes = isBareYes(replyText);
+  const picked = result && result.suggested_macro === 'SEND_VIDEO';
+  if (!bareYes && !picked) return result;
+  const hasLink = String((result && result.draft_response) || '').includes(VIDEO_EXAMPLE_URL());
+  if (picked && hasLink) return result;
+  return {
+    ...(result || {}),
+    failed: false,
+    classification: 'interested',
+    sentiment: 'positive',
+    summary: (result && result.summary) || 'Said yes to seeing the example clip.',
+    suggested_macro: 'SEND_VIDEO',
+    suggested_action: 'Send the example clip, then two times.',
+    tag: 'Interested',
+    subsequence: 'Call Time Sent',
+    followups_recommended: Number(result && result.followups_recommended) || 3,
+    draft_response: videoSendDraft({ channel, firstName, company, slots }),
+    video_enforced: picked ? 'missing_link' : 'bare_yes',
+  };
+}
+
 function buildPrompt({ channel, email, company, replyText, firstName, slots, todayDow, caseBlock, feedback, previousDraft, lane, offer }) {
   const isLinkedIn = channel === 'linkedin';
 
@@ -142,6 +197,7 @@ This prospect got our video outreach, not a PR pitch. What we offered them: we'r
 Talk about video that brings in new business. No press, journalists, outlets, podcasts, placements or PR case studies. The PR macros below are for shape only: use these video facts, never their PR wording.
 
 --- SEND_VIDEO (they want the example: "send it", "share the video first", "sure", "yes please", "show me") ---
+Our last message offered to share the clip, so a bare yes ("Absolutely", "Sure", "100%", "Yes please", "Sounds good") is a yes to the clip: classification interested, macro SEND_VIDEO, link in the draft. Never answer a yes in this thread with times alone and no link.
 This overrides SEND_INFO. The example clip is the one thing we send before a call. Put the link in exactly as written, on its own line, with nothing after it on that line. Never name the person in the clip.
 Email:
 "Here you go ${name}, the 30 second clip from a recent shoot:
@@ -451,9 +507,14 @@ async function classifyReply({ channel, email, company, replyText, firstName, sl
     );
     // Belt and braces: the prompt bans dashes, this makes it true.
     if (result && result.draft_response) result.draft_response = stripDashes(result.draft_response);
+    if (offer === 'video' && !feedback) return enforceVideoYes(result, { channel, replyText, firstName, company, slots });
     return result;
   } catch (e) {
     console.error('[replyClassifier] Failed:', e.message);
+    // A video-thread yes still gets its deterministic draft when the model is down.
+    if (offer === 'video' && !feedback && isBareYes(replyText)) {
+      return enforceVideoYes({}, { channel, replyText, firstName, company, slots });
+    }
     return {
       // Callers must be able to tell a real classification from a fallback.
       // Without this, cron/reclassify stamps reclassified_at on the fallback and
@@ -473,4 +534,4 @@ async function classifyReply({ channel, email, company, replyText, firstName, sl
   }
 }
 
-module.exports = { classifyReply, offerFor, stripDashes };
+module.exports = { classifyReply, offerFor, stripDashes, isBareYes, videoSendDraft, VIDEO_EXAMPLE_URL };
